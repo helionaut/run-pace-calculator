@@ -14,8 +14,10 @@ Build the first Run Pace Calculator slice
   GitHub Pages
 - tighten calculator validation so pace and finish-time fields reject invalid
   decimal or out-of-range time parts without capping long pace minutes
+- make the calculator mode switcher keyboard-operable with real tab semantics
 - add product docs, deployment workflow, PR template, and offline handoff
-  scripts with a repo-local manifest fallback for blocked publish environments
+  scripts with a repo-local manifest fallback and relative bundle import fixes
+  for blocked publish environments
 
 ## Testing
 
@@ -27,6 +29,8 @@ Build the first Run Pace Calculator slice
 - [x] `./scripts/import_bundle.sh /tmp/run-pace-calculator-hel-8.bundle <repo>`
 - [x] `npm run handoff:prepare`
 - [x] `npm run handoff:verify -- .handoff/HEL-8/HEL-8-handoff-manifest.json`
+- [x] import the persisted `.handoff/HEL-8` bundle into a fresh clone and run
+  `npm run check`
 - [x] `npm test` covers calculator logic and handoff manifest verification
 - [x] `npm run dev` (expected explicit bind error in this sandbox)
 - [x] `npm run preview` (expected explicit bind error in this sandbox)
