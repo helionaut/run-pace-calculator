@@ -74,3 +74,20 @@ To rehearse that flow without network access:
 ```sh
 npm run pr:dry-run
 ```
+
+## Prepare a handoff bundle
+
+When publication is still blocked, export a resumable handoff directory:
+
+```sh
+npm run handoff:prepare -- /tmp/hel-8-handoff
+```
+
+That writes a verified branch bundle, the PR draft, publish dry-run output, a
+commit summary, and a machine-readable manifest into the target directory.
+
+To verify those artifacts before resuming from another environment:
+
+```sh
+npm run handoff:verify -- /tmp/hel-8-handoff/HEL-8-handoff-manifest.json
+```

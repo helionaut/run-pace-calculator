@@ -22,6 +22,8 @@ Build the first Run Pace Calculator slice
 - [x] `npm run pr:dry-run`
 - [x] `./scripts/export_bundle.sh /tmp/run-pace-calculator-hel-8.bundle`
 - [x] `./scripts/import_bundle.sh /tmp/run-pace-calculator-hel-8.bundle <repo>`
+- [x] `npm run handoff:prepare -- /tmp/hel-8-handoff`
+- [x] `npm run handoff:verify -- /tmp/hel-8-handoff/HEL-8-handoff-manifest.json`
 - [x] `npm run dev` (expected explicit bind error in this sandbox)
 - [x] `npm run preview` (expected explicit bind error in this sandbox)
 
