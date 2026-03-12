@@ -43,8 +43,6 @@ Build the first Run Pace Calculator slice
 
 - Local HTTP serving could not be exercised in this sandbox because socket
   binding fails with `PermissionError: [Errno 1] Operation not permitted`.
-- GitHub PR creation and branch push remain blocked in this environment until
-  `gh` auth is restored and the repo is available through a pushable remote.
 
 ## Preview notes
 

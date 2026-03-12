@@ -114,8 +114,9 @@ if $dry_run; then
   echo "Would prepare offline handoff directory on auth/DNS/HTTPS failure at: $default_handoff_dir"
   echo "Dry run enabled; no network requests will be made."
   echo "Would run: git push -u origin HEAD"
-  echo "Would inspect PR state with: gh pr view --json state -q .state"
-  echo "Would create or update PR titled: $pr_title"
+  echo "Would inspect PR state with: gh pr list --head $branch --state all --json number,state,url"
+  echo "Would create a PR with: gh pr create --head $branch --title \"$pr_title\" --body-file $pr_body_file"
+  echo "Would update an existing PR with: gh pr edit <number> --title \"$pr_title\" --body-file $pr_body_file"
   echo "Would use body file: $pr_body_file"
   exit 0
 fi
@@ -139,16 +140,22 @@ fi
 
 git push -u origin HEAD
 
-pr_state="$(gh pr view --json state -q .state 2>/dev/null || true)"
-if [[ "$pr_state" == "MERGED" || "$pr_state" == "CLOSED" ]]; then
+existing_pr_number="$(
+  gh pr list --head "$branch" --state all --json number --jq '.[0].number // empty'
+)"
+existing_pr_state="$(
+  gh pr list --head "$branch" --state all --json state --jq '.[0].state // empty'
+)"
+
+if [[ "$existing_pr_state" == "MERGED" || "$existing_pr_state" == "CLOSED" ]]; then
   echo "Current branch is tied to a closed PR; create a new branch first." >&2
   exit 1
 fi
 
-if [[ -z "$pr_state" ]]; then
-  gh pr create --title "$pr_title" --body-file "$pr_body_file"
+if [[ -z "$existing_pr_number" ]]; then
+  gh pr create --head "$branch" --title "$pr_title" --body-file "$pr_body_file"
 else
-  gh pr edit --title "$pr_title" --body-file "$pr_body_file"
+  gh pr edit "$existing_pr_number" --title "$pr_title" --body-file "$pr_body_file"
 fi
 
-gh pr view --json url -q .url
+gh pr list --head "$branch" --state open --json url --jq '.[0].url'
