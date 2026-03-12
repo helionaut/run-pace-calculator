@@ -1,0 +1,15 @@
+{
+  "repo": {
+    "slug": "run-pace-calculator",
+    "url": "https://github.com/helionaut/run-pace-calculator",
+    "dir": "/home/helionaut/src/projects/run-pace-calculator"
+  },
+  "linear": {
+    "project_id": "7bb9f44b-3917-4aa3-b618-07ddc752a3ab",
+    "project_slug": "8fde3d6f1b81",
+    "project_url": "https://linear.app/heliagents/project/run-pace-calculator-8fde3d6f1b81",
+    "starter_issue_id": "fdab6e76-1c55-4e0f-84ff-e0bf87e6ee79",
+    "starter_issue_identifier": "HEL-8",
+    "starter_issue_url": "https://linear.app/heliagents/issue/HEL-8/initial-build-run-pace-calculator"
+  }
+}
