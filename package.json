@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "bash scripts/build-dist.sh",
     "test": "node --test",
     "check": "node --check script.js && node --check calculator.js",
     "verify:pages": "bash scripts/verify-pages-content.sh",

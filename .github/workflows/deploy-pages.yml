@@ -38,10 +38,7 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Prepare static site artifact
-        run: |
-          mkdir -p dist
-          cp index.html styles.css script.js calculator.js dist/
-          touch dist/.nojekyll
+        run: npm run build
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
