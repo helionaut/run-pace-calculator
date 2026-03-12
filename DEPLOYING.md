@@ -22,7 +22,7 @@ Release flow:
 
 Local validation before pushing:
 
-- `npm run validate`
+- `npm run validate` to run tests, syntax checks, and produce `dist/`
 
 Manual live verification after deployment:
 
