@@ -22,6 +22,8 @@ npm run dev
 - `npm run dev` serves the source files locally at `http://localhost:4173`
 - `npm run build` copies the static site into `dist/`
 - `npm run preview` serves the built output from `dist/`
+- If the environment blocks local socket binding, `dev` and `preview` exit with
+  a short explicit error instead of a server traceback
 
 ## Repository docs
 

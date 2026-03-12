@@ -22,7 +22,8 @@ Build the first Run Pace Calculator slice
 - [x] `npm run pr:dry-run`
 - [x] `./scripts/export_bundle.sh /tmp/run-pace-calculator-hel-8.bundle`
 - [x] `./scripts/import_bundle.sh /tmp/run-pace-calculator-hel-8.bundle <repo>`
-- [ ] `npm run dev`
+- [x] `npm run dev` (expected explicit bind error in this sandbox)
+- [x] `npm run preview` (expected explicit bind error in this sandbox)
 
 ## Risks
 
