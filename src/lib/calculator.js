@@ -58,7 +58,7 @@ function toWholeNumber(value) {
 
 export function validateTimeParts(
   { hours = 0, minutes = 0, seconds = 0 },
-  { allowHoursOnly = true } = {}
+  { allowHoursOnly = true, maxMinutes = 59 } = {}
 ) {
   const safeHours = toWholeNumber(hours);
   const safeMinutes = toWholeNumber(minutes);
@@ -72,8 +72,12 @@ export function validateTimeParts(
     return { error: "Hours cannot be negative." };
   }
 
-  if (safeMinutes < 0 || safeMinutes > 59) {
-    return { error: "Minutes must stay between 0 and 59." };
+  if (safeMinutes < 0) {
+    return { error: "Minutes cannot be negative." };
+  }
+
+  if (maxMinutes !== null && safeMinutes > maxMinutes) {
+    return { error: `Minutes must stay between 0 and ${maxMinutes}.` };
   }
 
   if (safeSeconds < 0 || safeSeconds > 59) {
@@ -164,6 +168,8 @@ export function calculatePerformance(input) {
       hours: 0,
       minutes: input.paceMinutes,
       seconds: input.paceSeconds
+    }, {
+      maxMinutes: null
     });
 
     if (paceParts.error) {

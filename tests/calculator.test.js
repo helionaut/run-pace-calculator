@@ -76,6 +76,19 @@ test("pace mode rejects seconds outside the expected range", () => {
   assert.equal(result.error, "Pace seconds must stay between 0 and 59.");
 });
 
+test("pace mode allows minute values above an hour", () => {
+  const result = calculatePerformance({
+    distanceId: "5k",
+    mode: "pace",
+    paceMinutes: 75,
+    paceSeconds: 0,
+    paceUnit: "km"
+  });
+
+  assert.equal(result.error, undefined);
+  assert.equal(formatDuration(result.selectedFinishSeconds), "6:15:00");
+});
+
 test("finish mode rejects minutes outside the expected range", () => {
   const result = calculatePerformance({
     distanceId: "5k",
