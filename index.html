@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <title>Run Pace Calculator</title>
+    <meta
+      name="description"
+      content="Convert running pace, speed, and projected finish times for common race distances."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="module" src="./script.js"></script>
+  </head>
+  <body>
+    <main class="page-shell">
+      <section class="hero" aria-labelledby="page-title">
+        <div class="hero-copy" data-animate="up">
+          <p class="eyebrow">Static race-day planning tool</p>
+          <h1 id="page-title">Run pace, speed, and finish time in one view.</h1>
+          <p class="hero-text">
+            Set either your pace or speed, then project race finishes from a
+            custom distance through the standard road race calendar.
+          </p>
+        </div>
+        <div class="hero-card" data-animate="up">
+          <p class="hero-card-label">Default training effort</p>
+          <strong id="hero-pace" class="hero-card-value">5:30 /km</strong>
+          <p id="hero-speed" class="hero-card-detail">10.91 km/h</p>
+        </div>
+      </section>
+
+      <section class="calculator-grid" aria-label="Calculator">
+        <form class="panel panel-form" novalidate>
+          <div class="panel-heading">
+            <p class="section-label">Inputs</p>
+            <h2>Set your effort</h2>
+          </div>
+
+          <label class="field">
+            <span class="field-label">Pace</span>
+            <div class="pace-row">
+              <input
+                id="pace-minutes"
+                class="field-input"
+                type="number"
+                min="0"
+                step="1"
+                inputmode="numeric"
+                value="5"
+                aria-label="Pace minutes"
+              />
+              <span class="pace-separator" aria-hidden="true">:</span>
+              <input
+                id="pace-seconds"
+                class="field-input"
+                type="number"
+                min="0"
+                max="59"
+                step="1"
+                inputmode="numeric"
+                value="30"
+                aria-label="Pace seconds"
+              />
+              <select id="pace-unit" class="field-select" aria-label="Pace unit">
+                <option value="km">/km</option>
+                <option value="mi">/mi</option>
+              </select>
+            </div>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Speed</span>
+            <div class="inline-row">
+              <input
+                id="speed-value"
+                class="field-input"
+                type="number"
+                min="0"
+                step="0.01"
+                inputmode="decimal"
+                aria-label="Speed value"
+              />
+              <select id="speed-unit" class="field-select" aria-label="Speed unit">
+                <option value="kmh">km/h</option>
+                <option value="mph">mph</option>
+              </select>
+            </div>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Custom distance</span>
+            <div class="inline-row">
+              <input
+                id="distance-value"
+                class="field-input"
+                type="number"
+                min="0"
+                step="0.01"
+                inputmode="decimal"
+                value="10"
+                aria-label="Custom distance value"
+              />
+              <select
+                id="distance-unit"
+                class="field-select"
+                aria-label="Custom distance unit"
+              >
+                <option value="km">km</option>
+                <option value="mi">mi</option>
+              </select>
+            </div>
+          </label>
+
+          <p id="status-line" class="status-line" aria-live="polite"></p>
+        </form>
+
+        <section class="panel panel-highlight" aria-labelledby="projection-title">
+          <div class="panel-heading">
+            <p class="section-label">Projection</p>
+            <h2 id="projection-title">Custom finish</h2>
+          </div>
+          <p id="custom-distance-label" class="metric-label">10 km</p>
+          <p id="custom-finish" class="metric-value">55:00</p>
+          <p id="custom-detail" class="metric-detail">Based on a 5:30 /km pace.</p>
+        </section>
+      </section>
+
+      <section class="stats-grid" aria-label="Conversion summary">
+        <article class="panel stat-card" data-animate="up">
+          <p class="section-label">Pace</p>
+          <h2 id="pace-km-value">5:30 /km</h2>
+          <p id="pace-km-detail" class="stat-detail">10.91 km/h</p>
+        </article>
+        <article class="panel stat-card" data-animate="up">
+          <p class="section-label">Imperial pace</p>
+          <h2 id="pace-mi-value">8:51 /mi</h2>
+          <p id="pace-mi-detail" class="stat-detail">6.78 mph</p>
+        </article>
+        <article class="panel stat-card" data-animate="up">
+          <p class="section-label">Metric speed</p>
+          <h2 id="speed-km-value">10.91 km/h</h2>
+          <p id="speed-km-detail" class="stat-detail">6.78 mph</p>
+        </article>
+        <article class="panel stat-card" data-animate="up">
+          <p class="section-label">Imperial speed</p>
+          <h2 id="speed-mi-value">6.78 mph</h2>
+          <p id="speed-mi-detail" class="stat-detail">5:30 /km</p>
+        </article>
+      </section>
+
+      <section class="panel table-panel" aria-labelledby="race-table-title">
+        <div class="panel-heading">
+          <p class="section-label">Race predictions</p>
+          <h2 id="race-table-title">Common distances</h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <caption class="sr-only">
+              Predicted finish times for common race distances.
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Race</th>
+                <th scope="col">Distance</th>
+                <th scope="col">Finish</th>
+              </tr>
+            </thead>
+            <tbody id="prediction-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
