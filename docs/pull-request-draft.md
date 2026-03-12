@@ -46,11 +46,20 @@ Build the first Run Pace Calculator slice
 - GitHub PR creation and branch push remain blocked in this environment until
   `gh` auth is restored and the repo is available through a pushable remote.
 
+## Preview notes
+
+- The page opens with a large editorial hero, supported race-distance chips,
+  and a dark aside card that calls out the first-slice scope.
+- The calculator panel uses three pill-style mode tabs for Pace, Speed, and
+  Finish Time, with the active panel swapping inline below the controls.
+- The output area shows a highlighted projected finish card, equivalent pace
+  and speed cards, a split guide, and a race projection table below.
+
 ## Checklist
 
 - [x] Scope matches the linked Linear issue
 - [x] Docs updated if behavior or workflow changed
-- [ ] Screenshots or preview notes added when UI changed
+- [x] Screenshots or preview notes added when UI changed
 
 ## Publish notes
 
