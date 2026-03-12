@@ -17,6 +17,7 @@ times for common race distances.
 
 - `npm test` runs the Node test suite for the calculator logic
 - `npm run build` copies the static site into `dist/`
+- `npm run preview` serves `dist/` locally on `http://127.0.0.1:4173`
 
 ## Project structure
 
@@ -25,3 +26,4 @@ times for common race distances.
 - `app.js` wires DOM events and rendering
 - `calculator.js` contains the shared conversion and formatting logic
 - `scripts/build.mjs` produces the static build output
+- `scripts/preview.mjs` serves the built site for local review
