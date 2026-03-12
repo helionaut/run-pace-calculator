@@ -23,4 +23,4 @@ One-time repository setup in GitHub:
 Run `python3 -m http.server 4173` in the repo root, then open
 `http://localhost:4173/` for manual testing.
 
-Run `npm test` to validate the calculation helpers.
+Run `npm run validate` for the full local validation pass.

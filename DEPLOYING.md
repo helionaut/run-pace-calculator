@@ -22,7 +22,5 @@ Release flow:
 
 Local validation before pushing:
 
-- `npm test`
-- `node --check script.js`
-- `node --check calculator.js`
-- `bash -n scripts/verify-pages-content.sh`
+- `npm run validate`
+- `npm run verify:pages -- https://helionaut.github.io/run-pace-calculator/`

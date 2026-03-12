@@ -32,7 +32,7 @@ jobs:
           node-version: 22
 
       - name: Run calculation tests
-        run: npm test
+        run: npm run validate
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -55,4 +55,4 @@ jobs:
       - name: Verify deployed site
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
-        run: scripts/verify-pages-content.sh "$PAGE_URL"
+        run: npm run verify:pages -- "$PAGE_URL"
