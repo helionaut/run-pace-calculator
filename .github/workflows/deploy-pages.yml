@@ -51,3 +51,21 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Verify deployed site
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          html=""
+          for attempt in 1 2 3 4 5; do
+            html=$(curl --fail --silent --show-error --location "$PAGE_URL") && break
+            sleep 5
+          done
+
+          if [ -z "$html" ]; then
+            echo "Failed to fetch deployed page at $PAGE_URL" >&2
+            exit 1
+          fi
+
+          printf '%s' "$html" | grep -q "Run pace, speed, and finish time in one view."
+          printf '%s' "$html" | grep -q "Run Pace Calculator"

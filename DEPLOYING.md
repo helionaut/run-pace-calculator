@@ -15,6 +15,8 @@ Release flow:
 1. Push the branch with the intended site changes.
 2. Open and merge a pull request into `main`.
 3. Wait for the `Deploy GitHub Pages` workflow on `main` to finish.
+   The workflow performs a live fetch of the deployed `page_url` and checks
+   for the calculator heading before succeeding.
 4. Verify the production URL loads:
    `https://helionaut.github.io/run-pace-calculator/`
 
