@@ -1,0 +1,12 @@
+{
+  "name": "run-pace-calculator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "python3 -m http.server 4173 --directory src",
+    "preview": "python3 -m http.server 4173 --directory dist",
+    "test": "node --test"
+  }
+}
