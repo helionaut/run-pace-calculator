@@ -28,6 +28,16 @@ const state = {
   lastEdited: "pace",
 };
 
+function pairField(input, error) {
+  return { error, input };
+}
+
+const fieldPairs = [
+  pairField(elements.paceInput, elements.paceError),
+  pairField(elements.speedInput, elements.speedError),
+  pairField(elements.distanceInput, elements.distanceError),
+];
+
 function renderProjectionCards() {
   elements.projections.innerHTML = COMMON_RACES.map((race) => `
     <button
@@ -46,6 +56,12 @@ function renderProjectionCards() {
 function setError(element, message) {
   element.textContent = message ?? "";
   element.classList.toggle("is-visible", Boolean(message));
+
+  const matchingField = fieldPairs.find((field) => field.error === element);
+
+  if (matchingField) {
+    matchingField.input.setAttribute("aria-invalid", String(Boolean(message)));
+  }
 }
 
 function updatePresetSelection(distanceKm) {

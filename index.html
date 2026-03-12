@@ -55,6 +55,7 @@
               <span class="field-label">Pace</span>
               <span class="field-unit">min/km</span>
               <input
+                aria-describedby="pace-hint pace-error"
                 autocomplete="off"
                 id="pace"
                 inputmode="text"
@@ -62,7 +63,7 @@
                 spellcheck="false"
                 type="text"
               />
-              <span class="field-hint">Use m:ss, for example 5:00.</span>
+              <span class="field-hint" id="pace-hint">Use m:ss, for example 5:00.</span>
               <span aria-live="polite" class="field-error" id="pace-error"></span>
             </label>
 
@@ -70,6 +71,7 @@
               <span class="field-label">Speed</span>
               <span class="field-unit">km/h</span>
               <input
+                aria-describedby="speed-hint speed-error"
                 id="speed"
                 inputmode="decimal"
                 min="0.1"
@@ -77,7 +79,7 @@
                 step="0.01"
                 type="number"
               />
-              <span class="field-hint">The last pace or speed field you edit drives the outputs.</span>
+              <span class="field-hint" id="speed-hint">The last pace or speed field you edit drives the outputs.</span>
               <span aria-live="polite" class="field-error" id="speed-error"></span>
             </label>
 
@@ -85,6 +87,7 @@
               <span class="field-label">Distance</span>
               <span class="field-unit">km</span>
               <input
+                aria-describedby="distance-hint distance-error"
                 id="distance"
                 inputmode="decimal"
                 min="0.1"
@@ -92,7 +95,7 @@
                 step="0.01"
                 type="number"
               />
-              <span class="field-hint">Choose a common race below or enter any custom distance.</span>
+              <span class="field-hint" id="distance-hint">Choose a common race below or enter any custom distance.</span>
               <span aria-live="polite" class="field-error" id="distance-error"></span>
             </label>
           </form>

@@ -19,6 +19,10 @@ test("parsePaceInput rejects malformed values", () => {
   assert.equal(parsePaceInput("4-35").error, "Use m:ss for pace, for example 4:45.");
 });
 
+test("parsePaceInput accepts pace values with single-digit seconds", () => {
+  assert.deepEqual(parsePaceInput("4:5"), { error: null, value: 245 });
+});
+
 test("pace and speed conversions stay in sync", () => {
   const speed = paceToSpeedKmh(300);
   assert.equal(speed.toFixed(2), "12.00");
@@ -49,6 +53,29 @@ test("deriveCalculatorState falls back to speed when pace is invalid", () => {
   assert.equal(state.sourceUsed, "speed");
   assert.equal(state.status, "Using speed because the pace input needs attention.");
   assert.equal(formatDuration(state.metrics.finishSeconds), "1:45:29");
+});
+
+test("deriveCalculatorState reports invalid numeric distance input", () => {
+  const state = deriveCalculatorState({
+    distanceInput: "ten",
+    paceInput: "5:00",
+    source: "pace",
+    speedInput: "",
+  });
+
+  assert.equal(state.errors.distance, "Distance must be a number, for example 10.");
+  assert.equal(state.metrics.finishSeconds, null);
+});
+
+test("deriveCalculatorState reminds users which valid source is active", () => {
+  const state = deriveCalculatorState({
+    distanceInput: "10",
+    paceInput: "5:00",
+    source: "speed",
+    speedInput: "",
+  });
+
+  assert.equal(state.status, "Using pace as the active source.");
 });
 
 test("findRacePreset recognises the marathon distance", () => {
