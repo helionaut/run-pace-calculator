@@ -3,7 +3,7 @@
 ## GitHub Pages
 
 This repository deploys to GitHub Pages through
-[`.github/workflows/deploy-pages.yml`](/home/helionaut/workspaces/HEL-11/.github/workflows/deploy-pages.yml).
+[`deploy-pages.yml`](.github/workflows/deploy-pages.yml).
 
 One-time repository setup:
 

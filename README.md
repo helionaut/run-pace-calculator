@@ -8,9 +8,9 @@ Production URL: https://helionaut.github.io/run-pace-calculator/
 ## Deployment
 
 Pushes to `main` trigger the GitHub Pages workflow in
-[deploy-pages.yml](/home/helionaut/workspaces/HEL-11/.github/workflows/deploy-pages.yml).
+[deploy-pages.yml](.github/workflows/deploy-pages.yml).
 That workflow also verifies the deployed `page_url` after publish.
-See [DEPLOYING.md](/home/helionaut/workspaces/HEL-11/DEPLOYING.md) for the
+See [DEPLOYING.md](DEPLOYING.md) for the
 publish and verification checklist.
 
 One-time repository setup in GitHub:
