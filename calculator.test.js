@@ -82,6 +82,42 @@ test("deriveCalculatorState reminds users which valid source is active", () => {
   assert.equal(state.status, "Using pace as the active source.");
 });
 
+test("deriveCalculatorState points to an invalid pace when no fallback source exists", () => {
+  const state = deriveCalculatorState({
+    distanceInput: "10",
+    paceInput: "oops",
+    source: "pace",
+    speedInput: "",
+  });
+
+  assert.equal(state.sourceUsed, null);
+  assert.equal(state.status, "Fix the pace input to start converting.");
+});
+
+test("deriveCalculatorState points to an invalid speed when no fallback source exists", () => {
+  const state = deriveCalculatorState({
+    distanceInput: "10",
+    paceInput: "",
+    source: "speed",
+    speedInput: "fast",
+  });
+
+  assert.equal(state.sourceUsed, null);
+  assert.equal(state.status, "Fix the speed input to start converting.");
+});
+
+test("deriveCalculatorState points to both invalid inputs when neither source is usable", () => {
+  const state = deriveCalculatorState({
+    distanceInput: "10",
+    paceInput: "oops",
+    source: "pace",
+    speedInput: "fast",
+  });
+
+  assert.equal(state.sourceUsed, null);
+  assert.equal(state.status, "Fix the pace and speed inputs to start converting.");
+});
+
 test("deriveCalculatorState accepts comma decimals for speed-driven projections", () => {
   const state = deriveCalculatorState({
     distanceInput: "10,0",

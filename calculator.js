@@ -171,6 +171,18 @@ export function findRacePreset(distanceKm) {
 
 function describeSource(preferredSource, sourceUsed, paceState, speedState) {
   if (!sourceUsed) {
+    if (paceState.error && speedState.error) {
+      return "Fix the pace and speed inputs to start converting.";
+    }
+
+    if (paceState.error) {
+      return "Fix the pace input to start converting.";
+    }
+
+    if (speedState.error) {
+      return "Fix the speed input to start converting.";
+    }
+
     return "Enter a pace or a speed to start converting.";
   }
 
