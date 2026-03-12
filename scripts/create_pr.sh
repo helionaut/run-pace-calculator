@@ -72,7 +72,8 @@ prepare_handoff_fallback() {
   echo "To verify the fallback handoff locally:" >&2
   echo "  npm run handoff:verify -- $manifest_path" >&2
   echo "To import the fallback bundle into another clone:" >&2
-  echo "  ./scripts/import_bundle.sh $bundle_path <target-repo-dir>" >&2
+  echo "  git -C <target-repo-dir> fetch $bundle_path $branch:$branch" >&2
+  echo "  git -C <target-repo-dir> switch $branch" >&2
   return 1
 }
 
