@@ -14,11 +14,14 @@ projected finish time across common race distances.
 ## Local usage
 
 ```sh
+npm run check
 npm test
 npm run build
 npm run dev
 ```
 
+- `npm run check` runs the local validation stack: tests, build, and PR
+  publish dry-run
 - `npm run dev` serves the source files locally at `http://localhost:4173`
 - `npm run build` copies the static site into `dist/`
 - `npm run preview` serves the built output from `dist/`

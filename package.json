@@ -6,6 +6,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "bundle:export": "./scripts/export_bundle.sh",
+    "check": "npm test && npm run build && npm run pr:dry-run",
     "dev": "node scripts/serve.mjs src 4173",
     "handoff:prepare": "./scripts/prepare-handoff.sh",
     "handoff:verify": "node scripts/verify-handoff.mjs",
