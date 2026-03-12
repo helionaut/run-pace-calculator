@@ -23,4 +23,7 @@ Release flow:
 Local validation before pushing:
 
 - `npm run validate`
+
+Manual live verification after deployment:
+
 - `npm run verify:pages -- https://helionaut.github.io/run-pace-calculator/`
