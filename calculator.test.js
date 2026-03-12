@@ -1,0 +1,56 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import {
+  deriveCalculatorState,
+  findRacePreset,
+  formatDuration,
+  formatPace,
+  parsePaceInput,
+  paceToSpeedKmh,
+  speedToPaceSeconds,
+} from "./calculator.js";
+
+test("parsePaceInput accepts m:ss values", () => {
+  assert.deepEqual(parsePaceInput("4:35"), { error: null, value: 275 });
+});
+
+test("parsePaceInput rejects malformed values", () => {
+  assert.equal(parsePaceInput("4-35").error, "Use m:ss for pace, for example 4:45.");
+});
+
+test("pace and speed conversions stay in sync", () => {
+  const speed = paceToSpeedKmh(300);
+  assert.equal(speed.toFixed(2), "12.00");
+  assert.equal(Math.round(speedToPaceSeconds(speed)), 300);
+});
+
+test("deriveCalculatorState uses pace when it is the preferred valid source", () => {
+  const state = deriveCalculatorState({
+    distanceInput: "10",
+    paceInput: "5:00",
+    source: "pace",
+    speedInput: "11",
+  });
+
+  assert.equal(state.sourceUsed, "pace");
+  assert.equal(state.metrics.finishSeconds, 3000);
+  assert.equal(formatPace(state.metrics.paceSeconds), "5:00 /km");
+});
+
+test("deriveCalculatorState falls back to speed when pace is invalid", () => {
+  const state = deriveCalculatorState({
+    distanceInput: "21.0975",
+    paceInput: "oops",
+    source: "pace",
+    speedInput: "12",
+  });
+
+  assert.equal(state.sourceUsed, "speed");
+  assert.equal(state.status, "Using speed because the pace input needs attention.");
+  assert.equal(formatDuration(state.metrics.finishSeconds), "1:45:29");
+});
+
+test("findRacePreset recognises the marathon distance", () => {
+  assert.equal(findRacePreset(42.195)?.label, "Marathon");
+});
