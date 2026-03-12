@@ -55,3 +55,20 @@ To import that branch into another writable checkout and publish it from there:
 ```sh
 ./scripts/import_bundle.sh /tmp/run-pace-calculator.bundle /path/to/repo
 ```
+
+## Publish when GitHub access is restored
+
+```sh
+npm run pr:publish
+```
+
+The publish helper runs `npm test` and `npm run build`, resets `origin` to the
+GitHub repository URL if the workspace was bootstrapped from the local mirror,
+then pushes the current branch and creates or updates the PR from
+`docs/pull-request-draft.md`.
+
+To rehearse that flow without network access:
+
+```sh
+npm run pr:dry-run
+```
