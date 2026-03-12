@@ -33,3 +33,24 @@ npm run dev
 
 `.github/workflows/deploy-pages.yml` builds the static site and publishes `dist/`
 to GitHub Pages on pushes to `main`.
+
+## Offline handoff
+
+If GitHub push or PR creation is blocked in the current environment, export the
+current branch as a verified bundle:
+
+```sh
+npm run bundle:export
+```
+
+You can also pass an explicit output path:
+
+```sh
+./scripts/export_bundle.sh /tmp/run-pace-calculator.bundle
+```
+
+To import that branch into another writable checkout and publish it from there:
+
+```sh
+./scripts/import_bundle.sh /tmp/run-pace-calculator.bundle /path/to/repo
+```
