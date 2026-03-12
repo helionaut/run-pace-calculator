@@ -8,6 +8,6 @@
     "test": "node --test",
     "check": "node --check script.js && node --check calculator.js",
     "verify:pages": "bash scripts/verify-pages-content.sh",
-    "validate": "npm test && npm run check && bash -n scripts/verify-pages-content.sh"
+    "validate": "npm test && npm run check && bash -n scripts/verify-pages-content.sh && npm run build"
   }
 }
