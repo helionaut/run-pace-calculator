@@ -95,11 +95,14 @@ cat >"$summary_path" <<EOF
 
 ## Resume steps
 
+The paths below use \`<handoff-dir>\` for the directory that contains this
+summary, the manifest, and the exported bundle.
+
 1. Import the bundle into a writable clone:
-   \`./scripts/import_bundle.sh ${bundle_path} <target-repo-dir>\`
+   \`./scripts/import_bundle.sh <handoff-dir>/${bundle_name} <target-repo-dir>\`
 2. Change into that repo and verify the handoff manifest:
-   \`npm run handoff:verify -- ${manifest_path}\`
-3. Publish the branch and create/update the PR:
+   \`node scripts/verify-handoff.mjs <handoff-dir>/${manifest_name}\`
+3. Publish the branch and create or update the PR:
    \`npm run pr:publish\`
 
 ## Included artifacts

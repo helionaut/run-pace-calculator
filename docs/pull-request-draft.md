@@ -18,6 +18,8 @@ Build the first Run Pace Calculator slice
 - add product docs, deployment workflow, PR template, and offline handoff
   scripts with a repo-local manifest fallback and relative bundle import fixes
   for blocked publish environments
+- strengthen handoff verification so copied manifests also confirm the bundled
+  branch and head metadata
 
 ## Testing
 
@@ -31,6 +33,8 @@ Build the first Run Pace Calculator slice
 - [x] `npm run handoff:verify -- .handoff/HEL-8/HEL-8-handoff-manifest.json`
 - [x] import the persisted `.handoff/HEL-8` bundle into a fresh clone and run
   `npm run check`
+- [x] verify a copied handoff manifest still validates bundle branch/head
+  metadata outside the original workspace path
 - [x] `npm test` covers calculator logic and handoff manifest verification
 - [x] `npm run dev` (expected explicit bind error in this sandbox)
 - [x] `npm run preview` (expected explicit bind error in this sandbox)

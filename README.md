@@ -112,3 +112,6 @@ To verify those artifacts before resuming from another environment:
 ```sh
 npm run handoff:verify -- /tmp/<issue-key>-handoff/<issue-key>-handoff-manifest.json
 ```
+
+That verification checks each artifact digest and size, then confirms that the
+included bundle still contains the expected branch and head from the manifest.
