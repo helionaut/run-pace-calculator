@@ -71,13 +71,13 @@
               <span class="field-label">Speed</span>
               <span class="field-unit">km/h</span>
               <input
+                autocomplete="off"
                 aria-describedby="speed-hint speed-error"
                 id="speed"
                 inputmode="decimal"
-                min="0.1"
                 placeholder="12.00"
-                step="0.01"
-                type="number"
+                spellcheck="false"
+                type="text"
               />
               <span class="field-hint" id="speed-hint">The last pace or speed field you edit drives the outputs.</span>
               <span aria-live="polite" class="field-error" id="speed-error"></span>
@@ -87,13 +87,13 @@
               <span class="field-label">Distance</span>
               <span class="field-unit">km</span>
               <input
+                autocomplete="off"
                 aria-describedby="distance-hint distance-error"
                 id="distance"
                 inputmode="decimal"
-                min="0.1"
                 placeholder="10"
-                step="0.01"
-                type="number"
+                spellcheck="false"
+                type="text"
               />
               <span class="field-hint" id="distance-hint">Choose a common race below or enter any custom distance.</span>
               <span aria-live="polite" class="field-error" id="distance-error"></span>

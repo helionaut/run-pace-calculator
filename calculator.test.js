@@ -78,6 +78,19 @@ test("deriveCalculatorState reminds users which valid source is active", () => {
   assert.equal(state.status, "Using pace as the active source.");
 });
 
+test("deriveCalculatorState accepts comma decimals for speed-driven projections", () => {
+  const state = deriveCalculatorState({
+    distanceInput: "10,0",
+    paceInput: "",
+    source: "speed",
+    speedInput: "12,5",
+  });
+
+  assert.equal(formatDuration(state.metrics.finishSeconds), "48:00");
+  assert.equal(state.errors.speed, null);
+  assert.equal(state.errors.distance, null);
+});
+
 test("findRacePreset recognises the marathon distance", () => {
   assert.equal(findRacePreset(42.195)?.label, "Marathon");
 });
