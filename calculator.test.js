@@ -90,9 +90,53 @@ test("describeFinishCaption points to invalid distance input", () => {
       distanceError: "Distance must be a number, for example 10.",
       distanceKm: null,
       finishSeconds: null,
+      paceError: null,
+      speedError: null,
       speedKmh: 12,
     }),
     "Fix the distance input to project a finish time.",
+  );
+});
+
+test("describeFinishCaption points to invalid pace input when projection cannot run", () => {
+  assert.equal(
+    describeFinishCaption({
+      distanceError: null,
+      distanceKm: 10,
+      finishSeconds: null,
+      paceError: "Use m:ss for pace, for example 4:45.",
+      speedError: null,
+      speedKmh: null,
+    }),
+    "Fix the pace input to project a finish time.",
+  );
+});
+
+test("describeFinishCaption points to invalid speed input when projection cannot run", () => {
+  assert.equal(
+    describeFinishCaption({
+      distanceError: null,
+      distanceKm: 10,
+      finishSeconds: null,
+      paceError: null,
+      speedError: "Speed must be a number, for example 12.4.",
+      speedKmh: null,
+    }),
+    "Fix the speed input to project a finish time.",
+  );
+});
+
+test("describeFinishCaption points to both invalid source inputs when projection cannot run", () => {
+  assert.equal(
+    describeFinishCaption({
+      distanceError: null,
+      distanceKm: 10,
+      finishSeconds: null,
+      paceError: "Use m:ss for pace, for example 4:45.",
+      speedError: "Speed must be a number, for example 12.4.",
+      speedKmh: null,
+    }),
+    "Fix the pace and speed inputs to project a finish time.",
   );
 });
 
@@ -102,6 +146,8 @@ test("describeFinishCaption asks for a source when pace and speed are missing", 
       distanceError: null,
       distanceKm: 10,
       finishSeconds: null,
+      paceError: null,
+      speedError: null,
       speedKmh: null,
     }),
     "Add a pace or a speed to project a finish time.",

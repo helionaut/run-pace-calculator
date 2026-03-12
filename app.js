@@ -110,6 +110,8 @@ function updateOutputs() {
     distanceError: snapshot.errors.distance,
     distanceKm: snapshot.metrics.distanceKm,
     finishSeconds: snapshot.metrics.finishSeconds,
+    paceError: snapshot.errors.pace,
+    speedError: snapshot.errors.speed,
     speedKmh: snapshot.metrics.speedKmh,
   });
 

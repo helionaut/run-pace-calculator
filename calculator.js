@@ -169,7 +169,14 @@ export function findRacePreset(distanceKm) {
   return COMMON_RACES.find((race) => Math.abs(race.distanceKm - distanceKm) < 0.001) ?? null;
 }
 
-export function describeFinishCaption({ distanceError, distanceKm, finishSeconds, speedKmh }) {
+export function describeFinishCaption({
+  distanceError,
+  distanceKm,
+  finishSeconds,
+  paceError,
+  speedError,
+  speedKmh,
+}) {
   if (distanceError) {
     return "Fix the distance input to project a finish time.";
   }
@@ -180,6 +187,18 @@ export function describeFinishCaption({ distanceError, distanceKm, finishSeconds
   }
 
   if (speedKmh === null) {
+    if (paceError && speedError) {
+      return "Fix the pace and speed inputs to project a finish time.";
+    }
+
+    if (paceError) {
+      return "Fix the pace input to project a finish time.";
+    }
+
+    if (speedError) {
+      return "Fix the speed input to project a finish time.";
+    }
+
     return "Add a pace or a speed to project a finish time.";
   }
 
