@@ -67,8 +67,12 @@ To import the included bundle into another writable checkout and publish it
 from there:
 
 ```sh
-./scripts/import_bundle.sh .handoff/<issue-key>/*.bundle /path/to/repo
+git -C /path/to/repo fetch .handoff/<issue-key>/<bundle-name>.bundle <branch>:<branch>
+git -C /path/to/repo switch <branch>
 ```
+
+If you already have a checkout of this feature branch with the helper scripts
+available, you can also use `./scripts/import_bundle.sh <bundle-path> <target-repo-dir>`.
 
 ## Publish when GitHub access is restored
 

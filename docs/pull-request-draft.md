@@ -67,7 +67,8 @@ If GitHub access is still blocked in the current checkout:
 
 1. Run `npm run handoff:prepare` from this repo, or reuse the verified
    handoff directory exported during this run.
-2. Import the included bundle into a writable clone with
-   `./scripts/import_bundle.sh .handoff/HEL-8/run-pace-calculator-eugeniy-hel-8-initial-build-run-pace-calculator.bundle <target-repo-dir>`.
+2. Import the included bundle into a writable clone with:
+   `git -C <target-repo-dir> fetch .handoff/HEL-8/run-pace-calculator-eugeniy-hel-8-initial-build-run-pace-calculator.bundle eugeniy/hel-8-initial-build-run-pace-calculator:eugeniy/hel-8-initial-build-run-pace-calculator`
+   `git -C <target-repo-dir> switch eugeniy/hel-8-initial-build-run-pace-calculator`
 3. Push branch `eugeniy/hel-8-initial-build-run-pace-calculator`.
 4. Create the PR using the title and body above.
