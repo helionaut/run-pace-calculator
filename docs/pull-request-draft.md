@@ -1,11 +1,3 @@
-# Pull Request Draft
-
-## Proposed title
-
-Build the first Run Pace Calculator slice
-
-## Proposed body
-
 ## Summary
 
 - add a polished static run pace calculator with pace, speed, and finish-time
@@ -27,6 +19,7 @@ Build the first Run Pace Calculator slice
 - [x] `npm run build`
 - [x] `npm run check`
 - [x] `npm run pr:dry-run`
+- [x] `npm run pr:publish`
 - [x] `npm run bundle:export`
 - [x] `./scripts/import_bundle.sh .handoff/HEL-8/run-pace-calculator-eugeniy-hel-8-initial-build-run-pace-calculator.bundle <repo>`
 - [x] `npm run handoff:prepare`
