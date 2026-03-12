@@ -28,6 +28,7 @@ npm run dev
 - `docs/prd.md`
 - `docs/requirements.md`
 - `docs/implementation-plan.md`
+- `docs/pull-request-draft.md`
 
 ## Deployment
 
