@@ -19,6 +19,8 @@ if [[ ! -d "$target_repo/.git" ]]; then
   exit 1
 fi
 
+bundle_path="$(cd "$(dirname "$bundle_path")" && pwd)/$(basename "$bundle_path")"
+
 branch="$(
   git bundle list-heads "$bundle_path" |
     awk '$2 ~ /^refs\/heads\// {sub("refs/heads/", "", $2); print $2; exit}'
