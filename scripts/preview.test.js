@@ -17,3 +17,10 @@ test("resolveRequestPath keeps resolved files inside dist", () => {
     path.join(process.cwd(), "dist", "app.js"),
   );
 });
+
+test("resolveRequestPath normalizes nested asset paths", () => {
+  assert.equal(
+    resolveRequestPath("/nested/../styles.css"),
+    path.join(process.cwd(), "dist", "styles.css"),
+  );
+});

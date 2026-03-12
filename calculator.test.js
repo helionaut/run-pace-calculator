@@ -23,6 +23,10 @@ test("parsePaceInput accepts pace values with single-digit seconds", () => {
   assert.deepEqual(parsePaceInput("4:5"), { error: null, value: 245 });
 });
 
+test("parsePaceInput ignores surrounding whitespace", () => {
+  assert.deepEqual(parsePaceInput(" 4:05 "), { error: null, value: 245 });
+});
+
 test("pace and speed conversions stay in sync", () => {
   const speed = paceToSpeedKmh(300);
   assert.equal(speed.toFixed(2), "12.00");
