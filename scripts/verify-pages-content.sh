@@ -12,7 +12,16 @@ fi
 html=""
 
 for attempt in 1 2 3 4 5; do
-  html="$(curl --fail --silent --show-error --location "$page_url")" && break
+  html="$(
+    curl \
+      --fail \
+      --silent \
+      --show-error \
+      --location \
+      --connect-timeout 10 \
+      --max-time 15 \
+      "$page_url"
+  )" && break
   sleep 5
 done
 
