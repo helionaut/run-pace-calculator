@@ -34,6 +34,63 @@ export function getDistanceById(id) {
   return DISTANCES.find((distance) => distance.id === id) ?? DISTANCES[1];
 }
 
+function describePaceTimeError(message) {
+  if (message === "Minutes must stay between 0 and 59.") {
+    return "Pace minutes must stay between 0 and 59.";
+  }
+
+  if (message === "Seconds must stay between 0 and 59.") {
+    return "Pace seconds must stay between 0 and 59.";
+  }
+
+  return message;
+}
+
+function toWholeNumber(value) {
+  const number = Number(value);
+
+  if (!Number.isFinite(number) || !Number.isInteger(number)) {
+    return null;
+  }
+
+  return number;
+}
+
+export function validateTimeParts(
+  { hours = 0, minutes = 0, seconds = 0 },
+  { allowHoursOnly = true } = {}
+) {
+  const safeHours = toWholeNumber(hours);
+  const safeMinutes = toWholeNumber(minutes);
+  const safeSeconds = toWholeNumber(seconds);
+
+  if (safeHours === null || safeMinutes === null || safeSeconds === null) {
+    return { error: "Use whole numbers for hours, minutes, and seconds." };
+  }
+
+  if (safeHours < 0) {
+    return { error: "Hours cannot be negative." };
+  }
+
+  if (safeMinutes < 0 || safeMinutes > 59) {
+    return { error: "Minutes must stay between 0 and 59." };
+  }
+
+  if (safeSeconds < 0 || safeSeconds > 59) {
+    return { error: "Seconds must stay between 0 and 59." };
+  }
+
+  if (!allowHoursOnly && safeHours === 0 && safeMinutes === 0 && safeSeconds === 0) {
+    return { error: "Enter a time greater than zero." };
+  }
+
+  return {
+    hours: safeHours,
+    minutes: safeMinutes,
+    seconds: safeSeconds
+  };
+}
+
 export function timePartsToSeconds({ hours = 0, minutes = 0, seconds = 0 }) {
   const totalSeconds =
     (Number(hours) || 0) * 3600 +
@@ -103,8 +160,21 @@ export function calculatePerformance(input) {
   let speedKmh = 0;
 
   if (input.mode === "pace") {
-    const paceSeconds =
-      (Number(input.paceMinutes) || 0) * 60 + (Number(input.paceSeconds) || 0);
+    const paceParts = validateTimeParts({
+      hours: 0,
+      minutes: input.paceMinutes,
+      seconds: input.paceSeconds
+    });
+
+    if (paceParts.error) {
+      return { error: describePaceTimeError(paceParts.error) };
+    }
+
+    const paceSeconds = timePartsToSeconds({
+      hours: 0,
+      minutes: paceParts.minutes,
+      seconds: paceParts.seconds
+    });
 
     if (paceSeconds <= 0) {
       return { error: "Enter a pace greater than zero." };
@@ -120,15 +190,28 @@ export function calculatePerformance(input) {
 
     speedKmh = toKilometersPerHour(speedValue, input.speedUnit);
   } else if (input.mode === "finish") {
-    const finishSeconds = timePartsToSeconds({
-      hours: input.finishHours,
-      minutes: input.finishMinutes,
-      seconds: input.finishSeconds
-    });
+    const finishParts = validateTimeParts(
+      {
+        hours: input.finishHours,
+        minutes: input.finishMinutes,
+        seconds: input.finishSeconds
+      },
+      { allowHoursOnly: false }
+    );
 
-    if (finishSeconds <= 0) {
-      return { error: "Enter a finish time greater than zero." };
+    if (finishParts.error) {
+      return {
+        error: finishParts.error === "Enter a time greater than zero."
+          ? "Enter a finish time greater than zero."
+          : finishParts.error
+      };
     }
+
+    const finishSeconds = timePartsToSeconds({
+      hours: finishParts.hours,
+      minutes: finishParts.minutes,
+      seconds: finishParts.seconds
+    });
 
     speedKmh = speedFromFinishTime(finishSeconds, selectedDistance.kilometers);
   } else {

@@ -22,6 +22,8 @@
 - The app must show a projection list for all supported race distances.
 - Inputs must validate against zero or missing values with a clear inline
   message.
+- Time-part inputs must reject out-of-range or decimal minute/second values
+  with a clear inline message.
 
 ## Non-Functional Requirements
 

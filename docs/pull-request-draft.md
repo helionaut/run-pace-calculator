@@ -12,6 +12,8 @@ Build the first Run Pace Calculator slice
   input modes
 - add pure conversion helpers, Node tests, and a zero-dependency build for
   GitHub Pages
+- tighten calculator validation so pace and finish-time fields reject invalid
+  minute and second values
 - add product docs, deployment workflow, PR template, and offline handoff
   scripts for blocked publish environments
 

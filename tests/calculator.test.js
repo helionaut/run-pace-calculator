@@ -8,7 +8,8 @@ import {
   formatDuration,
   paceSecondsToSpeed,
   speedFromFinishTime,
-  speedToPaceSeconds
+  speedToPaceSeconds,
+  validateTimeParts
 } from "../src/lib/calculator.js";
 
 test("pace mode converts five-minute kilometers into consistent outputs", () => {
@@ -61,4 +62,38 @@ test("pure helpers agree on round-trip conversions", () => {
   assert.equal(Number(speed.toFixed(3)), 12);
   assert.equal(Number(reconstructedSpeed.toFixed(3)), 12);
   assert.equal(Number(speedToPaceSeconds(speed, "mi").toFixed(1)), 482.8);
+});
+
+test("pace mode rejects seconds outside the expected range", () => {
+  const result = calculatePerformance({
+    distanceId: "10k",
+    mode: "pace",
+    paceMinutes: 4,
+    paceSeconds: 75,
+    paceUnit: "km"
+  });
+
+  assert.equal(result.error, "Pace seconds must stay between 0 and 59.");
+});
+
+test("finish mode rejects minutes outside the expected range", () => {
+  const result = calculatePerformance({
+    distanceId: "5k",
+    finishHours: 0,
+    finishMinutes: 61,
+    finishSeconds: 0,
+    mode: "finish"
+  });
+
+  assert.equal(result.error, "Minutes must stay between 0 and 59.");
+});
+
+test("time part validation requires whole numbers", () => {
+  const result = validateTimeParts({
+    hours: 0,
+    minutes: 12.5,
+    seconds: 0
+  });
+
+  assert.equal(result.error, "Use whole numbers for hours, minutes, and seconds.");
 });
