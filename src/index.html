@@ -57,34 +57,52 @@
               <button
                 type="button"
                 class="segmented__button is-active"
+                id="mode-tab-pace"
+                role="tab"
                 data-mode-button
                 data-mode="pace"
-                aria-pressed="true"
+                aria-controls="input-panel-pace"
+                aria-selected="true"
+                tabindex="0"
               >
                 Pace
               </button>
               <button
                 type="button"
                 class="segmented__button"
+                id="mode-tab-speed"
+                role="tab"
                 data-mode-button
                 data-mode="speed"
-                aria-pressed="false"
+                aria-controls="input-panel-speed"
+                aria-selected="false"
+                tabindex="-1"
               >
                 Speed
               </button>
               <button
                 type="button"
                 class="segmented__button"
+                id="mode-tab-finish"
+                role="tab"
                 data-mode-button
                 data-mode="finish"
-                aria-pressed="false"
+                aria-controls="input-panel-finish"
+                aria-selected="false"
+                tabindex="-1"
               >
                 Finish Time
               </button>
             </div>
 
             <div class="input-panels">
-              <div class="input-panel" data-input-panel="pace">
+              <div
+                class="input-panel"
+                id="input-panel-pace"
+                role="tabpanel"
+                aria-labelledby="mode-tab-pace"
+                data-input-panel="pace"
+              >
                 <div class="field-row">
                   <label class="field">
                     <span>Pace minutes</span>
@@ -119,7 +137,14 @@
                 </div>
               </div>
 
-              <div class="input-panel" data-input-panel="speed" hidden>
+              <div
+                class="input-panel"
+                id="input-panel-speed"
+                role="tabpanel"
+                aria-labelledby="mode-tab-speed"
+                data-input-panel="speed"
+                hidden
+              >
                 <div class="field-row">
                   <label class="field field--wide">
                     <span>Speed</span>
@@ -142,7 +167,14 @@
                 </div>
               </div>
 
-              <div class="input-panel" data-input-panel="finish" hidden>
+              <div
+                class="input-panel"
+                id="input-panel-finish"
+                role="tabpanel"
+                aria-labelledby="mode-tab-finish"
+                data-input-panel="finish"
+                hidden
+              >
                 <div class="field-row">
                   <label class="field">
                     <span>Hours</span>

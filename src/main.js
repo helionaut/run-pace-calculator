@@ -5,6 +5,7 @@ import {
   formatPace,
   formatSpeed
 } from "./lib/calculator.js";
+import { getModeFromNavigationKey } from "./lib/mode-navigation.js";
 
 const elements = {
   distanceSelect: document.querySelector("#distance-select"),
@@ -33,6 +34,8 @@ const elements = {
 const state = {
   mode: "pace"
 };
+const modeButtons = [...elements.modeButtons];
+const modes = modeButtons.map((button) => button.dataset.mode);
 
 function populateDistances() {
   for (const distance of DISTANCES) {
@@ -54,13 +57,18 @@ function populateHeroChips() {
   }
 }
 
-function setMode(nextMode) {
+function setMode(nextMode, { focusButton = false } = {}) {
   state.mode = nextMode;
 
-  for (const button of elements.modeButtons) {
+  for (const button of modeButtons) {
     const isActive = button.dataset.mode === nextMode;
     button.classList.toggle("is-active", isActive);
-    button.setAttribute("aria-pressed", String(isActive));
+    button.setAttribute("aria-selected", String(isActive));
+    button.tabIndex = isActive ? 0 : -1;
+
+    if (isActive && focusButton) {
+      button.focus();
+    }
   }
 
   for (const panel of elements.panels) {
@@ -163,9 +171,20 @@ function render() {
 }
 
 function bindEvents() {
-  for (const button of elements.modeButtons) {
+  for (const button of modeButtons) {
     button.addEventListener("click", () => {
       setMode(button.dataset.mode);
+    });
+
+    button.addEventListener("keydown", (event) => {
+      const nextMode = getModeFromNavigationKey(modes, state.mode, event.key);
+
+      if (!nextMode) {
+        return;
+      }
+
+      event.preventDefault();
+      setMode(nextMode, { focusButton: true });
     });
   }
 
