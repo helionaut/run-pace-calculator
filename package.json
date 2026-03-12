@@ -7,7 +7,8 @@
     "build": "bash scripts/build-dist.sh",
     "test": "node --test",
     "check": "node --check script.js && node --check calculator.js",
+    "check:shell": "bash -n scripts/build-dist.sh && bash -n scripts/verify-pages-content.sh",
     "verify:pages": "bash scripts/verify-pages-content.sh",
-    "validate": "npm test && npm run check && bash -n scripts/verify-pages-content.sh && npm run build"
+    "validate": "npm test && npm run check && npm run check:shell && npm run build"
   }
 }
