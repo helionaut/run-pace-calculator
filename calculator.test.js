@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  describeFinishCaption,
   deriveCalculatorState,
   findRacePreset,
   formatDuration,
@@ -69,6 +70,42 @@ test("deriveCalculatorState reports invalid numeric distance input", () => {
 
   assert.equal(state.errors.distance, "Distance must be a number, for example 10.");
   assert.equal(state.metrics.finishSeconds, null);
+});
+
+test("describeFinishCaption shows the selected race projection when complete", () => {
+  assert.equal(
+    describeFinishCaption({
+      distanceError: null,
+      distanceKm: 42.195,
+      finishSeconds: 12600,
+      speedKmh: 12,
+    }),
+    "Marathon projection",
+  );
+});
+
+test("describeFinishCaption points to invalid distance input", () => {
+  assert.equal(
+    describeFinishCaption({
+      distanceError: "Distance must be a number, for example 10.",
+      distanceKm: null,
+      finishSeconds: null,
+      speedKmh: 12,
+    }),
+    "Fix the distance input to project a finish time.",
+  );
+});
+
+test("describeFinishCaption asks for a source when pace and speed are missing", () => {
+  assert.equal(
+    describeFinishCaption({
+      distanceError: null,
+      distanceKm: 10,
+      finishSeconds: null,
+      speedKmh: null,
+    }),
+    "Add a pace or a speed to project a finish time.",
+  );
 });
 
 test("deriveCalculatorState reminds users which valid source is active", () => {

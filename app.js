@@ -1,5 +1,6 @@
 import {
   COMMON_RACES,
+  describeFinishCaption,
   deriveCalculatorState,
   findRacePreset,
   formatDistance,
@@ -105,15 +106,12 @@ function updateOutputs() {
   elements.paceOutput.textContent = formatPace(snapshot.metrics.paceSeconds);
   elements.speedOutput.textContent = formatSpeed(snapshot.metrics.speedKmh);
   elements.finishOutput.textContent = formatDuration(snapshot.metrics.finishSeconds);
-
-  if (snapshot.metrics.finishSeconds !== null && snapshot.metrics.distanceKm !== null) {
-    const distanceLabel = findRacePreset(snapshot.metrics.distanceKm)?.label ?? formatDistance(snapshot.metrics.distanceKm);
-    elements.finishCaption.textContent = `${distanceLabel} projection`;
-  } else if (snapshot.metrics.speedKmh === null) {
-    elements.finishCaption.textContent = "Add a pace or a speed to project a finish time.";
-  } else {
-    elements.finishCaption.textContent = "Add a distance to project a finish time.";
-  }
+  elements.finishCaption.textContent = describeFinishCaption({
+    distanceError: snapshot.errors.distance,
+    distanceKm: snapshot.metrics.distanceKm,
+    finishSeconds: snapshot.metrics.finishSeconds,
+    speedKmh: snapshot.metrics.speedKmh,
+  });
 
   updatePresetSelection(snapshot.metrics.distanceKm);
   updateProjectionTimes(snapshot.projections);
