@@ -65,7 +65,12 @@ sha256_file() {
 }
 
 file_size() {
-  stat -c '%s' "$1"
+  if stat -c '%s' "$1" >/dev/null 2>&1; then
+    stat -c '%s' "$1"
+    return
+  fi
+
+  stat -f '%z' "$1"
 }
 
 ./scripts/export_bundle.sh "$bundle_path" >/dev/null
