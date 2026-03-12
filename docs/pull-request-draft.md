@@ -27,8 +27,8 @@ Build the first Run Pace Calculator slice
 - [x] `npm run build`
 - [x] `npm run check`
 - [x] `npm run pr:dry-run`
-- [x] `./scripts/export_bundle.sh /tmp/run-pace-calculator-hel-8.bundle`
-- [x] `./scripts/import_bundle.sh /tmp/run-pace-calculator-hel-8.bundle <repo>`
+- [x] `npm run bundle:export`
+- [x] `./scripts/import_bundle.sh .handoff/HEL-8/run-pace-calculator-eugeniy-hel-8-initial-build-run-pace-calculator.bundle <repo>`
 - [x] `npm run handoff:prepare`
 - [x] `npm run handoff:verify -- .handoff/HEL-8/HEL-8-handoff-manifest.json`
 - [x] import the persisted `.handoff/HEL-8` bundle into a fresh clone and run

@@ -23,9 +23,26 @@ if [[ -z "$repo_name" ]]; then
   repo_name="$(basename "$repo_root")"
 fi
 
+issue_identifier=""
+if [[ "$branch" =~ ([A-Za-z]+-[0-9]+) ]]; then
+  issue_identifier="${BASH_REMATCH[1]^^}"
+else
+  issue_identifier="$(
+    sed -n 's/^[[:space:]]*"starter_issue_identifier":[[:space:]]*"\([^"]*\)".*/\1/p' "$repo_root/.bootstrap/project.json" |
+      head -n 1
+  )"
+fi
+
 safe_branch="${branch//\//-}"
-bundle_path="${1:-/tmp/${repo_name}-${safe_branch}.bundle}"
+default_bundle_dir="/tmp"
+if [[ -n "$issue_identifier" ]]; then
+  default_bundle_dir="$repo_root/.handoff/$issue_identifier"
+fi
+
+bundle_path="${1:-$default_bundle_dir/${repo_name}-${safe_branch}.bundle}"
 head="$(git rev-parse HEAD)"
+
+mkdir -p "$(dirname "$bundle_path")"
 
 git bundle create "$bundle_path" "$branch"
 git bundle verify "$bundle_path" >/dev/null

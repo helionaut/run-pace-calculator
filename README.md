@@ -74,6 +74,15 @@ git -C /path/to/repo switch <branch>
 If you already have a checkout of this feature branch with the helper scripts
 available, you can also use `./scripts/import_bundle.sh <bundle-path> <target-repo-dir>`.
 
+If you only want the raw branch bundle without the full manifest package:
+
+```sh
+npm run bundle:export
+```
+
+That now writes the bundle into `.handoff/<issue-key>/` by default, and still
+accepts an explicit output path when needed.
+
 ## Publish when GitHub access is restored
 
 ```sh
