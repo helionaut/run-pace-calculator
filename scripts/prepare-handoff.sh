@@ -1,16 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -ne 1 ]]; then
-  echo "Usage: ./scripts/prepare-handoff.sh <output-dir>" >&2
+if [[ $# -gt 1 ]]; then
+  echo "Usage: ./scripts/prepare-handoff.sh [output-dir]" >&2
   exit 1
 fi
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
-
-output_dir="$1"
-mkdir -p "$output_dir"
 
 if [[ -n "$(git status --short)" ]]; then
   echo "Working tree must be clean before preparing a handoff." >&2
@@ -29,15 +26,24 @@ repo_url="$(
   sed -n 's/^[[:space:]]*"url":[[:space:]]*"\([^"]*\)".*/\1/p' .bootstrap/project.json |
     head -n 1
 )"
-issue_identifier="$(
-  sed -n 's/^[[:space:]]*"starter_issue_identifier":[[:space:]]*"\([^"]*\)".*/\1/p' .bootstrap/project.json |
-    head -n 1
-)"
+
+issue_identifier=""
+if [[ "$branch" =~ ([A-Za-z]+-[0-9]+) ]]; then
+  issue_identifier="${BASH_REMATCH[1]^^}"
+else
+  issue_identifier="$(
+    sed -n 's/^[[:space:]]*"starter_issue_identifier":[[:space:]]*"\([^"]*\)".*/\1/p' .bootstrap/project.json |
+      head -n 1
+  )"
+fi
 
 if [[ -z "$repo_slug" || -z "$repo_url" || -z "$issue_identifier" ]]; then
-  echo "Missing repo metadata in .bootstrap/project.json." >&2
+  echo "Missing repo metadata or issue identifier for handoff preparation." >&2
   exit 1
 fi
+
+output_dir="${1:-$repo_root/.handoff/$issue_identifier}"
+mkdir -p "$output_dir"
 
 safe_branch="${branch//\//-}"
 bundle_name="${repo_slug}-${safe_branch}.bundle"
@@ -154,5 +160,6 @@ cat >"$manifest_path" <<EOF
 EOF
 
 printf 'Handoff directory: %s\n' "$output_dir"
+printf 'Bundle: %s\n' "$bundle_path"
 printf 'Manifest: %s\n' "$manifest_path"
 printf 'Bundle SHA-256: %s\n' "$bundle_sha"

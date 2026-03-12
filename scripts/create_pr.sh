@@ -21,70 +21,57 @@ repo_url="$(
   sed -n 's/^[[:space:]]*"url":[[:space:]]*"\([^"]*\)".*/\1/p' "$repo_root/.bootstrap/project.json" |
     head -n 1
 )"
+issue_identifier=""
+if [[ "$branch" =~ ([A-Za-z]+-[0-9]+) ]]; then
+  issue_identifier="${BASH_REMATCH[1]^^}"
+else
+  issue_identifier="$(
+    sed -n 's/^[[:space:]]*"starter_issue_identifier":[[:space:]]*"\([^"]*\)".*/\1/p' "$repo_root/.bootstrap/project.json" |
+      head -n 1
+  )"
+fi
 if [[ -z "$repo_url" ]]; then
   echo "Could not determine the GitHub repo URL from .bootstrap/project.json." >&2
   exit 1
 fi
+if [[ -z "$issue_identifier" ]]; then
+  echo "Could not determine an issue identifier from the current branch or .bootstrap/project.json." >&2
+  exit 1
+fi
 
 origin_url="$(git remote get-url origin 2>/dev/null || true)"
-safe_branch="${branch//\//-}"
-repo_name="$(
-  sed -n 's/^[[:space:]]*"slug":[[:space:]]*"\([^"]*\)".*/\1/p' "$repo_root/.bootstrap/project.json" |
-    head -n 1
-)"
-if [[ -z "$repo_name" ]]; then
-  repo_name="$(basename "$repo_root")"
-fi
-default_bundle_path="${BUNDLE_PATH:-/tmp/${repo_name}-${safe_branch}.bundle}"
+default_handoff_dir="${HANDOFF_DIR:-$repo_root/.handoff/$issue_identifier}"
 
-sha256_file() {
-  if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$1" | awk '{print $1}'
-    return
-  fi
-
-  if command -v shasum >/dev/null 2>&1; then
-    shasum -a 256 "$1" | awk '{print $1}'
-    return
-  fi
-
-  return 1
-}
-
-export_bundle_fallback() {
+prepare_handoff_fallback() {
   local reason="$1"
-  local bundle_output
+  local handoff_output
   local bundle_path
-  local bundle_sha
+  local manifest_path
 
   echo "$reason" >&2
 
-  if [[ -n "${BUNDLE_PATH-}" ]]; then
-    if ! bundle_output="$(./scripts/export_bundle.sh "$BUNDLE_PATH")"; then
-      echo "Offline bundle export also failed." >&2
-      return 1
-    fi
-  else
-    if ! bundle_output="$(./scripts/export_bundle.sh)"; then
-      echo "Offline bundle export also failed." >&2
-      return 1
-    fi
-  fi
-
-  printf '%s\n' "$bundle_output" >&2
-  bundle_path="$(printf '%s\n' "$bundle_output" | awk -F': ' '/^Bundle:/ {print $2; exit}')"
-  if [[ -z "$bundle_path" ]]; then
-    echo "Could not determine the exported bundle path." >&2
+  if ! handoff_output="$(./scripts/prepare-handoff.sh "$default_handoff_dir")"; then
+    echo "Offline handoff preparation also failed." >&2
     return 1
   fi
 
-  if bundle_sha="$(sha256_file "$bundle_path")"; then
-    echo "Bundle SHA-256: $bundle_sha" >&2
-  else
-    echo "Bundle SHA-256: unavailable (sha256 tool not found)." >&2
+  printf '%s\n' "$handoff_output" >&2
+  bundle_path="$(printf '%s\n' "$handoff_output" | awk -F': ' '/^Bundle:/ {print $2; exit}')"
+  manifest_path="$(printf '%s\n' "$handoff_output" | awk -F': ' '/^Manifest:/ {print $2; exit}')"
+
+  if [[ -z "$bundle_path" ]]; then
+    echo "Could not determine the handoff bundle path." >&2
+    return 1
   fi
 
-  echo "To import the fallback artifact into another clone:" >&2
+  if [[ -z "$manifest_path" ]]; then
+    echo "Could not determine the handoff manifest path." >&2
+    return 1
+  fi
+
+  echo "To verify the fallback handoff locally:" >&2
+  echo "  npm run handoff:verify -- $manifest_path" >&2
+  echo "To import the fallback bundle into another clone:" >&2
   echo "  ./scripts/import_bundle.sh $bundle_path <target-repo-dir>" >&2
   return 1
 }
@@ -123,7 +110,7 @@ if $dry_run; then
   echo "Would verify GitHub auth with: gh auth status"
   echo "Would verify GitHub DNS with: python3 -c 'import socket; socket.getaddrinfo(\"github.com\", 443)'"
   echo "Would verify GitHub HTTPS with: curl --silent --show-error --output /dev/null --connect-timeout 5 https://github.com"
-  echo "Would export offline bundle on auth/DNS/HTTPS failure to: $default_bundle_path"
+  echo "Would prepare offline handoff directory on auth/DNS/HTTPS failure at: $default_handoff_dir"
   echo "Dry run enabled; no network requests will be made."
   echo "Would run: git push -u origin HEAD"
   echo "Would inspect PR state with: gh pr view --json state -q .state"
@@ -136,16 +123,16 @@ npm test
 npm run build
 
 if ! gh auth status >/dev/null 2>&1; then
-  export_bundle_fallback "GitHub auth is not ready. Run 'gh auth status' for details."
+  prepare_handoff_fallback "GitHub auth is not ready. Run 'gh auth status' for details."
 fi
 
 if ! python3 -c "import socket; socket.getaddrinfo('github.com', 443)" >/dev/null 2>&1; then
-  export_bundle_fallback "GitHub DNS resolution failed. Check outbound network access."
+  prepare_handoff_fallback "GitHub DNS resolution failed. Check outbound network access."
 fi
 
 if command -v curl >/dev/null 2>&1; then
   if ! curl --silent --show-error --output /dev/null --connect-timeout 5 https://github.com; then
-    export_bundle_fallback "GitHub HTTPS reachability check failed. Check outbound network access."
+    prepare_handoff_fallback "GitHub HTTPS reachability check failed. Check outbound network access."
   fi
 fi
 

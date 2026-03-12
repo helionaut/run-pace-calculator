@@ -15,7 +15,7 @@ Build the first Run Pace Calculator slice
 - tighten calculator validation so pace and finish-time fields reject invalid
   decimal or out-of-range time parts without capping long pace minutes
 - add product docs, deployment workflow, PR template, and offline handoff
-  scripts for blocked publish environments
+  scripts with a repo-local manifest fallback for blocked publish environments
 
 ## Testing
 
@@ -25,8 +25,8 @@ Build the first Run Pace Calculator slice
 - [x] `npm run pr:dry-run`
 - [x] `./scripts/export_bundle.sh /tmp/run-pace-calculator-hel-8.bundle`
 - [x] `./scripts/import_bundle.sh /tmp/run-pace-calculator-hel-8.bundle <repo>`
-- [x] `npm run handoff:prepare -- /tmp/hel-8-handoff`
-- [x] `npm run handoff:verify -- /tmp/hel-8-handoff/HEL-8-handoff-manifest.json`
+- [x] `npm run handoff:prepare`
+- [x] `npm run handoff:verify -- .handoff/HEL-8/HEL-8-handoff-manifest.json`
 - [x] `npm test` covers calculator logic and handoff manifest verification
 - [x] `npm run dev` (expected explicit bind error in this sandbox)
 - [x] `npm run preview` (expected explicit bind error in this sandbox)
@@ -48,9 +48,9 @@ Build the first Run Pace Calculator slice
 
 If GitHub access is still blocked in the current checkout:
 
-1. Run `npm run bundle:export` from this repo, or reuse the verified bundle
-   exported during this run.
-2. Import the bundle into a writable clone with
-   `./scripts/import_bundle.sh <bundle-path> <target-repo-dir>`.
+1. Run `npm run handoff:prepare` from this repo, or reuse the verified
+   handoff directory exported during this run.
+2. Import the included bundle into a writable clone with
+   `./scripts/import_bundle.sh .handoff/HEL-8/run-pace-calculator-eugeniy-hel-8-initial-build-run-pace-calculator.bundle <target-repo-dir>`.
 3. Push branch `eugeniy/hel-8-initial-build-run-pace-calculator`.
 4. Create the PR using the title and body above.

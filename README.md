@@ -42,23 +42,32 @@ to GitHub Pages on pushes to `main`.
 
 ## Offline handoff
 
-If GitHub push or PR creation is blocked in the current environment, export the
-current branch as a verified bundle:
+If GitHub push or PR creation is blocked in the current environment, prepare a
+manifest-backed handoff directory:
 
 ```sh
-npm run bundle:export
+npm run handoff:prepare
 ```
 
-You can also pass an explicit output path:
+By default that writes verified artifacts into `.handoff/<issue-key>`, using
+the issue key parsed from the current branch name. That directory stays in the
+workspace and is ignored by git. You can still pass an explicit output path:
 
 ```sh
-./scripts/export_bundle.sh /tmp/run-pace-calculator.bundle
+npm run handoff:prepare -- /tmp/hel-8-handoff
 ```
 
-To import that branch into another writable checkout and publish it from there:
+To verify the exported handoff before resuming elsewhere:
 
 ```sh
-./scripts/import_bundle.sh /tmp/run-pace-calculator.bundle /path/to/repo
+npm run handoff:verify -- .handoff/<issue-key>/<issue-key>-handoff-manifest.json
+```
+
+To import the included bundle into another writable checkout and publish it
+from there:
+
+```sh
+./scripts/import_bundle.sh .handoff/<issue-key>/*.bundle /path/to/repo
 ```
 
 ## Publish when GitHub access is restored
@@ -70,7 +79,9 @@ npm run pr:publish
 The publish helper runs `npm test` and `npm run build`, resets `origin` to the
 GitHub repository URL if the workspace was bootstrapped from the local mirror,
 then pushes the current branch and creates or updates the PR from
-`docs/pull-request-draft.md`.
+`docs/pull-request-draft.md`. If GitHub auth or network checks fail first, it
+now writes a full handoff directory to `.handoff/<issue-key>` by default
+instead of only exporting a raw bundle to `/tmp`.
 
 To rehearse that flow without network access:
 
@@ -78,9 +89,16 @@ To rehearse that flow without network access:
 npm run pr:dry-run
 ```
 
-## Prepare a handoff bundle
+## Prepare a resumable handoff directory
 
-When publication is still blocked, export a resumable handoff directory:
+When publication is still blocked, export a resumable handoff directory into
+the repo-local ignored fallback path:
+
+```sh
+npm run handoff:prepare
+```
+
+You can also target another directory explicitly:
 
 ```sh
 npm run handoff:prepare -- /tmp/hel-8-handoff
@@ -92,5 +110,5 @@ commit summary, and a machine-readable manifest into the target directory.
 To verify those artifacts before resuming from another environment:
 
 ```sh
-npm run handoff:verify -- /tmp/hel-8-handoff/HEL-8-handoff-manifest.json
+npm run handoff:verify -- /tmp/<issue-key>-handoff/<issue-key>-handoff-manifest.json
 ```
