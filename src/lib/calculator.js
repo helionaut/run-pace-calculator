@@ -171,15 +171,15 @@ function deriveCanonicalValues(state) {
 
   return {
     distanceKm:
-      !distance.error && distance.value !== null
+      !distance.error && distance.value != null
         ? distanceToKilometers(distance.value, state.unit)
         : null,
     paceSpeedKmh:
-      !pace.error && pace.value !== null
+      !pace.error && pace.value != null
         ? paceToSpeedKmh(pace.value, state.unit)
         : null,
     speedKmh:
-      !speed.error && speed.value !== null
+      !speed.error && speed.value != null
         ? toKilometersPerHour(speed.value, state.unit)
         : null
   };
@@ -969,7 +969,7 @@ export function deriveCalculatorView(state, previousResult = null) {
 
     errors.distance = distance.error;
 
-    if (!distance.error && distance.value !== null) {
+    if (!distance.error && distance.value != null) {
       distanceKm = canonical.distanceKm;
     }
   }
@@ -981,7 +981,7 @@ export function deriveCalculatorView(state, previousResult = null) {
 
     errors.finish = finish.error;
 
-    if (!errors.distance && !errors.finish && distanceKm !== null) {
+    if (!errors.distance && !errors.finish && Number.isFinite(distanceKm)) {
       const speedKmh = speedFromFinishTime(finish.value, distanceKm);
 
       if (Number.isFinite(speedKmh) && speedKmh > 0) {
@@ -995,7 +995,13 @@ export function deriveCalculatorView(state, previousResult = null) {
 
     errors.pace = pace.error;
 
-    if (!errors.distance && !errors.pace && distanceKm !== null) {
+    if (
+      !errors.distance &&
+      !errors.pace &&
+      Number.isFinite(distanceKm) &&
+      Number.isFinite(canonical.paceSpeedKmh) &&
+      canonical.paceSpeedKmh > 0
+    ) {
       const speedKmh = canonical.paceSpeedKmh;
       currentResult = createResult(state, speedKmh, distanceKm);
     }
@@ -1006,7 +1012,11 @@ export function deriveCalculatorView(state, previousResult = null) {
 
     errors.pace = pace.error;
 
-    if (!errors.pace) {
+    if (
+      !errors.pace &&
+      Number.isFinite(canonical.paceSpeedKmh) &&
+      canonical.paceSpeedKmh > 0
+    ) {
       const speedKmh = canonical.paceSpeedKmh;
       currentResult = createResult(state, speedKmh, null);
     }
@@ -1017,7 +1027,11 @@ export function deriveCalculatorView(state, previousResult = null) {
 
     errors.speed = speed.error;
 
-    if (!errors.speed) {
+    if (
+      !errors.speed &&
+      Number.isFinite(canonical.speedKmh) &&
+      canonical.speedKmh > 0
+    ) {
       currentResult = createResult(state, canonical.speedKmh, null);
     }
   }

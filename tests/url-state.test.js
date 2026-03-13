@@ -323,3 +323,16 @@ test("main clears malformed query state back to the default calculator", async (
   assert.equal(app.window.history.calls.length, 1);
   assert.equal(app.window.history.calls[0], "/index.html");
 });
+
+test("main reset clears a valid deep link back to a clean URL", async (t) => {
+  const app = await loadApp(t, "?mode=finish&unit=km&preset=custom&distance=10&pm=5&ps=0");
+
+  app.elements["reset-button"].emit("click");
+
+  assert.equal(app.window.location.search, "");
+  assert.equal(app.elements["distance-input"].value, "");
+  assert.equal(app.elements["pace-minutes"].value, "");
+  assert.equal(app.elements["pace-seconds"].value, "");
+  assert.equal(app.window.history.calls.at(-1), "/index.html");
+  assert.equal(app.window.reloadCount, 0);
+});

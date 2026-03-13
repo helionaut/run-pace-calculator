@@ -379,3 +379,12 @@ test("blank or invalid calculator state serializes to a clean URL", () => {
   assert.equal(serializeCalculatorState(createFormState()), "");
   assert.equal(serializeCalculatorState(partialState), "");
 });
+
+test("empty finish-mode state stays empty and serializes to a clean URL", () => {
+  const finishState = buildState({ mode: MODES.FINISH });
+  const view = deriveCalculatorView(finishState);
+
+  assert.equal(view.resultState, "empty");
+  assert.equal(view.currentResult, null);
+  assert.equal(serializeCalculatorState(finishState), "");
+});
