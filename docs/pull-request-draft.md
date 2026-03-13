@@ -6,8 +6,9 @@
   include final partial rows for half marathon and marathon distances
 - expand automated coverage for metric, imperial, half-marathon, and marathon
   split behavior plus compact split-table markup
-- strengthen the blocked-publish handoff flow so regenerated handoff summaries
-  keep the latest auth and network blocker snapshot automatically
+- strengthen publish and handoff automation so detached-HEAD CI runs keep the
+  correct branch metadata and regenerated handoff summaries preserve the latest
+  auth and network blocker snapshot automatically
 
 ## Testing
 
@@ -25,8 +26,8 @@
 - Long custom distances rely on the split table's bounded scroll area to stay
   within the one-screen layout.
 - The branch includes handoff-workflow polish alongside the calculator feature,
-  so the eventual PR body should be published from this updated draft rather
-  than an earlier feature-only version.
+  so the eventual PR should be published from this updated draft rather than an
+  earlier feature-only version.
 
 ## Checklist
 
