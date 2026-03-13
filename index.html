@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Run Pace Calculator</title>
+    <meta
+      name="description"
+      content="Engineering harness for the Run Pace Calculator static web app."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="module" src="./script.js"></script>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <p class="eyebrow">Run Pace Calculator</p>
+        <h1>Engineering harness ready for calculator feature work.</h1>
+        <p class="lede">
+          This static shell gives the repo one predictable build, preview, and
+          validation path before the full calculator UI and logic arrive.
+        </p>
+        <p class="status" data-status-banner>
+          Local workflow: <code>npm ci</code> -> <code>npm run dev</code> ->
+          <code>npm run check</code>
+        </p>
+      </section>
+
+      <section class="card-grid" aria-label="Engineering workflow">
+        <article class="card">
+          <h2>Build</h2>
+          <p>
+            <code>npm run build</code> creates the deployable
+            <code>dist/</code> directory from the tracked static assets.
+          </p>
+        </article>
+
+        <article class="card">
+          <h2>Preview</h2>
+          <p>
+            <code>npm run preview</code> serves the production artifact locally
+            so the packaged output can be reviewed before deploy work lands.
+          </p>
+        </article>
+
+        <article class="card">
+          <h2>Validate</h2>
+          <p>
+            <code>npm run check</code> runs the same non-interactive path used
+            by pull request CI.
+          </p>
+        </article>
+      </section>
+
+      <footer class="footer">
+        <p>Repository harness status: <span data-build-stamp>loading</span></p>
+      </footer>
+    </main>
+  </body>
+</html>

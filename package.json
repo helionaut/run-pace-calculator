@@ -1,0 +1,17 @@
+{
+  "name": "run-pace-calculator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node scripts/serve.mjs . 3000",
+    "build": "node scripts/build.mjs",
+    "preview": "npm run build && node scripts/serve.mjs dist 4173",
+    "test": "node --test",
+    "check:syntax": "node --check script.js && node --check scripts/build.mjs && node --check scripts/check-dist.mjs && node --check scripts/serve.mjs",
+    "check": "npm run check:syntax && npm test && npm run build && node scripts/check-dist.mjs"
+  }
+}
