@@ -57,6 +57,8 @@ manifest_path="$output_dir/$manifest_name"
 capture_note_path="$output_dir/PREVIEW-CAPTURE.md"
 preview_root_dir="$output_dir/previews"
 preview_archive_path="$output_dir/preview-snapshots.tar"
+bundled_verifier_path="$output_dir/verify-handoff.mjs"
+resume_script_path="$output_dir/resume-from-handoff.sh"
 preview_notes=""
 demo_script=""
 preview_before_ref="${HANDOFF_PREVIEW_BEFORE_REF:-}"
@@ -67,6 +69,10 @@ capture_note_size=""
 capture_note_sha=""
 preview_archive_size=""
 preview_archive_sha=""
+bundled_verifier_size=""
+bundled_verifier_sha=""
+resume_script_size=""
+resume_script_sha=""
 optional_artifact_lines=""
 optional_resume_step=""
 optional_manifest_artifact=""
@@ -170,6 +176,79 @@ package_preview_snapshots() {
   tar -cf "$preview_archive_path" -C "$preview_root_dir" before after
 }
 
+write_resume_script() {
+  cat >"$resume_script_path" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ \$# -ne 1 ]]; then
+  echo "Usage: \$(basename "\$0") <target-repo-dir>" >&2
+  exit 1
+fi
+
+script_dir="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+target_repo="\$1"
+manifest_path="\$script_dir/${manifest_name}"
+
+if [[ ! -d "\$target_repo/.git" ]]; then
+  echo "Target repo is not a git checkout: \$target_repo" >&2
+  exit 1
+fi
+
+node "\$script_dir/verify-handoff.mjs" "\$manifest_path" >/dev/null
+
+mapfile -t handoff_artifacts < <(
+  node - "\$manifest_path" <<'NODE'
+const fs = require("node:fs");
+const path = require("node:path");
+
+const manifestPath = path.resolve(process.argv[2]);
+const manifestDir = path.dirname(manifestPath);
+const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+const bundle = manifest.artifacts?.find((artifact) => artifact.name === "bundle");
+const captureNote = manifest.artifacts?.find(
+  (artifact) => artifact.name === "preview_capture_note"
+);
+
+if (!bundle) {
+  console.error(`Manifest is missing a bundle artifact: ${manifestPath}`);
+  process.exit(1);
+}
+
+console.log(path.resolve(manifestDir, bundle.path));
+console.log(captureNote ? path.resolve(manifestDir, captureNote.path) : "");
+NODE
+)
+
+bundle_path="\${handoff_artifacts[0]}"
+capture_note_path="\${handoff_artifacts[1]:-}"
+branch="\$(
+  git bundle list-heads "\$bundle_path" |
+    awk '\$2 ~ /^refs\\/heads\\// {sub("refs/heads/", "", \$2); print \$2; exit}'
+)"
+
+if [[ -z "\$branch" ]]; then
+  echo "Could not determine a branch ref from bundle: \$bundle_path" >&2
+  exit 1
+fi
+
+git -C "\$target_repo" fetch "\$bundle_path" "\$branch:\$branch"
+git -C "\$target_repo" switch "\$branch" >/dev/null
+
+printf 'Verified manifest: %s\n' "\$manifest_path"
+printf 'Imported branch: %s\n' "\$branch"
+printf 'Target repo: %s\n' "\$target_repo"
+printf 'Head: %s\n' "\$(git -C "\$target_repo" rev-parse "\$branch")"
+printf 'Checked out: %s\n' "\$(git -C "\$target_repo" branch --show-current)"
+
+if [[ -n "\$capture_note_path" ]]; then
+  printf 'Preview capture: %s\n' "\$capture_note_path"
+fi
+EOF
+
+  chmod +x "$resume_script_path"
+}
+
 if [[ -n "$preview_after_ref" && -z "$preview_before_ref" ]]; then
   echo "HANDOFF_PREVIEW_AFTER_REF requires HANDOFF_PREVIEW_BEFORE_REF." >&2
   exit 1
@@ -185,6 +264,8 @@ fi
 cp docs/pull-request-draft.md "$pr_draft_path"
 npm run pr:dry-run >"$dry_run_path"
 git log --oneline -n 20 >"$commits_path"
+cp scripts/verify-handoff.mjs "$bundled_verifier_path"
+write_resume_script
 
 rm -rf "$preview_root_dir" "$capture_note_path" "$preview_archive_path"
 
@@ -206,15 +287,37 @@ dry_run_sha="$(sha256_file "$dry_run_path")"
 dry_run_size="$(file_size "$dry_run_path")"
 commits_sha="$(sha256_file "$commits_path")"
 commits_size="$(file_size "$commits_path")"
+bundled_verifier_sha="$(sha256_file "$bundled_verifier_path")"
+bundled_verifier_size="$(file_size "$bundled_verifier_path")"
+resume_script_sha="$(sha256_file "$resume_script_path")"
+resume_script_size="$(file_size "$resume_script_path")"
+
+optional_artifact_lines=$'- `verify-handoff.mjs`\n- `resume-from-handoff.sh`'
+optional_manifest_artifact="$(cat <<EOF
+    ,
+    {
+      "name": "bundled_verify_handoff",
+      "path": "verify-handoff.mjs",
+      "sha256": "${bundled_verifier_sha}",
+      "size": ${bundled_verifier_size}
+    },
+    {
+      "name": "resume_from_handoff",
+      "path": "resume-from-handoff.sh",
+      "sha256": "${resume_script_sha}",
+      "size": ${resume_script_size}
+    }
+EOF
+)"
 
 if [[ -f "$capture_note_path" ]]; then
   capture_note_sha="$(sha256_file "$capture_note_path")"
   capture_note_size="$(file_size "$capture_note_path")"
   preview_archive_sha="$(sha256_file "$preview_archive_path")"
   preview_archive_size="$(file_size "$preview_archive_path")"
-  optional_artifact_lines=$'- `PREVIEW-CAPTURE.md`\n- `preview-snapshots.tar`\n- `previews/before/`\n- `previews/after/`'
+  optional_artifact_lines="${optional_artifact_lines}"$'\n'"- \`PREVIEW-CAPTURE.md\`"$'\n'"- \`preview-snapshots.tar\`"$'\n'"- \`previews/before/\`"$'\n'"- \`previews/after/\`"
   optional_resume_step=$'7. If `PREVIEW-CAPTURE.md` is present, use its serve commands to capture the\n   required before/after screenshots or short recording in a browser-enabled\n   environment.\n'
-  optional_manifest_artifact="$(cat <<EOF
+  optional_manifest_artifact="${optional_manifest_artifact}$(cat <<EOF
     ,
     {
       "name": "preview_capture_note",
@@ -263,14 +366,13 @@ The paths below use \`<handoff-dir>\` for the directory that contains this
 summary, the manifest, and the exported bundle.
 
 1. Clone or choose a writable checkout of the repo at \`<target-repo-dir>\`.
-2. If the checkout already has this repo's helper scripts available, import the
-   handoff in one step:
-   \`./scripts/import_bundle.sh <handoff-dir> <target-repo-dir>\`
+2. From the handoff directory itself, run the bundled resume helper:
+   \`./resume-from-handoff.sh <target-repo-dir>\`
 3. Or import the bundle into that checkout with plain git:
    \`git -C <target-repo-dir> fetch <handoff-dir>/${bundle_name} ${branch}:${branch}\`
    \`git -C <target-repo-dir> switch ${branch}\`
-4. Verify the copied handoff manifest from the repo root:
-   \`node scripts/verify-handoff.mjs <handoff-dir>/${manifest_name}\`
+4. Verify the copied handoff manifest with the bundled verifier:
+   \`node <handoff-dir>/verify-handoff.mjs <handoff-dir>/${manifest_name}\`
 5. Publish the branch and create or update the PR:
    \`npm run pr:publish\`
 6. Attach the resulting PR to \`${issue_identifier}\` and move the issue to

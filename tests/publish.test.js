@@ -109,8 +109,10 @@ test("prepare_handoff summary includes preview notes from the PR draft", async (
   assert.match(summary, /## Demo script/);
   assert.match(summary, /Turn on the finish-time lock, set the time to `1:45:00`/);
   assert.match(summary, /Attach the resulting PR to `HEL-16` and move the issue to/);
-  assert.match(summary, /\.\/scripts\/import_bundle\.sh <handoff-dir> <target-repo-dir>/);
+  assert.match(summary, /\.\/resume-from-handoff\.sh <target-repo-dir>/);
   assert.match(summary, /- `SUMMARY.md`/);
+  assert.match(summary, /- `verify-handoff\.mjs`/);
+  assert.match(summary, /- `resume-from-handoff\.sh`/);
   assert.match(summary, /In a browser-enabled environment, use the demo script above/);
   assert.ok(manifestPathMatch, "prepare-handoff should print the manifest path");
 
@@ -151,4 +153,38 @@ test("prepare_handoff can package optional preview capture artifacts", async () 
   assert.ok(manifestPathMatch, "prepare-handoff should print the manifest path");
 
   run("node", ["scripts/verify-handoff.mjs", manifestPathMatch[1]], cloneDir);
+});
+
+test("prepare_handoff exports a self-contained resume script", async () => {
+  const cloneDir = await cloneRepo();
+  const outputDir = path.join(cloneDir, ".handoff-test");
+  const output = run("./scripts/prepare-handoff.sh", [outputDir], cloneDir);
+  const summary = await readFile(path.join(outputDir, "SUMMARY.md"), "utf8");
+  const resumeScriptPath = path.join(outputDir, "resume-from-handoff.sh");
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "hel-16-resume-test."));
+  const targetRepo = path.join(tempRoot, "target");
+
+  run("git", ["clone", cloneDir, targetRepo], tempRoot);
+  run("git", ["switch", "-c", "scratch", "HEAD~1"], targetRepo);
+  run(
+    "git",
+    [
+      "branch",
+      "-D",
+      run("git", ["branch", "--show-current"], cloneDir)
+    ],
+    targetRepo
+  );
+
+  const resumeOutput = run(resumeScriptPath, [targetRepo], outputDir);
+  const manifestPathMatch = output.match(/^Manifest: (.+)$/m);
+
+  assert.match(summary, /\.\/resume-from-handoff\.sh <target-repo-dir>/);
+  assert.match(resumeOutput, /Verified manifest:/);
+  assert.match(resumeOutput, /Imported branch:/);
+  assert.equal(
+    run("git", ["branch", "--show-current"], targetRepo),
+    run("git", ["branch", "--show-current"], cloneDir)
+  );
+  assert.ok(manifestPathMatch, "prepare-handoff should print the manifest path");
 });

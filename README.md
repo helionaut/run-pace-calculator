@@ -152,6 +152,16 @@ To verify the exported handoff before resuming elsewhere:
 npm run handoff:verify -- .handoff/<issue-key>/<issue-key>-handoff-manifest.json
 ```
 
+The exported handoff is self-contained. From inside `.handoff/<issue-key>/`,
+you can resume into another checkout with:
+
+```sh
+./resume-from-handoff.sh /path/to/repo
+```
+
+That bundled helper verifies the packaged manifest, imports the bundled
+branch, and switches the target checkout onto that branch.
+
 The exported `.handoff/<issue-key>/SUMMARY.md` includes the current preview
 notes plus a reusable demo script for the eventual screenshot or short
 recording capture in a browser-enabled environment.
