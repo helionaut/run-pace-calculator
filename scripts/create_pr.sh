@@ -13,9 +13,27 @@ elif [[ "${1-}" != "" ]]; then
 fi
 
 branch="$(git branch --show-current)"
-pr_title="Build the first Run Pace Calculator slice"
 pr_body_file="docs/pull-request-draft.md"
 dirty="$(git status --short)"
+
+derive_pr_title() {
+  local branch_name="$1"
+  local title_slug="${branch_name##*/}"
+
+  if [[ "$title_slug" =~ ^[[:alpha:]]+-[0-9]+-(.+)$ ]]; then
+    title_slug="${BASH_REMATCH[1]}"
+  fi
+
+  title_slug="${title_slug//-/ }"
+
+  if [[ -z "$title_slug" ]]; then
+    title_slug="Update run pace calculator"
+  fi
+
+  printf '%s\n' "${title_slug^}"
+}
+
+pr_title="${PR_TITLE:-$(derive_pr_title "$branch")}"
 
 repo_url="$(
   sed -n 's/^[[:space:]]*"url":[[:space:]]*"\([^"]*\)".*/\1/p' "$repo_root/.bootstrap/project.json" |

@@ -12,6 +12,7 @@ Production URL: https://helionaut.github.io/run-pace-calculator/
 - Pace, speed, finish-time, and conversion modes
 - Metric and imperial conversions
 - Projection table from one mile through the marathon
+- Selected-distance split table with kilometer or mile targets
 - Responsive layout with inline validation and keyboard-operable mode tabs
 - Zero-dependency static build suitable for GitHub Pages
 - Product docs for the PRD, requirements, and implementation plan
