@@ -37,6 +37,17 @@
   selected distance; locking time or pace keeps that metric fixed while the
   slider recomputes the others.
 
+## Demo script
+
+- Open the page on the default calculator view and show that the distance
+  slider plus the pace, speed, and finish-time cards are visible together
+  without scrolling.
+- Enter a pace of `8:00 /mi`, then drag the distance slider from `5K` through
+  `Half Marathon` to show speed stays visible while finish time updates live.
+- Turn on the finish-time lock, set the time to `1:45:00`, then drag the
+  slider toward `Marathon` to show the required pace and speed recompute
+  against the fixed time target.
+
 ## Checklist
 
 - [x] Scope matches the linked Linear issue

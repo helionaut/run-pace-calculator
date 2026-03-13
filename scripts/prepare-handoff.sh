@@ -55,6 +55,7 @@ summary_path="$output_dir/SUMMARY.md"
 commits_path="$output_dir/commits.txt"
 manifest_path="$output_dir/$manifest_name"
 preview_notes=""
+demo_script=""
 
 sha256_file() {
   if command -v sha256sum >/dev/null 2>&1; then
@@ -74,14 +75,15 @@ file_size() {
   stat -f '%z' "$1"
 }
 
-./scripts/export_bundle.sh "$bundle_path" >/dev/null
-cp docs/pull-request-draft.md "$pr_draft_path"
-npm run pr:dry-run >"$dry_run_path"
-git log --oneline -n 20 >"$commits_path"
+extract_markdown_section() {
+  local heading="$1"
+  local source_path="$2"
 
-preview_notes="$(
-  awk '
-    /^## Preview notes/ {capture=1; next}
+  awk -v heading="$heading" '
+    BEGIN {
+      pattern = "^## " heading "$"
+    }
+    $0 ~ pattern {capture=1; next}
     /^## / && capture {exit}
     capture {
       if (!started && $0 == "") {
@@ -100,8 +102,16 @@ preview_notes="$(
         print lines[i]
       }
     }
-  ' docs/pull-request-draft.md
-)"
+  ' "$source_path"
+}
+
+./scripts/export_bundle.sh "$bundle_path" >/dev/null
+cp docs/pull-request-draft.md "$pr_draft_path"
+npm run pr:dry-run >"$dry_run_path"
+git log --oneline -n 20 >"$commits_path"
+
+preview_notes="$(extract_markdown_section "Preview notes" docs/pull-request-draft.md)"
+demo_script="$(extract_markdown_section "Demo script" docs/pull-request-draft.md)"
 
 bundle_sha="$(sha256_file "$bundle_path")"
 bundle_size="$(file_size "$bundle_path")"
@@ -128,6 +138,13 @@ $(if [[ -n "$preview_notes" ]]; then
     printf '%s\n' "$preview_notes"
   else
     printf '%s\n' '- Preview notes not found in docs/pull-request-draft.md.'
+  fi)
+
+## Demo script
+$(if [[ -n "$demo_script" ]]; then
+    printf '%s\n' "$demo_script"
+  else
+    printf '%s\n' '- Demo script not found in docs/pull-request-draft.md.'
   fi)
 
 ## Resume steps
