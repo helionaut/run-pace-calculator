@@ -44,8 +44,19 @@ derive_pr_title() {
     return
   fi
 
+  local draft_title
   local branch_slug
   local issue_prefix
+
+  draft_title="$(
+    sed -n 's/^<!--[[:space:]]*PR_TITLE:[[:space:]]*\(.*[^[:space:]]\)[[:space:]]*-->$/\1/p' "$pr_body_file" |
+      head -n 1
+  )"
+
+  if [[ -n "$draft_title" ]]; then
+    printf '%s\n' "$draft_title"
+    return
+  fi
 
   branch_slug="${branch##*/}"
   issue_prefix="${issue_identifier,,}-"

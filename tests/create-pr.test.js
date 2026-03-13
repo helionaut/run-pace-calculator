@@ -27,7 +27,7 @@ function git(args, cwd) {
   return run("git", args, cwd);
 }
 
-async function createFixtureRepo(branchName) {
+async function createFixtureRepo(branchName, draftBody = "## Summary\n\n- fixture\n") {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "run-pace-calculator-pr."));
   const repoDir = path.join(tempRoot, "repo");
 
@@ -54,7 +54,7 @@ async function createFixtureRepo(branchName) {
   );
   await writeFile(
     path.join(repoDir, "docs", "pull-request-draft.md"),
-    "## Summary\n\n- fixture\n"
+    draftBody
   );
   await writeFile(path.join(repoDir, "README.md"), "# fixture\n");
   await writeFile(
@@ -90,9 +90,40 @@ test("create_pr.sh dry-run infers a PR title from the current issue branch", asy
   );
 });
 
-test("create_pr.sh dry-run lets PR_TITLE override the inferred title", async (t) => {
+test("create_pr.sh dry-run prefers PR draft title metadata over branch inference", async (t) => {
   const { repoDir, tempRoot } = await createFixtureRepo(
-    "eugeniy/hel-19-add-confidence-focused-result-presentation-and-input"
+    "eugeniy/hel-19-add-confidence-focused-result-presentation-and-input",
+    [
+      "<!-- PR_TITLE: Add confidence-focused result presentation and input provenance styling -->",
+      "",
+      "## Summary",
+      "",
+      "- fixture",
+      ""
+    ].join("\n")
+  );
+  t.after(async () => {
+    await rm(tempRoot, { force: true, recursive: true });
+  });
+  const output = run("./scripts/create_pr.sh", ["--dry-run"], repoDir);
+
+  assert.match(
+    output,
+    /Using PR title: Add confidence-focused result presentation and input provenance styling/
+  );
+});
+
+test("create_pr.sh dry-run lets PR_TITLE override the draft title", async (t) => {
+  const { repoDir, tempRoot } = await createFixtureRepo(
+    "eugeniy/hel-19-add-confidence-focused-result-presentation-and-input",
+    [
+      "<!-- PR_TITLE: Add confidence-focused result presentation and input provenance styling -->",
+      "",
+      "## Summary",
+      "",
+      "- fixture",
+      ""
+    ].join("\n")
   );
   t.after(async () => {
     await rm(tempRoot, { force: true, recursive: true });
