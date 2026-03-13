@@ -2,24 +2,32 @@
 
 ## Functional Requirements
 
-- The app must support three calculation modes:
-  - Pace to speed and projected finish times.
-  - Speed to pace and projected finish times.
-  - Finish time for a selected race distance to pace and speed.
+- The app must present one compact calculator surface instead of separate
+  multi-section modes.
+- The app must support three driving inputs:
+  - Pace to speed and projected finish time.
+  - Speed to pace and projected finish time.
+  - Finish time for a selected race distance to required pace and speed.
 - The app must support both metric and imperial inputs:
   - Pace in minutes per kilometer or mile.
   - Speed in km/h or mph.
 - The app must expose common race distances:
-  - 1 mile
   - 5K
   - 10K
-  - 10 miles
   - Half marathon
   - Marathon
+- The app must allow custom distances in addition to the named presets.
+- The app must provide a distance slider that updates the selected distance
+  continuously.
 - The app must show the projected finish time for the selected distance.
 - The app must show equivalent pace in both `/km` and `/mi`.
 - The app must show equivalent speed in both `km/h` and `mph`.
-- The app must show a projection list for all supported race distances.
+- The app must show a projection list for all supported race distances in a
+  compact disclosure.
+- The app must support locking at least pace and finish time so distance
+  changes can recompute the remaining derived values.
+- The app must make user-provided values visually distinct from auto-derived
+  values.
 - Inputs must validate against zero or missing values with a clear inline
   message.
 - Time-part inputs must reject decimal values and invalid minute/second ranges
@@ -30,6 +38,8 @@
 - The repository must remain deployable as a static site on GitHub Pages.
 - The implementation must not rely on a server.
 - The site must be responsive from mobile widths upward.
+- The primary calculator interaction should fit in a single screen on a common
+  laptop viewport.
 - Core calculation logic must live in pure functions that can be tested in Node.
 - The site must run without an install step beyond the built-in Node runtime.
 

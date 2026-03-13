@@ -99,9 +99,8 @@ short explicit error instead of a server traceback.
 - `src/styles.css` defines the calculator interface and responsive layout.
 - `src/main.js` wires DOM events and rendering.
 - `src/lib/calculator.js` contains the shared conversion and formatting logic.
-- `src/lib/mode-navigation.js` contains the keyboard tab-navigation helper.
 - `tests/*.test.js` covers calculator logic, DOM interaction behavior,
-  build/serve harness behavior, handoff verification, import flow, and mode navigation.
+  build/serve harness behavior, handoff verification, and import flow.
 - `scripts/build.mjs` produces the static build output.
 - `scripts/serve.mjs` serves either `src/` or `dist/` locally.
 - `scripts/check-dist.mjs` smoke-checks the built artifact.
