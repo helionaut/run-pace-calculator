@@ -179,7 +179,9 @@ git -C /path/to/repo switch <branch>
 
 If you already have a checkout of this feature branch with the helper scripts
 available, you can also use
-`./scripts/import_bundle.sh <bundle-path> <target-repo-dir>`.
+`./scripts/import_bundle.sh <bundle-path|manifest-path|handoff-dir> <target-repo-dir>`.
+When you pass a handoff manifest or the handoff directory itself, the helper
+verifies the manifest first and then imports the bundled branch.
 
 If you only want the raw branch bundle without the full manifest package:
 
