@@ -78,6 +78,15 @@ cp docs/pull-request-draft.md "$pr_draft_path"
 npm run pr:dry-run >"$dry_run_path"
 git log --oneline -n 20 >"$commits_path"
 
+pr_title="$(
+  sed -n 's/^Would create a PR with: gh pr create --head .* --title "\(.*\)" --body-file .*$/\1/p' "$dry_run_path" |
+    head -n 1
+)"
+pr_body_source="$(
+  sed -n 's/^Would use body file: \(.*\)$/\1/p' "$dry_run_path" |
+    head -n 1
+)"
+
 bundle_sha="$(sha256_file "$bundle_path")"
 bundle_size="$(file_size "$bundle_path")"
 pr_draft_sha="$(sha256_file "$pr_draft_path")"
@@ -95,6 +104,8 @@ cat >"$summary_path" <<EOF
 - Branch: ${branch}
 - Head: ${head}
 - Generated at: ${generated_at}
+- PR title: ${pr_title:-<see publish-dry-run.txt>}
+- PR body source: ${pr_body_source:-docs/pull-request-draft.md}
 - Verified bundle: ${bundle_name}
 - Bundle SHA-256: ${bundle_sha}
 
@@ -111,6 +122,8 @@ summary, the manifest, and the exported bundle.
    \`node scripts/verify-handoff.mjs <handoff-dir>/${manifest_name}\`
 4. Publish the branch and create or update the PR:
    \`npm run pr:publish\`
+   Manual fallback title: \`${pr_title:-see publish-dry-run.txt}\`
+   Manual fallback body: \`${pr_body_source:-docs/pull-request-draft.md}\`
 
 ## Included artifacts
 
