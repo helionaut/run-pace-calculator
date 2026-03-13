@@ -150,6 +150,37 @@ test("half marathon includes a final partial split in metric mode", () => {
   );
 });
 
+test("marathon includes a final partial split in imperial mode", () => {
+  const presetState = applyPresetSelection(createFormState(), "marathon");
+  const milePresetState = applyUnitChange(presetState, "mi");
+  const mileState = {
+    ...milePresetState,
+    mode: MODES.FINISH,
+    inputs: {
+      ...milePresetState.inputs,
+      paceMinutes: "8",
+      paceSeconds: "0"
+    }
+  };
+  const view = deriveCalculatorView(mileState);
+
+  assert.equal(view.resultState, "current");
+  assert.equal(view.display.splitTitle, "Mile splits");
+  assert.match(view.display.splitMeta, /final partial split/i);
+  assert.equal(view.display.splitRows.length, 27);
+  assert.deepEqual(
+    view.display.splitRows.slice(-2).map((row) => [
+      row.label,
+      row.finishLabel,
+      row.isPartial
+    ]),
+    [
+      ["26 mi", "03:28:00", false],
+      ["Finish (26.21876 mi)", "03:29:45", true]
+    ]
+  );
+});
+
 test("incomplete structured finish time blocks a fresh calculation", () => {
   const view = deriveCalculatorView(
     buildState(
