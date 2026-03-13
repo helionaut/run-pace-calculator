@@ -70,8 +70,12 @@ Instructions:
 1. This is an unattended orchestration session. Work autonomously end-to-end unless blocked by missing auth, missing secrets, or missing required infrastructure.
 2. Keep a single persistent workpad comment on the issue and update it as you go.
 3. Use repo-local skills from `.codex/skills`.
-4. Validate meaningful behavior before handoff.
-5. Move the issue to `Human Review` only after the implementation, validation, and PR linkage are complete.
+4. Work test-first by default for behavior changes:
+   - add or update tests before, or at least in the same change as, the implementation
+   - do not hand off behavior changes without explicit test evidence
+   - if the task is too ambiguous to write meaningful tests, clarify the acceptance criteria in the workpad before coding
+5. Validate meaningful behavior before handoff.
+6. Move the issue to `Human Review` only after the implementation, validation, test evidence, and PR linkage are complete.
 
 Repo metadata:
 
