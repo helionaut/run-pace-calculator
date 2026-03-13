@@ -7,8 +7,8 @@
 - add matching provenance cues to the active input clusters and a dedicated
   locked-value summary in the compact context card
 - preserve stale-result clarity and accessibility with explicit text labels,
-  screen-reader-friendly provenance regions, and tests for entered-vs-derived
-  plus stale-state rendering paths
+  screen-reader-friendly provenance regions, aligned stale input badges, and
+  tests for entered-vs-derived plus stale-state rendering paths
 
 ## Testing
 
@@ -31,6 +31,9 @@
   locked-input block that stays readable when the result is stale.
 - Stale results continue to show the last valid answer, now explicitly marked
   as `Last valid` instead of looking like fresh output.
+- When stale output survives a mode or convert-source switch, the input
+  clusters keep the previous driving value marked as `Locked` so the last
+  valid answer does not contradict the current edit state.
 
 ## Checklist
 
