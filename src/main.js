@@ -17,23 +17,33 @@ import { getModeFromNavigationKey } from "./lib/mode-navigation.js";
 
 const elements = {
   alternatePaceLabel: document.querySelector("#alternate-pace-label"),
+  alternatePaceProvenance: document.querySelector("#alternate-pace-provenance"),
   alternatePaceValue: document.querySelector("#alternate-pace-value"),
   alternateSpeedLabel: document.querySelector("#alternate-speed-label"),
+  alternateSpeedProvenance: document.querySelector("#alternate-speed-provenance"),
   alternateSpeedValue: document.querySelector("#alternate-speed-value"),
   convertSourceButtons: document.querySelectorAll("[data-convert-source-button]"),
   convertSourceCluster: document.querySelector("#convert-source-cluster"),
   distanceCluster: document.querySelector("#distance-cluster"),
+  distanceClusterProvenance: document.querySelector("#distance-cluster-provenance"),
   distanceError: document.querySelector("#distance-error"),
   distanceInput: document.querySelector("#distance-input"),
   distanceLabel: document.querySelector("#distance-label"),
+  distanceProvenance: document.querySelector("#distance-provenance"),
   finishCluster: document.querySelector("#finish-cluster"),
+  finishClusterProvenance: document.querySelector("#finish-cluster-provenance"),
   finishError: document.querySelector("#finish-error"),
   finishHours: document.querySelector("#finish-hours"),
   finishMinutes: document.querySelector("#finish-minutes"),
   finishSeconds: document.querySelector("#finish-seconds"),
   heroChips: document.querySelector("#hero-chips"),
+  lockedLabel: document.querySelector("#locked-label"),
+  lockedMeta: document.querySelector("#locked-meta"),
+  lockedProvenance: document.querySelector("#locked-provenance"),
+  lockedValue: document.querySelector("#locked-value"),
   modeButtons: document.querySelectorAll("[data-mode-button]"),
   paceCluster: document.querySelector("#pace-cluster"),
+  paceClusterProvenance: document.querySelector("#pace-cluster-provenance"),
   paceCopy: document.querySelector("#pace-copy"),
   paceError: document.querySelector("#pace-error"),
   paceMinutes: document.querySelector("#pace-minutes"),
@@ -41,6 +51,7 @@ const elements = {
   presetSelect: document.querySelector("#preset-select"),
   primaryLabel: document.querySelector("#primary-label"),
   primaryMeta: document.querySelector("#primary-meta"),
+  primaryProvenance: document.querySelector("#primary-provenance"),
   primaryValue: document.querySelector("#primary-value"),
   projectionRows: document.querySelector("#projection-rows"),
   resetButton: document.querySelector("#reset-button"),
@@ -48,10 +59,13 @@ const elements = {
   resultNote: document.querySelector("#result-note"),
   selectedDistance: document.querySelector("#selected-distance"),
   selectedPaceLabel: document.querySelector("#selected-pace-label"),
+  selectedPaceProvenance: document.querySelector("#selected-pace-provenance"),
   selectedPaceValue: document.querySelector("#selected-pace-value"),
   selectedSpeedLabel: document.querySelector("#selected-speed-label"),
+  selectedSpeedProvenance: document.querySelector("#selected-speed-provenance"),
   selectedSpeedValue: document.querySelector("#selected-speed-value"),
   speedCluster: document.querySelector("#speed-cluster"),
+  speedClusterProvenance: document.querySelector("#speed-cluster-provenance"),
   speedError: document.querySelector("#speed-error"),
   speedInput: document.querySelector("#speed-input"),
   speedLabel: document.querySelector("#speed-label"),
@@ -209,6 +223,69 @@ function renderVisibility(view) {
   elements.speedCluster.hidden = !view.showSpeedFields;
 }
 
+function renderProvenanceBadges(element, descriptor, label) {
+  const badges = descriptor?.badges ?? [];
+
+  element.hidden = badges.length === 0;
+
+  if (badges.length === 0) {
+    element.replaceChildren();
+    return;
+  }
+
+  const srLabel = document.createElement("span");
+
+  srLabel.className = "sr-only";
+  srLabel.textContent = `${label}: `;
+
+  element.replaceChildren(
+    srLabel,
+    ...badges.map((badge) => {
+      const badgeElement = document.createElement("span");
+
+      badgeElement.className = `provenance-badge provenance-badge--${badge.tone}`;
+      badgeElement.textContent = badge.label;
+      return badgeElement;
+    })
+  );
+}
+
+function setClusterState(cluster, descriptor) {
+  const badges = descriptor?.badges ?? [];
+  const tones = new Set(badges.map((badge) => badge.tone));
+
+  cluster.classList.toggle("field-cluster--entered", tones.has("entered"));
+  cluster.classList.toggle("field-cluster--locked", tones.has("locked"));
+}
+
+function renderInputProvenance(view) {
+  setClusterState(elements.distanceCluster, view.inputProvenance.distance);
+  setClusterState(elements.finishCluster, view.inputProvenance.finish);
+  setClusterState(elements.paceCluster, view.inputProvenance.pace);
+  setClusterState(elements.speedCluster, view.inputProvenance.speed);
+
+  renderProvenanceBadges(
+    elements.distanceClusterProvenance,
+    view.inputProvenance.distance,
+    "Distance input state"
+  );
+  renderProvenanceBadges(
+    elements.finishClusterProvenance,
+    view.inputProvenance.finish,
+    "Finish time input state"
+  );
+  renderProvenanceBadges(
+    elements.paceClusterProvenance,
+    view.inputProvenance.pace,
+    "Pace input state"
+  );
+  renderProvenanceBadges(
+    elements.speedClusterProvenance,
+    view.inputProvenance.speed,
+    "Speed input state"
+  );
+}
+
 function renderBadge(resultState) {
   elements.resultBadge.className = "result-badge";
 
@@ -267,11 +344,48 @@ function renderResultSummary(view) {
     setTextContent(elements.primaryLabel, "Result");
     setTextContent(elements.primaryValue, "--");
     setTextContent(elements.primaryMeta, RESULT_PLACEHOLDER);
+    renderProvenanceBadges(elements.primaryProvenance, null, "Result provenance");
     setTextContent(elements.selectedPaceValue, "--");
     setTextContent(elements.selectedSpeedValue, "--");
     setTextContent(elements.alternatePaceValue, "--");
     setTextContent(elements.alternateSpeedValue, "--");
+    renderProvenanceBadges(
+      elements.selectedPaceProvenance,
+      null,
+      "Selected pace provenance"
+    );
+    renderProvenanceBadges(
+      elements.selectedSpeedProvenance,
+      null,
+      "Selected speed provenance"
+    );
+    renderProvenanceBadges(
+      elements.alternatePaceProvenance,
+      null,
+      "Alternate pace provenance"
+    );
+    renderProvenanceBadges(
+      elements.alternateSpeedProvenance,
+      null,
+      "Alternate speed provenance"
+    );
+    setTextContent(elements.lockedLabel, "Locked input");
+    setTextContent(elements.lockedValue, "--");
+    setTextContent(
+      elements.lockedMeta,
+      "The active driving value appears here after the first valid result."
+    );
+    renderProvenanceBadges(
+      elements.lockedProvenance,
+      null,
+      "Locked value provenance"
+    );
     setTextContent(elements.selectedDistance, "--");
+    renderProvenanceBadges(
+      elements.distanceProvenance,
+      null,
+      "Distance provenance"
+    );
     setTextContent(
       elements.resultNote,
       "Common-race projections appear below after the first valid result."
@@ -283,26 +397,50 @@ function renderResultSummary(view) {
   setTextContent(elements.primaryLabel, view.display.primaryLabel);
   setTextContent(elements.primaryValue, view.display.primaryValue);
   setTextContent(elements.primaryMeta, view.display.primaryMeta);
+  renderProvenanceBadges(
+    elements.primaryProvenance,
+    view.display.provenance.primary,
+    "Result provenance"
+  );
   setTextContent(elements.selectedPaceValue, view.display.selectedPace);
   setTextContent(elements.selectedSpeedValue, view.display.selectedSpeed);
   setTextContent(elements.alternatePaceValue, view.display.alternatePace);
   setTextContent(elements.alternateSpeedValue, view.display.alternateSpeed);
-
-  if (view.display.selectedDistanceLabel) {
-    setTextContent(elements.selectedDistance, view.display.selectedDistanceLabel);
-    setTextContent(
-      elements.resultNote,
-      view.resultState === "stale"
-        ? "These numbers are still visible, but they no longer match the current invalid edit."
-        : "This is the distance currently driving the distance-based result."
-    );
-  } else {
-    setTextContent(elements.selectedDistance, "No distance needed");
-    setTextContent(
-      elements.resultNote,
-      "Convert mode projects the common race table from the same effort without needing a custom distance."
-    );
-  }
+  renderProvenanceBadges(
+    elements.selectedPaceProvenance,
+    view.display.provenance.selectedPace,
+    "Selected pace provenance"
+  );
+  renderProvenanceBadges(
+    elements.selectedSpeedProvenance,
+    view.display.provenance.selectedSpeed,
+    "Selected speed provenance"
+  );
+  renderProvenanceBadges(
+    elements.alternatePaceProvenance,
+    view.display.provenance.alternatePace,
+    "Alternate pace provenance"
+  );
+  renderProvenanceBadges(
+    elements.alternateSpeedProvenance,
+    view.display.provenance.alternateSpeed,
+    "Alternate speed provenance"
+  );
+  setTextContent(elements.lockedLabel, view.display.lockedSummary.label);
+  setTextContent(elements.lockedValue, view.display.lockedSummary.value);
+  setTextContent(elements.lockedMeta, view.display.lockedSummary.meta);
+  renderProvenanceBadges(
+    elements.lockedProvenance,
+    view.display.lockedSummary.provenance,
+    "Locked value provenance"
+  );
+  setTextContent(elements.selectedDistance, view.display.distanceSummary.value);
+  renderProvenanceBadges(
+    elements.distanceProvenance,
+    view.display.distanceSummary.provenance,
+    "Distance provenance"
+  );
+  setTextContent(elements.resultNote, view.display.distanceSummary.meta);
 
   renderProjectionTable(view.display);
 }
@@ -320,6 +458,7 @@ function render() {
   renderStaticLabels();
   renderInputValues();
   renderVisibility(view);
+  renderInputProvenance(view);
 
   renderError(elements.distanceError, [elements.distanceInput], view.errors.distance);
   renderError(

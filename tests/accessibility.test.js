@@ -58,7 +58,24 @@ test("validation text and 320 px layout safeguards are present in the shipped fi
     html,
     /id="status-message"[\s\S]*role="status"[\s\S]*aria-live="polite"[\s\S]*aria-atomic="true"/
   );
+  assert.match(html, /id="distance-cluster-provenance"/);
+  assert.match(html, /id="finish-cluster-provenance"/);
+  assert.match(html, /id="pace-cluster-provenance"/);
+  assert.match(html, /id="speed-cluster-provenance"/);
+  assert.match(html, /id="primary-provenance"/);
+  assert.match(html, /id="selected-pace-provenance"/);
+  assert.match(html, /id="selected-speed-provenance"/);
+  assert.match(html, /id="alternate-pace-provenance"/);
+  assert.match(html, /id="alternate-speed-provenance"/);
+  assert.match(html, /id="locked-value"/);
+  assert.match(html, /id="locked-provenance"/);
+  assert.match(html, /id="distance-provenance"/);
   assert.match(css, /input\[aria-invalid="true"\],\s*select\[aria-invalid="true"\]/);
+  assert.match(css, /\.cluster-badges/);
+  assert.match(css, /\.provenance-badges/);
+  assert.match(css, /\.provenance-badge--locked/);
+  assert.match(css, /\.provenance-badge--stale/);
+  assert.match(css, /\.sr-only/);
   assert.match(css, /table\s*{\s*width: 100%;\s*table-layout: fixed;/);
   assert.match(css, /overflow-wrap: anywhere;/);
   assert.match(

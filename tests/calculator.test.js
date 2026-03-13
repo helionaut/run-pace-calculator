@@ -28,6 +28,10 @@ function buildState(overrides = {}, inputOverrides = {}) {
   };
 }
 
+function getBadgeLabels(item) {
+  return item.badges.map((badge) => badge.label);
+}
+
 test("blank state stays empty without showing required-field errors", () => {
   const view = deriveCalculatorView(createFormState());
 
@@ -74,6 +78,50 @@ test("finish mode calculates finish time from distance plus pace", () => {
   assert.equal(view.display.primaryLabel, "Finish time");
   assert.equal(view.display.primaryValue, "00:50:00");
   assert.equal(view.display.selectedSpeed, "12.00 km/h");
+});
+
+test("finish mode exposes entered versus derived provenance and the locked pace", () => {
+  const view = deriveCalculatorView(
+    buildState(
+      { mode: MODES.FINISH },
+      {
+        distance: "10",
+        paceMinutes: "5",
+        paceSeconds: "0"
+      }
+    )
+  );
+
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.primary),
+    ["Derived"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.selectedPace),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.selectedSpeed),
+    ["Derived"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.distance),
+    ["Entered"]
+  );
+  assert.equal(view.display.lockedSummary.label, "Locked pace");
+  assert.equal(view.display.lockedSummary.value, "05:00 /km");
+  assert.deepEqual(
+    getBadgeLabels(view.display.lockedSummary.provenance),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.inputProvenance.pace),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.inputProvenance.distance),
+    ["Entered"]
+  );
 });
 
 test("incomplete structured finish time blocks a fresh calculation", () => {
@@ -157,6 +205,18 @@ test("stale mode preserves the last valid result when a required field becomes i
 
   assert.equal(staleView.resultState, "stale");
   assert.equal(staleView.display.primaryValue, validView.display.primaryValue);
+  assert.match(
+    staleView.display.primaryMeta,
+    /Last valid result derived from locked finish time/
+  );
+  assert.deepEqual(
+    getBadgeLabels(staleView.display.provenance.primary),
+    ["Derived", "Last valid"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(staleView.display.lockedSummary.provenance),
+    ["Entered", "Locked", "Last valid"]
+  );
   assert.equal(
     staleView.errors.finish,
     "Finish seconds must stay between 0 and 59."

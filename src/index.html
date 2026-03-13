@@ -134,6 +134,7 @@
                 <div class="cluster-heading">
                   <p class="eyebrow">Distance</p>
                   <h3>Choose a preset or enter your own route</h3>
+                  <div class="cluster-badges provenance-badges" id="distance-cluster-provenance"></div>
                 </div>
 
                 <div class="field-row field-row--two">
@@ -193,6 +194,7 @@
                 <div class="cluster-heading">
                   <p class="eyebrow">Finish Time</p>
                   <h3>Enter a completed or goal race clock</h3>
+                  <div class="cluster-badges provenance-badges" id="finish-cluster-provenance"></div>
                   <p>Hours, minutes, and seconds all stay visible so incomplete edits can be validated inline.</p>
                 </div>
 
@@ -241,6 +243,7 @@
                 <div class="cluster-heading">
                   <p class="eyebrow">Pace</p>
                   <h3>Enter the effort you want to hold</h3>
+                  <div class="cluster-badges provenance-badges" id="pace-cluster-provenance"></div>
                   <p id="pace-copy">
                     Pace is always entered in the selected unit, then converted
                     into the alternate unit automatically.
@@ -280,6 +283,7 @@
                 <div class="cluster-heading">
                   <p class="eyebrow">Speed</p>
                   <h3>Enter a treadmill or target speed</h3>
+                  <div class="cluster-badges provenance-badges" id="speed-cluster-provenance"></div>
                 </div>
 
                 <label class="field field--wide">
@@ -326,7 +330,10 @@
 
           <div class="summary-grid">
             <article class="stat-card stat-card--accent">
-              <p class="stat-card__label" id="primary-label">Result</p>
+              <div class="stat-card__heading">
+                <p class="stat-card__label" id="primary-label">Result</p>
+                <div class="provenance-badges" id="primary-provenance"></div>
+              </div>
               <p class="stat-card__value" id="primary-value">--</p>
               <p class="stat-card__meta" id="primary-meta">
                 Enter valid values to calculate.
@@ -337,11 +344,17 @@
               <p class="stat-card__label">Selected Unit</p>
               <dl class="stat-pairs">
                 <div>
-                  <dt id="selected-pace-label">Pace /km</dt>
+                  <div class="stat-pair__heading">
+                    <dt id="selected-pace-label">Pace /km</dt>
+                    <div class="provenance-badges provenance-badges--inline" id="selected-pace-provenance"></div>
+                  </div>
                   <dd id="selected-pace-value">--</dd>
                 </div>
                 <div>
-                  <dt id="selected-speed-label">Speed km/h</dt>
+                  <div class="stat-pair__heading">
+                    <dt id="selected-speed-label">Speed km/h</dt>
+                    <div class="provenance-badges provenance-badges--inline" id="selected-speed-provenance"></div>
+                  </div>
                   <dd id="selected-speed-value">--</dd>
                 </div>
               </dl>
@@ -351,11 +364,17 @@
               <p class="stat-card__label">Alternate Unit</p>
               <dl class="stat-pairs">
                 <div>
-                  <dt id="alternate-pace-label">Pace /mi</dt>
+                  <div class="stat-pair__heading">
+                    <dt id="alternate-pace-label">Pace /mi</dt>
+                    <div class="provenance-badges provenance-badges--inline" id="alternate-pace-provenance"></div>
+                  </div>
                   <dd id="alternate-pace-value">--</dd>
                 </div>
                 <div>
-                  <dt id="alternate-speed-label">Speed mph</dt>
+                  <div class="stat-pair__heading">
+                    <dt id="alternate-speed-label">Speed mph</dt>
+                    <div class="provenance-badges provenance-badges--inline" id="alternate-speed-provenance"></div>
+                  </div>
                   <dd id="alternate-speed-value">--</dd>
                 </div>
               </dl>
@@ -363,12 +382,27 @@
 
             <article class="stat-card">
               <p class="stat-card__label">Context</p>
-              <p class="stat-card__value stat-card__value--compact" id="selected-distance">
-                --
-              </p>
-              <p class="stat-card__meta" id="result-note">
-                Common-race projections appear below after the first valid result.
-              </p>
+              <div class="context-stack">
+                <div class="context-block">
+                  <p class="stat-card__subheading" id="locked-label">Locked input</p>
+                  <p class="stat-card__value stat-card__value--compact" id="locked-value">--</p>
+                  <div class="provenance-badges" id="locked-provenance"></div>
+                  <p class="stat-card__meta" id="locked-meta">
+                    The active driving value appears here after the first valid result.
+                  </p>
+                </div>
+
+                <div class="context-block">
+                  <p class="stat-card__subheading">Distance context</p>
+                  <p class="stat-card__value stat-card__value--compact" id="selected-distance">
+                    --
+                  </p>
+                  <div class="provenance-badges" id="distance-provenance"></div>
+                  <p class="stat-card__meta" id="result-note">
+                    Common-race projections appear below after the first valid result.
+                  </p>
+                </div>
+              </div>
             </article>
           </div>
         </section>

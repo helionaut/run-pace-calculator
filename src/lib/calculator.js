@@ -60,6 +60,111 @@ function getAlternateUnit(unit) {
   return ALTERNATE_UNIT[unit] ?? "km";
 }
 
+function createBadge(tone, label, ariaLabel) {
+  return {
+    ariaLabel,
+    label,
+    tone
+  };
+}
+
+function createProvenanceDescriptor({
+  source = null,
+  locked = false,
+  stale = false
+} = {}) {
+  const badges = [];
+
+  if (source === "entered") {
+    badges.push(
+      createBadge("entered", "Entered", "User-entered value")
+    );
+  } else if (source === "derived") {
+    badges.push(
+      createBadge("derived", "Derived", "Calculated value")
+    );
+  } else if (source === "not-used") {
+    badges.push(
+      createBadge("neutral", "Not used", "Not used in this calculation")
+    );
+  }
+
+  if (locked) {
+    badges.push(
+      createBadge("locked", "Locked", "Currently driving recalculation")
+    );
+  }
+
+  if (stale) {
+    badges.push(
+      createBadge(
+        "stale",
+        "Last valid",
+        "Shown from the last valid complete calculation"
+      )
+    );
+  }
+
+  return {
+    badges
+  };
+}
+
+function getSelectedPaceProvenance(displayMode, displayConvertSource, stale) {
+  const isEntered =
+    displayMode === MODES.FINISH ||
+    (displayMode === MODES.CONVERT &&
+      displayConvertSource === CONVERT_SOURCES.PACE);
+
+  return createProvenanceDescriptor({
+    source: isEntered ? "entered" : "derived",
+    locked: isEntered,
+    stale
+  });
+}
+
+function getSelectedSpeedProvenance(displayMode, displayConvertSource, stale) {
+  const isEntered =
+    displayMode === MODES.CONVERT &&
+    displayConvertSource === CONVERT_SOURCES.SPEED;
+
+  return createProvenanceDescriptor({
+    source: isEntered ? "entered" : "derived",
+    locked: isEntered,
+    stale
+  });
+}
+
+function createInputProvenance(state) {
+  const distance = createProvenanceDescriptor({
+    source: "entered"
+  });
+  const finish = createProvenanceDescriptor({
+    source: "entered",
+    locked: state.mode === MODES.PACE
+  });
+  const pace = createProvenanceDescriptor({
+    source: "entered",
+    locked:
+      state.mode === MODES.FINISH ||
+      (state.mode === MODES.CONVERT &&
+        state.convertSource === CONVERT_SOURCES.PACE)
+  });
+  const speed = createProvenanceDescriptor({
+    source: "entered",
+    locked:
+      state.mode === MODES.CONVERT &&
+      state.convertSource === CONVERT_SOURCES.SPEED
+  });
+
+  return {
+    distance,
+    finish,
+    pace,
+    speed
+  };
+}
+
 function getRelevantFieldGroups(state) {
   if (state.mode === MODES.PACE) {
     return [
@@ -651,11 +756,117 @@ function createResult(state, speedKmh, distanceKm) {
   };
 }
 
-function createDisplaySummary(state, result) {
+function createLockedSummary(state, result, stale) {
+  const selectedUnit = state.unit;
+  const displayMode = result.sourceMode ?? state.mode;
+  const displayConvertSource = result.sourceConvertSource ?? state.convertSource;
+
+  if (displayMode === MODES.PACE) {
+    return {
+      label: "Locked finish time",
+      meta: stale
+        ? "The last valid finish time is still shown until the invalid edit is fixed."
+        : "This entered finish time is currently driving recalculation.",
+      provenance: createProvenanceDescriptor({
+        source: "entered",
+        locked: true,
+        stale
+      }),
+      value: formatDuration(result.finishSeconds)
+    };
+  }
+
+  if (
+    displayMode === MODES.FINISH ||
+    displayConvertSource === CONVERT_SOURCES.PACE
+  ) {
+    return {
+      label: "Locked pace",
+      meta: stale
+        ? "The last valid pace is still shown until the invalid edit is fixed."
+        : "This entered pace is currently driving recalculation.",
+      provenance: createProvenanceDescriptor({
+        source: "entered",
+        locked: true,
+        stale
+      }),
+      value: formatPace(
+        speedToPaceSeconds(result.speedKmh, selectedUnit),
+        selectedUnit
+      )
+    };
+  }
+
+  return {
+    label: "Locked speed",
+    meta: stale
+      ? "The last valid speed is still shown until the invalid edit is fixed."
+      : "This entered speed is currently driving recalculation.",
+    provenance: createProvenanceDescriptor({
+      source: "entered",
+      locked: true,
+      stale
+    }),
+    value: formatSpeed(result.speedKmh, selectedUnit)
+  };
+}
+
+function createDistanceSummary(state, result, selectedDistanceLabel, stale) {
+  if (!selectedDistanceLabel) {
+    return {
+      label: "Distance context",
+      meta: stale
+        ? "The last valid result did not need a custom distance."
+        : "Convert mode does not need a distance to stay locked.",
+      provenance: createProvenanceDescriptor({
+        source: "not-used",
+        stale
+      }),
+      value: "No distance needed"
+    };
+  }
+
+  return {
+    label: "Distance context",
+    meta: stale
+      ? "This is the last valid entered distance behind the displayed result."
+      : "This entered distance still anchors the displayed result.",
+    provenance: createProvenanceDescriptor({
+      source: "entered",
+      stale
+    }),
+    value: selectedDistanceLabel
+  };
+}
+
+function buildPrimaryMeta({
+  displayMode,
+  displayConvertSource,
+  lockedSummary,
+  selectedDistanceLabel,
+  stale
+}) {
+  const prefix = stale
+    ? "Last valid result derived from"
+    : "Derived from";
+
+  if (displayMode === MODES.PACE || displayMode === MODES.FINISH) {
+    return `${prefix} ${lockedSummary.label.toLowerCase()} ${lockedSummary.value} and entered distance ${selectedDistanceLabel}.`;
+  }
+
+  if (displayConvertSource === CONVERT_SOURCES.PACE) {
+    return `${prefix} ${lockedSummary.label.toLowerCase()} ${lockedSummary.value}.`;
+  }
+
+  return `${prefix} ${lockedSummary.label.toLowerCase()} ${lockedSummary.value}.`;
+}
+
+function createDisplaySummary(state, result, resultState) {
   const selectedUnit = state.unit;
   const alternateUnit = getAlternateUnit(selectedUnit);
   const displayMode = result.sourceMode ?? state.mode;
   const displayConvertSource = result.sourceConvertSource ?? state.convertSource;
+  const stale = resultState === "stale";
   const selectedPace = formatPace(
     speedToPaceSeconds(result.speedKmh, selectedUnit),
     selectedUnit
@@ -671,32 +882,70 @@ function createDisplaySummary(state, result) {
     : null;
   let primaryLabel = "Result";
   let primaryValue = RESULT_PLACEHOLDER;
+  const lockedSummary = createLockedSummary(state, result, stale);
+  const distanceSummary = createDistanceSummary(
+    state,
+    result,
+    selectedDistanceLabel,
+    stale
+  );
   let primaryMeta = "Enter valid values to calculate.";
 
   if (displayMode === MODES.PACE) {
     primaryLabel = "Pace";
     primaryValue = selectedPace;
-    primaryMeta = `From ${formatDuration(result.finishSeconds)} over ${selectedDistanceLabel}.`;
   } else if (displayMode === MODES.FINISH) {
     primaryLabel = "Finish time";
     primaryValue = formatDuration(result.finishSeconds);
-    primaryMeta = `At ${selectedPace} over ${selectedDistanceLabel}.`;
   } else if (displayConvertSource === CONVERT_SOURCES.PACE) {
     primaryLabel = "Speed";
     primaryValue = selectedSpeed;
-    primaryMeta = `Converted from ${selectedPace}.`;
   } else {
     primaryLabel = "Pace";
     primaryValue = selectedPace;
-    primaryMeta = `Converted from ${selectedSpeed}.`;
   }
+
+  primaryMeta = buildPrimaryMeta({
+    displayConvertSource,
+    displayMode,
+    lockedSummary,
+    selectedDistanceLabel,
+    stale
+  });
 
   return {
     alternatePace,
     alternateSpeed,
+    distanceSummary,
+    lockedSummary,
     primaryLabel,
     primaryMeta,
     primaryValue,
+    provenance: {
+      alternatePace: createProvenanceDescriptor({
+        source: "derived",
+        stale
+      }),
+      alternateSpeed: createProvenanceDescriptor({
+        source: "derived",
+        stale
+      }),
+      distance: distanceSummary.provenance,
+      primary: createProvenanceDescriptor({
+        source: "derived",
+        stale
+      }),
+      selectedPace: getSelectedPaceProvenance(
+        displayMode,
+        displayConvertSource,
+        stale
+      ),
+      selectedSpeed: getSelectedSpeedProvenance(
+        displayMode,
+        displayConvertSource,
+        stale
+      )
+    },
     projectionRows: result.projectionRows.map((row) => ({
       ...row,
       finishLabel: formatDuration(row.finishSeconds)
@@ -788,15 +1037,19 @@ export function deriveCalculatorView(state, previousResult = null) {
   let statusMessage = RESULT_PLACEHOLDER;
 
   if (resultState === "current") {
-    statusMessage = "Results are current.";
+    statusMessage = "Results are current. Entered and derived values are labeled in place.";
   } else if (resultState === "stale") {
-    statusMessage = "Out of date. Fix the highlighted fields to recalculate.";
+    statusMessage =
+      "Out of date. Showing the last valid result while you fix the highlighted fields.";
   }
 
   return {
     currentResult,
-    display: displayedResult ? createDisplaySummary(state, displayedResult) : null,
+    display: displayedResult
+      ? createDisplaySummary(state, displayedResult, resultState)
+      : null,
     errors,
+    inputProvenance: createInputProvenance(state),
     resultState,
     showDistanceFields: state.mode !== MODES.CONVERT,
     showFinishFields: state.mode === MODES.PACE,
