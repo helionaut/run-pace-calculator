@@ -184,7 +184,10 @@ GitHub repository URL if the workspace was bootstrapped from the local mirror,
 then pushes the current branch and creates or updates the PR from
 `docs/pull-request-draft.md`. If GitHub auth or network checks fail first, it
 now writes a full handoff directory to `.handoff/<issue-key>` by default
-instead of only exporting a raw bundle to `/tmp`.
+instead of only exporting a raw bundle to `/tmp`. The generated
+`.handoff/<issue-key>/SUMMARY.md` also records the detected publish blockers so
+the next environment does not have to rediscover the same auth, DNS, or HTTPS
+failures before resuming.
 
 To rehearse that flow without network access:
 
