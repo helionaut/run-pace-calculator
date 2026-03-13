@@ -152,6 +152,10 @@ To verify the exported handoff before resuming elsewhere:
 npm run handoff:verify -- .handoff/<issue-key>/<issue-key>-handoff-manifest.json
 ```
 
+The exported `.handoff/<issue-key>/SUMMARY.md` includes the current preview
+notes plus a reusable demo script for the eventual screenshot or short
+recording capture in a browser-enabled environment.
+
 To import the included bundle into another writable checkout and publish it
 from there:
 
@@ -184,7 +188,10 @@ GitHub repository URL if the workspace was bootstrapped from the local mirror,
 then pushes the current branch and creates or updates the PR from
 `docs/pull-request-draft.md`. If GitHub auth or network checks fail first, it
 now writes a full handoff directory to `.handoff/<issue-key>` by default
-instead of only exporting a raw bundle to `/tmp`.
+instead of only exporting a raw bundle to `/tmp`. Once publish succeeds in a
+browser-enabled environment, use the demo script already packaged in
+`.handoff/<issue-key>/SUMMARY.md` to capture the required media for the PR and
+Linear issue.
 
 To rehearse that flow without network access:
 

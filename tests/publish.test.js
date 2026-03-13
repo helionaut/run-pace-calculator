@@ -107,6 +107,7 @@ test("prepare_handoff summary includes preview notes from the PR draft", async (
   assert.doesNotMatch(summary, /## Preview notes\n\n\n-/);
   assert.match(summary, /## Demo script/);
   assert.match(summary, /Turn on the finish-time lock, set the time to `1:45:00`/);
+  assert.match(summary, /In a browser-enabled environment, use the demo script above/);
   assert.ok(manifestPathMatch, "prepare-handoff should print the manifest path");
 
   run("node", ["scripts/verify-handoff.mjs", manifestPathMatch[1]], cloneDir);
