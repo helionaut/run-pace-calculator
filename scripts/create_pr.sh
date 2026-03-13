@@ -13,9 +13,20 @@ elif [[ "${1-}" != "" ]]; then
 fi
 
 branch="$(git branch --show-current)"
-pr_title="Build the first Run Pace Calculator slice"
 pr_body_file="docs/pull-request-draft.md"
+pr_title_file="docs/pull-request-title.txt"
 dirty="$(git status --short)"
+
+default_pr_title="Build the first Run Pace Calculator slice"
+pr_title="${PR_TITLE:-}"
+
+if [[ -z "$pr_title" && -f "$pr_title_file" ]]; then
+  pr_title="$(head -n 1 "$pr_title_file" | tr -d '\r')"
+fi
+
+if [[ -z "$pr_title" ]]; then
+  pr_title="$default_pr_title"
+fi
 
 repo_url="$(
   sed -n 's/^[[:space:]]*"url":[[:space:]]*"\([^"]*\)".*/\1/p' "$repo_root/.bootstrap/project.json" |
