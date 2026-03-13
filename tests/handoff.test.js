@@ -478,3 +478,137 @@ exit 1
   assert.match(summary, new RegExp(`- Branch: ${branch}`));
   assert.equal(manifest.branch, branch);
 });
+
+test("prepare-handoff generates resume artifacts that restore a fresh main clone", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "hel-18-handoff-resume."));
+  const repoDir = path.join(tempRoot, "repo");
+  const targetRepo = path.join(tempRoot, "target");
+  const scriptsDir = path.join(repoDir, "scripts");
+  const docsDir = path.join(repoDir, "docs");
+  const bootstrapDir = path.join(repoDir, ".bootstrap");
+  const binDir = path.join(tempRoot, "bin");
+  const outputDir = path.join(tempRoot, "handoff");
+  const branch = "eugeniy/hel-99-handoff-resume";
+
+  await mkdir(repoDir, { recursive: true });
+  await mkdir(scriptsDir, { recursive: true });
+  await mkdir(docsDir, { recursive: true });
+  await mkdir(bootstrapDir, { recursive: true });
+  await mkdir(binDir, { recursive: true });
+
+  git(["init", "-b", "main"], repoDir);
+  git(["config", "user.name", "Codex"], repoDir);
+  git(["config", "user.email", "codex@example.com"], repoDir);
+  git(["remote", "add", "origin", "https://github.com/helionaut/run-pace-calculator.git"], repoDir);
+
+  await writeFile(path.join(repoDir, "README.md"), "# fixture repo\n");
+  await writeFile(
+    path.join(docsDir, "pull-request-draft.md"),
+    await readFile(path.join(repoRoot, "docs", "pull-request-draft.md"), "utf8")
+  );
+  await writeFile(
+    path.join(bootstrapDir, "project.json"),
+    JSON.stringify(
+      {
+        repo: {
+          slug: "run-pace-calculator",
+          url: "https://github.com/helionaut/run-pace-calculator"
+        },
+        linear: {
+          starter_issue_identifier: "HEL-99"
+        }
+      },
+      null,
+      2
+    )
+  );
+  await writeExecutable(
+    path.join(scriptsDir, "prepare-handoff.sh"),
+    await readFile(path.join(repoRoot, "scripts", "prepare-handoff.sh"), "utf8")
+  );
+  await writeExecutable(
+    path.join(scriptsDir, "export_bundle.sh"),
+    await readFile(path.join(repoRoot, "scripts", "export_bundle.sh"), "utf8")
+  );
+  await writeExecutable(
+    path.join(binDir, "npm"),
+    `#!/bin/sh
+if [ "$1" = "run" ] && [ "$2" = "pr:dry-run" ]; then
+  branch=$(git branch --show-current)
+  printf '%s\n' "Would create a PR with: gh pr create --head $branch --title \\"Fixture title\\" --body-file docs/pull-request-draft.md"
+  printf '%s\n' "Would use body file: docs/pull-request-draft.md"
+  exit 0
+fi
+if [ "$1" = "run" ] && [ "$2" = "check" ]; then
+  exit 0
+fi
+echo "unexpected npm invocation: $*" >&2
+exit 1
+`
+  );
+
+  git(["add", "."], repoDir);
+  git(["commit", "-m", "Initial fixture"], repoDir);
+  git(["switch", "-c", branch], repoDir);
+  await writeFile(path.join(repoDir, "feature.txt"), "feature branch\n");
+  git(["add", "feature.txt"], repoDir);
+  git(["commit", "-m", "Add feature"], repoDir);
+
+  const featureHead = git(["rev-parse", "HEAD"], repoDir);
+  git(["clone", "--single-branch", "--branch", "main", repoDir, targetRepo], tempRoot);
+
+  const prepareResult = spawnSync("./scripts/prepare-handoff.sh", [outputDir], {
+    cwd: repoDir,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      PATH: `${binDir}:${process.env.PATH}`
+    }
+  });
+
+  assert.equal(prepareResult.status, 0, prepareResult.stderr);
+  assert.match(prepareResult.stdout, /Resume script:/);
+  assert.match(prepareResult.stdout, /Checksums:/);
+  assert.match(prepareResult.stdout, /Archive:/);
+
+  const resumeScriptPath = path.join(outputDir, "resume-handoff.sh");
+  const checksumsPath = path.join(outputDir, "SHA256SUMS");
+  const archivePath = path.join(outputDir, "HEL-99-handoff.tar.gz");
+
+  await stat(resumeScriptPath);
+  await stat(checksumsPath);
+  await stat(archivePath);
+
+  const checksumOutput = spawnSync("sha256sum", ["-c", "SHA256SUMS"], {
+    cwd: outputDir,
+    encoding: "utf8"
+  });
+
+  assert.equal(checksumOutput.status, 0, checksumOutput.stderr);
+  assert.match(checksumOutput.stdout, /resume-handoff\.sh: OK/);
+
+  const resumeResult = spawnSync(resumeScriptPath, [targetRepo, "--validate", "--dry-run-publish"], {
+    cwd: outputDir,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      PATH: `${binDir}:${process.env.PATH}`
+    }
+  });
+
+  assert.equal(resumeResult.status, 0, resumeResult.stderr);
+  assert.match(resumeResult.stdout, /Verified handoff artifacts from:/);
+  assert.match(resumeResult.stdout, new RegExp(`Imported branch: ${branch}`));
+  assert.match(resumeResult.stdout, /Would create a PR with: gh pr create --head/);
+  assert.equal(git(["rev-parse", "HEAD"], targetRepo), featureHead);
+
+  const summary = await readFile(path.join(outputDir, "SUMMARY.md"), "utf8");
+  const manifest = JSON.parse(
+    await readFile(path.join(outputDir, "HEL-99-handoff-manifest.json"), "utf8")
+  );
+
+  assert.match(summary, /- Resume helper: resume-handoff\.sh/);
+  assert.match(summary, /- Checksums: SHA256SUMS/);
+  assert.match(summary, /- Packaged archive: HEL-99-handoff\.tar\.gz/);
+  assert.equal(manifest.artifacts.some((artifact) => artifact.name === "resume_script"), true);
+});

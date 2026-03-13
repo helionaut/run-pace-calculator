@@ -79,12 +79,18 @@ mkdir -p "$output_dir"
 safe_branch="${branch//\//-}"
 bundle_name="${repo_slug}-${safe_branch}.bundle"
 manifest_name="${issue_identifier}-handoff-manifest.json"
+archive_name="${issue_identifier}-handoff.tar.gz"
+checksums_name="SHA256SUMS"
+resume_script_name="resume-handoff.sh"
 bundle_path="$output_dir/$bundle_name"
 pr_draft_path="$output_dir/pull-request-draft.md"
 dry_run_path="$output_dir/publish-dry-run.txt"
 summary_path="$output_dir/SUMMARY.md"
 commits_path="$output_dir/commits.txt"
 manifest_path="$output_dir/$manifest_name"
+archive_path="$output_dir/$archive_name"
+checksums_path="$output_dir/$checksums_name"
+resume_script_path="$output_dir/$resume_script_name"
 
 sha256_file() {
   if command -v sha256sum >/dev/null 2>&1; then
@@ -153,6 +159,141 @@ dry_run_size="$(file_size "$dry_run_path")"
 commits_sha="$(sha256_file "$commits_path")"
 commits_size="$(file_size "$commits_path")"
 
+cat >"$resume_script_path" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ \$# -lt 1 || \$# -gt 3 ]]; then
+  echo "Usage: \$(basename "\$0") <target-repo-dir> [--validate] [--dry-run-publish]" >&2
+  exit 1
+fi
+
+target_repo="\$1"
+run_publish_dry_run=false
+run_validate=false
+
+shift
+
+for arg in "\$@"; do
+  case "\$arg" in
+    --dry-run-publish)
+      run_publish_dry_run=true
+      ;;
+    --validate)
+      run_validate=true
+      ;;
+    *)
+      echo "Unknown option: \$arg" >&2
+      echo "Usage: \$(basename "\$0") <target-repo-dir> [--validate] [--dry-run-publish]" >&2
+      exit 1
+      ;;
+  esac
+done
+
+handoff_dir="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+manifest_path="\$handoff_dir/${manifest_name}"
+
+if [[ ! -f "\$manifest_path" ]]; then
+  echo "Manifest not found: \$manifest_path" >&2
+  exit 1
+fi
+
+if [[ ! -d "\$target_repo/.git" ]]; then
+  echo "Target repo is not a git checkout: \$target_repo" >&2
+  exit 1
+fi
+
+node - "\$manifest_path" <<'NODE'
+const crypto = require("node:crypto");
+const fs = require("node:fs");
+const path = require("node:path");
+
+const manifestPath = path.resolve(process.argv[2]);
+const manifestDir = path.dirname(manifestPath);
+const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+
+for (const artifact of manifest.artifacts) {
+  const artifactPath = path.join(manifestDir, artifact.path);
+  const content = fs.readFileSync(artifactPath);
+  const digest = crypto.createHash("sha256").update(content).digest("hex");
+
+  if (digest !== artifact.sha256) {
+    throw new Error(
+      \`SHA mismatch for \${artifact.name}: expected \${artifact.sha256}, got \${digest}\`
+    );
+  }
+
+  const fileStat = fs.statSync(artifactPath);
+  if (fileStat.size !== artifact.size) {
+    throw new Error(
+      \`Size mismatch for \${artifact.name}: expected \${artifact.size}, got \${fileStat.size}\`
+    );
+  }
+}
+NODE
+
+bundle_info="\$(
+  node - "\$manifest_path" <<'NODE'
+const fs = require("node:fs");
+const path = require("node:path");
+
+const manifestPath = path.resolve(process.argv[2]);
+const manifestDir = path.dirname(manifestPath);
+const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+const bundle = manifest.artifacts.find((artifact) => artifact.name === "bundle");
+
+if (!bundle) {
+  throw new Error("Bundle artifact missing from manifest.");
+}
+
+process.stdout.write(JSON.stringify({
+  branch: manifest.branch,
+  bundlePath: path.join(manifestDir, bundle.path),
+  head: manifest.head
+}));
+NODE
+)"
+
+branch="\$(
+  node -e 'const info = JSON.parse(process.argv[1]); process.stdout.write(info.branch);' "\$bundle_info"
+)"
+bundle_path="\$(
+  node -e 'const info = JSON.parse(process.argv[1]); process.stdout.write(info.bundlePath);' "\$bundle_info"
+)"
+head="\$(
+  node -e 'const info = JSON.parse(process.argv[1]); process.stdout.write(info.head);' "\$bundle_info"
+)"
+
+git -C "\$target_repo" fetch "\$bundle_path" "\$branch:\$branch"
+git -C "\$target_repo" switch "\$branch"
+
+printf 'Verified handoff artifacts from: %s\n' "\$handoff_dir"
+printf 'Imported branch: %s\n' "\$branch"
+printf 'Target repo: %s\n' "\$target_repo"
+printf 'Expected head: %s\n' "\$head"
+printf 'Current head: %s\n' "\$(git -C "\$target_repo" rev-parse HEAD)"
+
+if \$run_validate; then
+  (
+    cd "\$target_repo"
+    npm run check
+  )
+fi
+
+if \$run_publish_dry_run; then
+  (
+    cd "\$target_repo"
+    npm run pr:dry-run
+  )
+fi
+
+printf 'Next step in %s: npm run pr:publish\n' "\$target_repo"
+EOF
+chmod 0o755 "$resume_script_path" 2>/dev/null || chmod 755 "$resume_script_path"
+
+resume_script_sha="$(sha256_file "$resume_script_path")"
+resume_script_size="$(file_size "$resume_script_path")"
+
 cat >"$summary_path" <<EOF
 # ${issue_identifier} Handoff Summary
 
@@ -165,6 +306,9 @@ cat >"$summary_path" <<EOF
 - PR body source: ${pr_body_source:-docs/pull-request-draft.md}
 - Verified bundle: ${bundle_name}
 - Bundle SHA-256: ${bundle_sha}
+- Resume helper: ${resume_script_name}
+- Checksums: ${checksums_name}
+- Packaged archive: ${archive_name}
 
 ## Resume steps
 
@@ -201,6 +345,9 @@ cat >>"$summary_path" <<EOF
 - \`publish-dry-run.txt\`
 - \`commits.txt\`
 - \`${manifest_name}\`
+- \`${resume_script_name}\`
+- \`${checksums_name}\`
+- \`${archive_name}\`
 EOF
 
 summary_sha="$(sha256_file "$summary_path")"
@@ -246,12 +393,45 @@ cat >"$manifest_path" <<EOF
       "path": "SUMMARY.md",
       "sha256": "${summary_sha}",
       "size": ${summary_size}
+    },
+    {
+      "name": "resume_script",
+      "path": "${resume_script_name}",
+      "sha256": "${resume_script_sha}",
+      "size": ${resume_script_size}
     }
   ]
 }
 EOF
 
+{
+  for artifact in \
+    "${bundle_name}" \
+    "pull-request-draft.md" \
+    "publish-dry-run.txt" \
+    "commits.txt" \
+    "SUMMARY.md" \
+    "${manifest_name}" \
+    "${resume_script_name}"; do
+    printf '%s  %s\n' "$(sha256_file "$output_dir/$artifact")" "$artifact"
+  done
+} >"$checksums_path"
+
+tar -czf "$archive_path" \
+  -C "$output_dir" \
+  "${bundle_name}" \
+  "publish-dry-run.txt" \
+  "SUMMARY.md" \
+  "pull-request-draft.md" \
+  "${manifest_name}" \
+  "${checksums_name}" \
+  "commits.txt" \
+  "${resume_script_name}"
+
 printf 'Handoff directory: %s\n' "$output_dir"
 printf 'Bundle: %s\n' "$bundle_path"
 printf 'Manifest: %s\n' "$manifest_path"
+printf 'Resume script: %s\n' "$resume_script_path"
+printf 'Checksums: %s\n' "$checksums_path"
+printf 'Archive: %s\n' "$archive_path"
 printf 'Bundle SHA-256: %s\n' "$bundle_sha"
