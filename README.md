@@ -8,6 +8,8 @@ projected finish time across common race distances.
 - Pace, speed, and finish-time driven calculator modes
 - Metric and imperial conversions
 - Projection table from one mile through the marathon
+- Responsive layout for mobile and desktop
+- Inline validation and keyboard-operable mode tabs
 - Zero-dependency static build suitable for GitHub Pages
 - Product docs for the PRD, requirements, and implementation plan
 
@@ -27,6 +29,18 @@ npm run dev
 - `npm run preview` serves the built output from `dist/`
 - If the environment blocks local socket binding, `dev` and `preview` exit with
   a short explicit error instead of a server traceback
+
+## Project structure
+
+- `src/index.html` contains the static app shell
+- `src/styles.css` defines the calculator interface and responsive layout
+- `src/main.js` wires DOM events and rendering
+- `src/lib/calculator.js` contains the shared conversion and formatting logic
+- `src/lib/mode-navigation.js` contains the keyboard tab-navigation helper
+- `tests/*.test.js` covers calculator logic, handoff verification, import flow,
+  and mode navigation
+- `scripts/build.mjs` produces the static build output
+- `scripts/serve.mjs` serves either `src/` or `dist/` locally
 
 ## Repository docs
 
@@ -101,30 +115,3 @@ To rehearse that flow without network access:
 ```sh
 npm run pr:dry-run
 ```
-
-## Prepare a resumable handoff directory
-
-When publication is still blocked, export a resumable handoff directory into
-the repo-local ignored fallback path:
-
-```sh
-npm run handoff:prepare
-```
-
-You can also target another directory explicitly:
-
-```sh
-npm run handoff:prepare -- /tmp/hel-8-handoff
-```
-
-That writes a verified branch bundle, the PR draft, publish dry-run output, a
-commit summary, and a machine-readable manifest into the target directory.
-
-To verify those artifacts before resuming from another environment:
-
-```sh
-npm run handoff:verify -- /tmp/<issue-key>-handoff/<issue-key>-handoff-manifest.json
-```
-
-That verification checks each artifact digest and size, then confirms that the
-included bundle still contains the expected branch and head from the manifest.
