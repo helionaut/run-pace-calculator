@@ -3,18 +3,22 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
     "bundle:export": "./scripts/export_bundle.sh",
-    "check": "npm test && npm run build && npm run pr:dry-run",
-    "dev": "node scripts/serve.mjs src 4173",
+    "check:syntax": "node --check src/main.js && node --check src/lib/calculator.js && node --check src/lib/mode-navigation.js && node --check scripts/build.mjs && node --check scripts/check-dist.mjs && node --check scripts/serve.mjs && node --check scripts/verify-handoff.mjs && node --check scripts/verify-pages-content.mjs",
+    "check": "npm run check:syntax && npm test && npm run build && node scripts/check-dist.mjs",
+    "dev": "node scripts/serve.mjs src 3000",
     "handoff:prepare": "./scripts/prepare-handoff.sh",
     "handoff:verify": "node scripts/verify-handoff.mjs",
     "pr:dry-run": "./scripts/create_pr.sh --dry-run",
     "pr:publish": "./scripts/create_pr.sh",
-    "preview": "node scripts/serve.mjs dist 4173",
+    "preview": "npm run build && node scripts/serve.mjs dist 4173",
     "test": "node --test",
-    "validate": "npm test && npm run build && node --check scripts/verify-pages-content.mjs",
+    "validate": "npm run check",
     "verify:pages": "node scripts/verify-pages-content.mjs"
   }
 }

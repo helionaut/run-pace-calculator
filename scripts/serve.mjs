@@ -1,89 +1,102 @@
-import { createServer } from "node:http";
+import http from "node:http";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const [, , rootArg = "src", portArg = "4173"] = process.argv;
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-const rootDir = path.resolve(rootArg);
-const port = Number(portArg);
+const CONTENT_TYPES = {
+  ".css": "text/css; charset=utf-8",
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".txt": "text/plain; charset=utf-8",
+};
 
-if (!Number.isInteger(port) || port <= 0) {
-  console.error(`Invalid port: ${portArg}`);
-  process.exit(1);
-}
+export function resolveRequestPath(rootDir, urlPath) {
+  const decodedPath = decodeURIComponent(urlPath);
+  const segments = decodedPath.split("/").filter(Boolean);
 
-const CONTENT_TYPES = new Map([
-  [".css", "text/css; charset=utf-8"],
-  [".html", "text/html; charset=utf-8"],
-  [".js", "text/javascript; charset=utf-8"],
-  [".json", "application/json; charset=utf-8"],
-  [".svg", "image/svg+xml"],
-  [".txt", "text/plain; charset=utf-8"]
-]);
-
-function contentTypeFor(filePath) {
-  return CONTENT_TYPES.get(path.extname(filePath)) ?? "application/octet-stream";
-}
-
-function resolveRequestPath(urlPathname) {
-  const decoded = decodeURIComponent(urlPathname);
-  const requestPath = decoded === "/" ? "/index.html" : decoded;
-  const normalized = path.normalize(requestPath).replace(/^(\.\.[/\\])+/, "");
-  const absolute = path.resolve(rootDir, `.${normalized}`);
-
-  if (!absolute.startsWith(rootDir)) {
-    return null;
+  if (segments.some((segment) => segment === "..")) {
+    throw new Error("Path traversal is not allowed");
   }
 
-  return absolute;
+  const relativeSegments =
+    segments.length === 0 || decodedPath.endsWith("/")
+      ? [...segments, "index.html"]
+      : segments;
+
+  return path.join(path.resolve(rootDir), path.join(...relativeSegments));
 }
 
-const server = createServer(async (request, response) => {
-  if (!request.url) {
-    response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
-    response.end("Bad request");
-    return;
+export function createStaticServer({ rootDir }) {
+  const resolvedRoot = path.resolve(rootDir);
+
+  return http.createServer(async (request, response) => {
+    try {
+      const requestUrl = new URL(request.url ?? "/", "http://127.0.0.1");
+      const filePath = resolveRequestPath(resolvedRoot, requestUrl.pathname);
+      const extension = path.extname(filePath);
+      const contentType = CONTENT_TYPES[extension] ?? "application/octet-stream";
+      const contents = await readFile(filePath);
+
+      response.writeHead(200, { "Content-Type": contentType });
+      response.end(contents);
+    } catch (error) {
+      const statusCode =
+        error.message === "Path traversal is not allowed"
+          ? 400
+          : error.code === "ENOENT"
+            ? 404
+            : 500;
+
+      response.writeHead(statusCode, { "Content-Type": "text/plain; charset=utf-8" });
+      response.end(
+        statusCode === 400 ? "Bad request" : statusCode === 404 ? "Not found" : "Server error",
+      );
+    }
+  });
+}
+
+export async function startStaticServer({
+  rootDir = path.join(REPO_ROOT, "src"),
+  port = 3000,
+  host = "127.0.0.1",
+} = {}) {
+  const server = createStaticServer({ rootDir });
+
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(port, host, resolve);
+  });
+
+  console.log(`Serving ${path.resolve(rootDir)} at http://${host}:${port}`);
+  return server;
+}
+
+const isDirectExecution =
+  process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isDirectExecution) {
+  const rootArg = process.argv[2] ?? "src";
+  const defaultPort = rootArg === "dist" ? "4173" : "3000";
+  const portArg = Number.parseInt(process.argv[3] ?? process.env.PORT ?? defaultPort, 10);
+
+  if (!Number.isInteger(portArg) || portArg < 1) {
+    console.error("Port must be a positive integer.");
+    process.exit(1);
   }
 
-  const url = new URL(request.url, `http://${request.headers.host ?? "localhost"}`);
-  const filePath = resolveRequestPath(url.pathname);
-
-  if (!filePath) {
-    response.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
-    response.end("Forbidden");
-    return;
-  }
-
-  try {
-    const file = await readFile(filePath);
-    response.writeHead(200, { "Content-Type": contentTypeFor(filePath) });
-    response.end(file);
-  } catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
-      response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
-      response.end("Not found");
-      return;
+  startStaticServer({ rootDir: path.resolve(REPO_ROOT, rootArg), port: portArg }).catch((error) => {
+    if (error?.code === "EACCES" || error?.code === "EPERM") {
+      console.error(
+        `Local HTTP serving is blocked by this environment while binding port ${portArg}.`,
+      );
+    } else {
+      console.error(error.message);
     }
 
-    response.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
-    response.end("Internal server error");
-  }
-});
-
-server.on("error", (error) => {
-  const code = error && typeof error === "object" && "code" in error ? error.code : "";
-
-  if (code === "EACCES" || code === "EPERM") {
-    console.error(
-      `Local HTTP serving is blocked by this environment while binding port ${port}.`
-    );
-  } else {
-    console.error(error instanceof Error ? error.message : String(error));
-  }
-
-  process.exit(1);
-});
-
-server.listen(port, () => {
-  console.log(`Serving ${rootDir} at http://localhost:${port}`);
-});
+    process.exit(1);
+  });
+}
