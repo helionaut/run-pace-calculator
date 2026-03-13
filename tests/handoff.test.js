@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -20,6 +20,19 @@ function git(args, cwd) {
 
   if (result.status !== 0) {
     throw new Error(result.stderr.trim() || `git ${args.join(" ")} failed`);
+  }
+
+  return result.stdout.trim();
+}
+
+function command(commandName, args, cwd) {
+  const result = spawnSync(commandName, args, {
+    cwd,
+    encoding: "utf8"
+  });
+
+  if (result.status !== 0) {
+    throw new Error(result.stderr.trim() || `${commandName} ${args.join(" ")} failed`);
   }
 
   return result.stdout.trim();
@@ -185,5 +198,79 @@ test("verifyManifest rejects bundles whose recorded head does not match", async 
   await assert.rejects(
     () => verifyManifest(manifestPath),
     /Bundle head mismatch for feature\/test/
+  );
+});
+
+test("verifyManifest accepts preview archives with before and after snapshots", async () => {
+  const handoffDir = await mkdtemp(path.join(os.tmpdir(), "hel-8-handoff-verify."));
+  const previewRoot = path.join(handoffDir, "preview-root");
+  const archivePath = path.join(handoffDir, "preview-snapshots.tar");
+  const manifestPath = path.join(handoffDir, "manifest.json");
+
+  await mkdir(path.join(previewRoot, "before"), { recursive: true });
+  await mkdir(path.join(previewRoot, "after"), { recursive: true });
+  await writeFile(path.join(previewRoot, "before", "index.html"), "<h1>before</h1>\n");
+  await writeFile(path.join(previewRoot, "after", "index.html"), "<h1>after</h1>\n");
+  command("tar", ["-cf", archivePath, "-C", previewRoot, "before", "after"], handoffDir);
+
+  const archiveStat = await stat(archivePath);
+  await writeFile(
+    manifestPath,
+    JSON.stringify(
+      {
+        head: "preview123",
+        artifacts: [
+          {
+            name: "preview_snapshots",
+            path: "preview-snapshots.tar",
+            sha256: sha256(await readFile(archivePath)),
+            size: archiveStat.size
+          }
+        ]
+      },
+      null,
+      2
+    )
+  );
+
+  const result = await verifyManifest(manifestPath);
+
+  assert.equal(result.artifactCount, 1);
+  assert.equal(result.head, "preview123");
+});
+
+test("verifyManifest rejects preview archives missing a required snapshot", async () => {
+  const handoffDir = await mkdtemp(path.join(os.tmpdir(), "hel-8-handoff-verify."));
+  const previewRoot = path.join(handoffDir, "preview-root");
+  const archivePath = path.join(handoffDir, "preview-snapshots.tar");
+  const manifestPath = path.join(handoffDir, "manifest.json");
+
+  await mkdir(path.join(previewRoot, "before"), { recursive: true });
+  await writeFile(path.join(previewRoot, "before", "index.html"), "<h1>before</h1>\n");
+  command("tar", ["-cf", archivePath, "-C", previewRoot, "before"], handoffDir);
+
+  const archiveStat = await stat(archivePath);
+  await writeFile(
+    manifestPath,
+    JSON.stringify(
+      {
+        head: "preview456",
+        artifacts: [
+          {
+            name: "preview_snapshots",
+            path: "preview-snapshots.tar",
+            sha256: sha256(await readFile(archivePath)),
+            size: archiveStat.size
+          }
+        ]
+      },
+      null,
+      2
+    )
+  );
+
+  await assert.rejects(
+    () => verifyManifest(manifestPath),
+    /Preview archive is missing required entry after\/index\.html/
   );
 });

@@ -9,9 +9,9 @@ async function sha256(filePath) {
   return createHash("sha256").update(content).digest("hex");
 }
 
-async function runGit(args, cwd) {
+async function runCommand(command, args, cwd) {
   return new Promise((resolve, reject) => {
-    const child = spawn("git", args, {
+    const child = spawn(command, args, {
       cwd,
       stdio: ["ignore", "pipe", "pipe"]
     });
@@ -34,13 +34,13 @@ async function runGit(args, cwd) {
         return;
       }
 
-      reject(new Error(stderr.trim() || `git ${args.join(" ")} failed`));
+      reject(new Error(stderr.trim() || `${command} ${args.join(" ")} failed`));
     });
   });
 }
 
 async function verifyBundle(bundlePath, branch, head) {
-  const bundleHeads = await runGit(["bundle", "list-heads", bundlePath]);
+  const bundleHeads = await runCommand("git", ["bundle", "list-heads", bundlePath]);
   const expectedRef = `refs/heads/${branch}`;
   const bundleRefs = bundleHeads
     .split(/\r?\n/)
@@ -60,6 +60,24 @@ async function verifyBundle(bundlePath, branch, head) {
     throw new Error(
       `Bundle head mismatch for ${branch}: expected ${head}, got ${branchRef.head}`
     );
+  }
+}
+
+async function verifyPreviewArchive(archivePath) {
+  const archiveEntries = await runCommand("tar", ["-tf", archivePath]);
+  const normalizedEntries = new Set(
+    archiveEntries
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+  );
+
+  for (const requiredEntry of ["before/index.html", "after/index.html"]) {
+    if (!normalizedEntries.has(requiredEntry)) {
+      throw new Error(
+        `Preview archive is missing required entry ${requiredEntry}.`
+      );
+    }
   }
 }
 
@@ -105,6 +123,14 @@ export async function verifyManifest(manifestArg) {
   if (bundleArtifact && manifest.branch && manifest.head) {
     const bundlePath = path.resolve(manifestDir, bundleArtifact.path);
     await verifyBundle(bundlePath, manifest.branch, manifest.head);
+  }
+
+  const previewArchiveArtifact = manifest.artifacts.find(
+    (artifact) => artifact.name === "preview_snapshots"
+  );
+  if (previewArchiveArtifact) {
+    const previewArchivePath = path.resolve(manifestDir, previewArchiveArtifact.path);
+    await verifyPreviewArchive(previewArchivePath);
   }
 
   return {
