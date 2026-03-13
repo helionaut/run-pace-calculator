@@ -70,6 +70,7 @@ test("import_bundle.sh accepts a relative bundle path", async () => {
   run(importScript, [path.basename(bundlePath), targetRepo], bundleDir);
 
   assert.equal(git(["rev-parse", "feature/test"], targetRepo), featureHead);
+  assert.equal(git(["branch", "--show-current"], targetRepo), "feature/test");
 });
 
 test("import_bundle.sh accepts a handoff manifest path", async () => {
@@ -125,6 +126,7 @@ test("import_bundle.sh accepts a handoff manifest path", async () => {
   const output = run(importScript, [manifestPath, targetRepo], tempRoot);
 
   assert.equal(git(["rev-parse", "feature/test"], targetRepo), featureHead);
+  assert.equal(git(["branch", "--show-current"], targetRepo), "feature/test");
   assert.match(output, /Verified manifest:/);
 });
 
@@ -181,5 +183,6 @@ test("import_bundle.sh accepts a handoff directory", async () => {
   const output = run(importScript, [handoffDir, targetRepo], tempRoot);
 
   assert.equal(git(["rev-parse", "feature/test"], targetRepo), featureHead);
+  assert.equal(git(["branch", "--show-current"], targetRepo), "feature/test");
   assert.match(output, /Verified manifest:/);
 });

@@ -86,6 +86,7 @@ if [[ -z "$branch" ]]; then
 fi
 
 git -C "$target_repo" fetch "$bundle_path" "$branch:$branch"
+git -C "$target_repo" switch "$branch" >/dev/null
 
 if [[ -n "$manifest_path" ]]; then
   printf 'Verified manifest: %s\n' "$manifest_path"
@@ -94,6 +95,7 @@ fi
 printf 'Imported branch: %s\n' "$branch"
 printf 'Target repo: %s\n' "$target_repo"
 printf 'Head: %s\n' "$(git -C "$target_repo" rev-parse "$branch")"
+printf 'Checked out: %s\n' "$(git -C "$target_repo" branch --show-current)"
 
 if [[ -n "$capture_note_path" ]]; then
   printf 'Preview capture: %s\n' "$capture_note_path"

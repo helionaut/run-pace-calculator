@@ -181,7 +181,8 @@ If you already have a checkout of this feature branch with the helper scripts
 available, you can also use
 `./scripts/import_bundle.sh <bundle-path|manifest-path|handoff-dir> <target-repo-dir>`.
 When you pass a handoff manifest or the handoff directory itself, the helper
-verifies the manifest first and then imports the bundled branch.
+verifies the manifest first, imports the bundled branch, and switches the
+target checkout onto that branch.
 
 If you only want the raw branch bundle without the full manifest package:
 
