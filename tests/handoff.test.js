@@ -578,14 +578,23 @@ exit 1
   await stat(resumeScriptPath);
   await stat(checksumsPath);
   await stat(archivePath);
+  const checksums = await readFile(checksumsPath, "utf8");
+  const checksumEntries = Object.fromEntries(
+    checksums
+      .trim()
+      .split("\n")
+      .map((line) => {
+        const [digest, artifact] = line.split(/\s{2,}/);
 
-  const checksumOutput = spawnSync("sha256sum", ["-c", "SHA256SUMS"], {
-    cwd: outputDir,
-    encoding: "utf8"
-  });
+        return [artifact, digest];
+      })
+  );
 
-  assert.equal(checksumOutput.status, 0, checksumOutput.stderr);
-  assert.match(checksumOutput.stdout, /resume-handoff\.sh: OK/);
+  assert.equal(checksumEntries["resume-handoff.sh"], sha256(await readFile(resumeScriptPath)));
+  assert.equal(
+    checksumEntries["HEL-99-handoff-manifest.json"],
+    sha256(await readFile(path.join(outputDir, "HEL-99-handoff-manifest.json")))
+  );
 
   const resumeResult = spawnSync(resumeScriptPath, [targetRepo, "--validate", "--dry-run-publish"], {
     cwd: outputDir,

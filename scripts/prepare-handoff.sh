@@ -289,7 +289,7 @@ fi
 
 printf 'Next step in %s: npm run pr:publish\n' "\$target_repo"
 EOF
-chmod 0o755 "$resume_script_path" 2>/dev/null || chmod 755 "$resume_script_path"
+chmod 755 "$resume_script_path"
 
 resume_script_sha="$(sha256_file "$resume_script_path")"
 resume_script_size="$(file_size "$resume_script_path")"
