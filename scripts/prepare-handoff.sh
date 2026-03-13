@@ -54,6 +54,7 @@ dry_run_path="$output_dir/publish-dry-run.txt"
 summary_path="$output_dir/SUMMARY.md"
 commits_path="$output_dir/commits.txt"
 manifest_path="$output_dir/$manifest_name"
+preview_notes=""
 
 sha256_file() {
   if command -v sha256sum >/dev/null 2>&1; then
@@ -78,6 +79,14 @@ cp docs/pull-request-draft.md "$pr_draft_path"
 npm run pr:dry-run >"$dry_run_path"
 git log --oneline -n 20 >"$commits_path"
 
+preview_notes="$(
+  awk '
+    /^## Preview notes/ {capture=1; next}
+    /^## / && capture {exit}
+    capture {print}
+  ' docs/pull-request-draft.md
+)"
+
 bundle_sha="$(sha256_file "$bundle_path")"
 bundle_size="$(file_size "$bundle_path")"
 pr_draft_sha="$(sha256_file "$pr_draft_path")"
@@ -97,6 +106,14 @@ cat >"$summary_path" <<EOF
 - Generated at: ${generated_at}
 - Verified bundle: ${bundle_name}
 - Bundle SHA-256: ${bundle_sha}
+
+## Preview notes
+
+$(if [[ -n "$preview_notes" ]]; then
+    printf '%s\n' "$preview_notes"
+  else
+    printf '%s\n' '- Preview notes not found in docs/pull-request-draft.md.'
+  fi)
 
 ## Resume steps
 
