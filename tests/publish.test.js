@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -38,7 +38,45 @@ async function cloneRepo() {
   const cloneDir = path.join(tempRoot, "repo");
 
   run("git", ["clone", repoRoot, cloneDir], tempRoot);
+  await syncWorkingTree(cloneDir);
+  snapshotWorkingTree(cloneDir);
   return cloneDir;
+}
+
+async function syncWorkingTree(cloneDir) {
+  const trackedOutput = run("git", ["ls-files", "-z"], repoRoot);
+  const untrackedOutput = run(
+    "git",
+    ["ls-files", "-z", "--others", "--exclude-standard"],
+    repoRoot
+  );
+  const relativePaths = `${trackedOutput}\0${untrackedOutput}`
+    .split("\0")
+    .filter(Boolean);
+
+  for (const relativePath of relativePaths) {
+    const sourcePath = path.join(repoRoot, relativePath);
+    const targetPath = path.join(cloneDir, relativePath);
+
+    await mkdir(path.dirname(targetPath), { recursive: true });
+    await cp(sourcePath, targetPath, { force: true });
+  }
+}
+
+function snapshotWorkingTree(cloneDir) {
+  const hasChanges =
+    spawnSync("git", ["diff", "--quiet"], { cwd: cloneDir }).status !== 0 ||
+    spawnSync("git", ["diff", "--cached", "--quiet"], { cwd: cloneDir }).status !== 0 ||
+    run("git", ["status", "--short"], cloneDir) !== "";
+
+  if (!hasChanges) {
+    return;
+  }
+
+  run("git", ["config", "user.name", "Codex Test"], cloneDir);
+  run("git", ["config", "user.email", "codex-test@example.com"], cloneDir);
+  run("git", ["add", "--all"], cloneDir);
+  run("git", ["commit", "-m", "test: snapshot working tree"], cloneDir);
 }
 
 test("create_pr.sh dry run uses a branch-derived PR title", async () => {
@@ -66,6 +104,7 @@ test("prepare_handoff summary includes preview notes from the PR draft", async (
     summary,
     /Interaction: entering pace immediately reveals speed and finish time/
   );
+  assert.doesNotMatch(summary, /## Preview notes\n\n\n-/);
   assert.ok(manifestPathMatch, "prepare-handoff should print the manifest path");
 
   run("node", ["scripts/verify-handoff.mjs", manifestPathMatch[1]], cloneDir);

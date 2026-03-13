@@ -83,7 +83,23 @@ preview_notes="$(
   awk '
     /^## Preview notes/ {capture=1; next}
     /^## / && capture {exit}
-    capture {print}
+    capture {
+      if (!started && $0 == "") {
+        next
+      }
+
+      started=1
+      lines[++count]=$0
+    }
+    END {
+      while (count > 0 && lines[count] == "") {
+        count--
+      }
+
+      for (i = 1; i <= count; i += 1) {
+        print lines[i]
+      }
+    }
   ' docs/pull-request-draft.md
 )"
 
@@ -108,7 +124,6 @@ cat >"$summary_path" <<EOF
 - Bundle SHA-256: ${bundle_sha}
 
 ## Preview notes
-
 $(if [[ -n "$preview_notes" ]]; then
     printf '%s\n' "$preview_notes"
   else
