@@ -1,17 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { cp, mkdir, mkdtemp, readFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-function run(command, args, cwd) {
+function run(command, args, cwd, options = {}) {
   const result = spawnSync(command, args, {
     cwd,
-    encoding: "utf8"
+    encoding: "utf8",
+    ...options
   });
 
   if (result.status !== 0) {
@@ -110,6 +111,36 @@ test("prepare_handoff summary includes preview notes from the PR draft", async (
   assert.match(summary, /Attach the resulting PR to `HEL-16` and move the issue to/);
   assert.match(summary, /- `SUMMARY.md`/);
   assert.match(summary, /In a browser-enabled environment, use the demo script above/);
+  assert.ok(manifestPathMatch, "prepare-handoff should print the manifest path");
+
+  run("node", ["scripts/verify-handoff.mjs", manifestPathMatch[1]], cloneDir);
+});
+
+test("prepare_handoff can package optional preview capture artifacts", async () => {
+  const cloneDir = await cloneRepo();
+  const outputDir = path.join(cloneDir, ".handoff-test");
+  const beforeRef = run("git", ["rev-parse", "HEAD~1"], cloneDir);
+  const afterRef = run("git", ["rev-parse", "HEAD"], cloneDir);
+  const output = run("./scripts/prepare-handoff.sh", [outputDir], cloneDir, {
+    env: {
+      ...process.env,
+      HANDOFF_PREVIEW_BEFORE_REF: beforeRef,
+      HANDOFF_PREVIEW_AFTER_REF: afterRef
+    }
+  });
+  const summary = await readFile(path.join(outputDir, "SUMMARY.md"), "utf8");
+  const captureNote = await readFile(path.join(outputDir, "PREVIEW-CAPTURE.md"), "utf8");
+  const manifestPathMatch = output.match(/^Manifest: (.+)$/m);
+
+  assert.match(captureNote, new RegExp(beforeRef));
+  assert.match(captureNote, new RegExp(afterRef));
+  assert.match(captureNote, /python3 -m http\.server 4301/);
+  assert.match(captureNote, /python3 -m http\.server 4302/);
+  assert.match(summary, /- `PREVIEW-CAPTURE\.md`/);
+  assert.match(summary, /- `previews\/before\/`/);
+  assert.match(summary, /- `previews\/after\/`/);
+  await stat(path.join(outputDir, "previews", "before", "index.html"));
+  await stat(path.join(outputDir, "previews", "after", "index.html"));
   assert.ok(manifestPathMatch, "prepare-handoff should print the manifest path");
 
   run("node", ["scripts/verify-handoff.mjs", manifestPathMatch[1]], cloneDir);

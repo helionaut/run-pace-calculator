@@ -54,8 +54,19 @@ dry_run_path="$output_dir/publish-dry-run.txt"
 summary_path="$output_dir/SUMMARY.md"
 commits_path="$output_dir/commits.txt"
 manifest_path="$output_dir/$manifest_name"
+capture_note_path="$output_dir/PREVIEW-CAPTURE.md"
+preview_root_dir="$output_dir/previews"
 preview_notes=""
 demo_script=""
+preview_before_ref="${HANDOFF_PREVIEW_BEFORE_REF:-}"
+preview_after_ref="${HANDOFF_PREVIEW_AFTER_REF:-}"
+preview_before_commit=""
+preview_after_commit=""
+capture_note_size=""
+capture_note_sha=""
+optional_artifact_lines=""
+optional_resume_step=""
+optional_manifest_artifact=""
 
 sha256_file() {
   if command -v sha256sum >/dev/null 2>&1; then
@@ -105,10 +116,76 @@ extract_markdown_section() {
   ' "$source_path"
 }
 
+resolve_commit_ref() {
+  git rev-parse "$1^{commit}"
+}
+
+build_preview_snapshot() {
+  local ref="$1"
+  local destination="$2"
+  local worktree=""
+
+  worktree="$(mktemp -d "${TMPDIR:-/tmp}/hel-16-preview.XXXXXX")"
+
+  git archive "$ref" | tar -x -C "$worktree"
+
+  (
+    cd "$worktree"
+    npm run build >/dev/null
+  )
+
+  mkdir -p "$destination"
+  cp -R "$worktree/dist/." "$destination/"
+  rm -rf "$worktree"
+}
+
+write_capture_note() {
+  cat >"$capture_note_path" <<EOF
+# ${issue_identifier} Preview Capture
+
+- Before snapshot ref: \`${preview_before_commit}\`
+- After snapshot ref: \`${preview_after_commit}\`
+- Before static build: \`${preview_root_dir}/before\`
+- After static build: \`${preview_root_dir}/after\`
+
+Suggested capture flow in a browser-enabled environment:
+
+\`\`\`sh
+python3 -m http.server 4301 --directory ${preview_root_dir}/before
+python3 -m http.server 4302 --directory ${preview_root_dir}/after
+\`\`\`
+
+Then capture:
+
+1. \`http://127.0.0.1:4301/\` for the before screenshot showing the earlier UI state.
+2. \`http://127.0.0.1:4302/\` for the after screenshot showing the redesigned calculator.
+3. \`http://127.0.0.1:4302/\` again for the short interaction recording using the demo script in \`${summary_path}\`.
+EOF
+}
+
+if [[ -n "$preview_after_ref" && -z "$preview_before_ref" ]]; then
+  echo "HANDOFF_PREVIEW_AFTER_REF requires HANDOFF_PREVIEW_BEFORE_REF." >&2
+  exit 1
+fi
+
+if [[ -n "$preview_before_ref" ]]; then
+  preview_after_ref="${preview_after_ref:-HEAD}"
+  preview_before_commit="$(resolve_commit_ref "$preview_before_ref")"
+  preview_after_commit="$(resolve_commit_ref "$preview_after_ref")"
+fi
+
 ./scripts/export_bundle.sh "$bundle_path" >/dev/null
 cp docs/pull-request-draft.md "$pr_draft_path"
 npm run pr:dry-run >"$dry_run_path"
 git log --oneline -n 20 >"$commits_path"
+
+rm -rf "$preview_root_dir" "$capture_note_path"
+
+if [[ -n "$preview_before_commit" ]]; then
+  build_preview_snapshot "$preview_before_commit" "$preview_root_dir/before"
+  build_preview_snapshot "$preview_after_commit" "$preview_root_dir/after"
+  write_capture_note
+fi
 
 preview_notes="$(extract_markdown_section "Preview notes" docs/pull-request-draft.md)"
 demo_script="$(extract_markdown_section "Demo script" docs/pull-request-draft.md)"
@@ -121,6 +198,23 @@ dry_run_sha="$(sha256_file "$dry_run_path")"
 dry_run_size="$(file_size "$dry_run_path")"
 commits_sha="$(sha256_file "$commits_path")"
 commits_size="$(file_size "$commits_path")"
+
+if [[ -f "$capture_note_path" ]]; then
+  capture_note_sha="$(sha256_file "$capture_note_path")"
+  capture_note_size="$(file_size "$capture_note_path")"
+  optional_artifact_lines=$'- `PREVIEW-CAPTURE.md`\n- `previews/before/`\n- `previews/after/`'
+  optional_resume_step=$'6. If `PREVIEW-CAPTURE.md` is present, use its serve commands to capture the\n   required before/after screenshots or short recording in a browser-enabled\n   environment.\n'
+  optional_manifest_artifact="$(cat <<EOF
+    ,
+    {
+      "name": "preview_capture_note",
+      "path": "PREVIEW-CAPTURE.md",
+      "sha256": "${capture_note_sha}",
+      "size": ${capture_note_size}
+    }
+EOF
+)"
+fi
 
 cat >"$summary_path" <<EOF
 # ${issue_identifier} Handoff Summary
@@ -162,9 +256,13 @@ summary, the manifest, and the exported bundle.
    \`npm run pr:publish\`
 5. Attach the resulting PR to \`${issue_identifier}\` and move the issue to
    \`Human Review\`.
-6. In a browser-enabled environment, use the demo script above to capture the
-   required before/after screenshot or short recording for the PR and Linear
-   issue.
+$(if [[ -n "$optional_resume_step" ]]; then
+    printf '%s' "$optional_resume_step"
+  else
+    printf '%s\n' '6. In a browser-enabled environment, use the demo script above to capture the'
+    printf '%s\n' '   required before/after screenshot or short recording for the PR and Linear'
+    printf '%s\n' '   issue.'
+  fi)
 
 ## Included artifacts
 
@@ -174,6 +272,9 @@ summary, the manifest, and the exported bundle.
 - \`publish-dry-run.txt\`
 - \`commits.txt\`
 - \`${manifest_name}\`
+$(if [[ -n "$optional_artifact_lines" ]]; then
+    printf '%s\n' "$optional_artifact_lines"
+  fi)
 EOF
 
 summary_sha="$(sha256_file "$summary_path")"
@@ -219,7 +320,7 @@ cat >"$manifest_path" <<EOF
       "path": "SUMMARY.md",
       "sha256": "${summary_sha}",
       "size": ${summary_size}
-    }
+    }${optional_manifest_artifact}
   ]
 }
 EOF

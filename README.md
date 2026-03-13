@@ -156,6 +156,18 @@ The exported `.handoff/<issue-key>/SUMMARY.md` includes the current preview
 notes plus a reusable demo script for the eventual screenshot or short
 recording capture in a browser-enabled environment.
 
+To also package explicit before/after static previews for later screenshot
+capture, provide git refs when preparing the handoff:
+
+```sh
+HANDOFF_PREVIEW_BEFORE_REF=<before-ref> HANDOFF_PREVIEW_AFTER_REF=<after-ref> npm run handoff:prepare
+```
+
+That adds `.handoff/<issue-key>/PREVIEW-CAPTURE.md` plus
+`.handoff/<issue-key>/previews/before/` and `.handoff/<issue-key>/previews/after/`
+with ready-to-serve static artifacts for external screenshot or recording
+capture.
+
 To import the included bundle into another writable checkout and publish it
 from there:
 
