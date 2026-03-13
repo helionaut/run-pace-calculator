@@ -211,7 +211,7 @@ const captureNote = manifest.artifacts?.find(
 );
 
 if (!bundle) {
-  console.error(`Manifest is missing a bundle artifact: ${manifestPath}`);
+  console.error("Manifest is missing a bundle artifact: " + manifestPath);
   process.exit(1);
 }
 
