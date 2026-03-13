@@ -2,8 +2,10 @@
 
 Run Pace Calculator is a static web app for converting running pace, speed, and
 projected finish time across common race distances. This repo now has one
-canonical Node-based install, run, build, preview, and check flow for local
-work and pull-request validation.
+canonical Node-based install, run, build, preview, check, and Pages-deploy
+verification flow for local work and pull-request validation.
+
+Production URL: https://helionaut.github.io/run-pace-calculator/
 
 ## What Ships In The Current Slice
 
@@ -60,6 +62,17 @@ work and pull-request validation.
    This runs syntax checks, the Node test suite, a production build, and a
    smoke check against the built artifact.
 
+6. Run the Pages deployment validation or compare the live site to `dist/`:
+
+   ```sh
+   npm run validate
+   npm run verify:pages -- https://helionaut.github.io/run-pace-calculator/
+   ```
+
+   `npm run validate` reuses the deploy gate before GitHub Pages upload, and
+   `npm run verify:pages` compares the deployed site with the local `dist/`
+   artifact.
+
 ## Day-To-Day Commands
 
 | Command | Purpose |
@@ -70,6 +83,8 @@ work and pull-request validation.
 | `npm run preview` | Build and serve the production artifact |
 | `npm test` | Run the full Node test suite |
 | `npm run check` | Run the canonical validation flow used by CI |
+| `npm run validate` | Run the Pages pre-deploy validation path |
+| `npm run verify:pages -- <url>` | Compare a deployed site to local `dist/` |
 
 GitHub Actions runs `npm run check` for every pull request.
 
@@ -88,6 +103,7 @@ short explicit error instead of a server traceback.
 - `scripts/build.mjs` produces the static build output.
 - `scripts/serve.mjs` serves either `src/` or `dist/` locally.
 - `scripts/check-dist.mjs` smoke-checks the built artifact.
+- `scripts/verify-pages-content.mjs` compares the live Pages site to `dist/`.
 - `.github/workflows/` contains CI and deployment definitions.
 - `.codex/skills/` contains repo-local Symphony/Codex workflows.
 
@@ -100,8 +116,17 @@ short explicit error instead of a server traceback.
 
 ## Deployment
 
-`.github/workflows/deploy-pages.yml` builds the static site and publishes
-`dist/` to GitHub Pages on pushes to `main`.
+`.github/workflows/deploy-pages.yml` builds the static site and publishes `dist/`
+to GitHub Pages on pushes to `main`, then verifies that the published site
+matches the artifact built from that same commit.
+
+One-time repository setup in GitHub:
+
+1. Open `Settings -> Pages`.
+2. Set `Source` to `GitHub Actions`.
+
+See [DEPLOYING.md](DEPLOYING.md) for the release checklist and post-deploy
+verification flow.
 
 ## Offline Handoff
 

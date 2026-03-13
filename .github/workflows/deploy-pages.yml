@@ -27,8 +27,8 @@ jobs:
         with:
           node-version: 22
 
-      - name: Build static site
-        run: npm run build
+      - name: Validate the Pages artifact
+        run: npm run validate
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
@@ -40,8 +40,30 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     needs: build
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  verify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Rebuild the deployed artifact
+        run: npm run build
+
+      - name: Verify deployed Pages content
+        env:
+          PAGE_URL: ${{ needs.deploy.outputs.page_url }}
+        run: npm run verify:pages -- "$PAGE_URL"
