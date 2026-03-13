@@ -9,12 +9,42 @@ fi
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
+resolve_branch() {
+  local branch_name
+
+  branch_name="$(git branch --show-current 2>/dev/null || true)"
+  if [[ -n "$branch_name" ]]; then
+    printf '%s\n' "$branch_name"
+    return 0
+  fi
+
+  for branch_name in "${GITHUB_HEAD_REF:-}" "${GITHUB_REF_NAME:-}" "${BRANCH_NAME:-}"; do
+    if [[ -n "$branch_name" ]]; then
+      printf '%s\n' "$branch_name"
+      return 0
+    fi
+  done
+
+  branch_name="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+  if [[ -n "$branch_name" ]]; then
+    printf '%s\n' "$branch_name"
+    return 0
+  fi
+
+  return 1
+}
+
 if [[ -n "$(git status --short)" ]]; then
   echo "Working tree must be clean before preparing a handoff." >&2
   exit 1
 fi
 
-branch="$(git branch --show-current)"
+branch="$(resolve_branch || true)"
+if [[ -z "$branch" ]]; then
+  echo "Could not determine the current git branch." >&2
+  exit 1
+fi
+
 head="$(git rev-parse HEAD)"
 generated_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 generated_on="${generated_at%%T*}"

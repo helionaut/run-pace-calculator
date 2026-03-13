@@ -22,6 +22,12 @@ function run(command, args) {
   return result.stdout;
 }
 
+function resolveCurrentBranch(env = process.env) {
+  const branch = run("git", ["branch", "--show-current"]).trim();
+
+  return branch || env.GITHUB_HEAD_REF || env.GITHUB_REF_NAME || "";
+}
+
 function git(args, cwd) {
   const result = spawnSync("git", args, {
     cwd,
@@ -49,13 +55,80 @@ function deriveExpectedTitle(branch) {
 }
 
 test("create_pr.sh dry run uses a title derived from the current branch", () => {
-  const branch = run("git", ["branch", "--show-current"]).trim();
+  const branch = resolveCurrentBranch();
   const output = run(publishScript, ["--dry-run"]);
   const expectedTitle = deriveExpectedTitle(branch);
 
   assert.match(output, new RegExp(`Would create a PR with: gh pr create --head ${branch} --title "${expectedTitle}"`));
   assert.doesNotMatch(output, /Build the first Run Pace Calculator slice/);
   assert.match(output, /Would use body file: docs\/pull-request-draft\.md/);
+});
+
+test("create_pr.sh dry run uses GITHUB_HEAD_REF when the checkout is detached", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "hel-18-publish-detached."));
+  const repoDir = path.join(tempRoot, "repo");
+  const scriptsDir = path.join(repoDir, "scripts");
+  const docsDir = path.join(repoDir, "docs");
+  const bootstrapDir = path.join(repoDir, ".bootstrap");
+  const branch = "eugeniy/hel-99-detached-publish";
+
+  await mkdir(repoDir, { recursive: true });
+  await mkdir(scriptsDir, { recursive: true });
+  await mkdir(docsDir, { recursive: true });
+  await mkdir(bootstrapDir, { recursive: true });
+
+  git(["init", "-b", "main"], repoDir);
+  git(["config", "user.name", "Codex"], repoDir);
+  git(["config", "user.email", "codex@example.com"], repoDir);
+  git(["remote", "add", "origin", "https://github.com/helionaut/run-pace-calculator.git"], repoDir);
+
+  await writeFile(path.join(repoDir, "README.md"), "# fixture repo\n");
+  await writeFile(
+    path.join(docsDir, "pull-request-draft.md"),
+    await readFile(path.join(repoRoot, "docs", "pull-request-draft.md"), "utf8")
+  );
+  await writeFile(
+    path.join(bootstrapDir, "project.json"),
+    JSON.stringify(
+      {
+        repo: {
+          slug: "run-pace-calculator",
+          url: "https://github.com/helionaut/run-pace-calculator"
+        },
+        linear: {
+          starter_issue_identifier: "HEL-99"
+        }
+      },
+      null,
+      2
+    )
+  );
+  await writeExecutable(
+    path.join(scriptsDir, "create_pr.sh"),
+    await readFile(path.join(repoRoot, "scripts", "create_pr.sh"), "utf8")
+  );
+
+  git(["add", "."], repoDir);
+  git(["commit", "-m", "Initial fixture"], repoDir);
+  git(["switch", "-c", branch], repoDir);
+  git(["checkout", "--detach"], repoDir);
+
+  const result = spawnSync("./scripts/create_pr.sh", ["--dry-run"], {
+    cwd: repoDir,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      GITHUB_HEAD_REF: branch
+    }
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, new RegExp(`Using branch: ${branch}`));
+  assert.match(
+    result.stdout,
+    /Would create a PR with: gh pr create --head eugeniy\/hel-99-detached-publish --title "Detached publish"/
+  );
+  assert.doesNotMatch(result.stdout, /Update run pace calculator/);
 });
 
 test("create_pr.sh records combined blocker details in the fallback handoff summary", async () => {
