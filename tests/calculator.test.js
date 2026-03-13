@@ -3,12 +3,16 @@ import assert from "node:assert/strict";
 
 import {
   CONVERT_SOURCES,
+  DISTANCE_PRESETS,
   MODES,
   applyConvertSourceChange,
+  applyPresetSelection,
   applyUnitChange,
   createFormState,
   deriveCalculatorView,
-  resetFormState
+  formatDistanceInputValue,
+  resetFormState,
+  updateDistanceInput
 } from "../src/lib/calculator.js";
 
 function buildState(overrides = {}, inputOverrides = {}) {
@@ -221,25 +225,80 @@ test("reset clears editable fields and results while preserving mode, unit, and 
 });
 
 test("unit changes convert preset distance, pace, and speed inputs in place", () => {
+  const initialState = buildState(
+    {
+      mode: MODES.FINISH,
+      presetId: "10k"
+    },
+    {
+      distance: "10",
+      paceMinutes: "5",
+      paceSeconds: "0",
+      speed: "12.5"
+    }
+  );
+  const finishBefore = deriveCalculatorView(initialState).display.primaryValue;
   const nextState = applyUnitChange(
-    buildState(
-      {
-        mode: MODES.FINISH,
-        presetId: "10k"
-      },
-      {
-        distance: "10",
-        paceMinutes: "5",
-        paceSeconds: "0",
-        speed: "12.5"
-      }
-    ),
+    initialState,
     "mi"
   );
+  const finishAfter = deriveCalculatorView(nextState).display.primaryValue;
 
   assert.equal(nextState.unit, "mi");
   assert.equal(nextState.inputs.distance, "6.21371");
   assert.equal(nextState.inputs.paceMinutes, "8");
   assert.equal(nextState.inputs.paceSeconds, "03");
   assert.equal(nextState.inputs.speed, "7.77");
+  assert.equal(finishAfter, finishBefore);
+});
+
+test("named presets stay selected across unit switches and keep canonical miles", () => {
+  const presetState = applyPresetSelection(createFormState(), "half");
+  const switchedState = applyUnitChange(
+    buildState(
+      {
+        mode: MODES.FINISH,
+        presetId: presetState.presetId,
+        canonical: presetState.canonical
+      },
+      {
+        distance: presetState.inputs.distance,
+        paceMinutes: "5",
+        paceSeconds: "0"
+      }
+    ),
+    "mi"
+  );
+
+  assert.equal(switchedState.presetId, "half");
+  assert.equal(switchedState.inputs.distance, "13.10938");
+});
+
+test("manual distance edits switch the preset back to custom", () => {
+  const presetState = applyPresetSelection(createFormState(), "marathon");
+  const nextState = updateDistanceInput(presetState, "43");
+
+  assert.equal(nextState.presetId, "custom");
+  assert.equal(nextState.inputs.distance, "43");
+});
+
+test("named presets use the PRD canonical distances", () => {
+  assert.deepEqual(
+    DISTANCE_PRESETS
+      .filter((preset) => preset.distanceKm !== null)
+      .map(({ label, distanceKm }) => [label, distanceKm]),
+    [
+      ["5K", 5],
+      ["10K", 10],
+      ["Half Marathon", 21.0975],
+      ["Marathon", 42.195]
+    ]
+  );
+});
+
+test("preset distances render exact converted miles from canonical kilometers", () => {
+  assert.equal(formatDistanceInputValue(5, "mi"), "3.10686");
+  assert.equal(formatDistanceInputValue(10, "mi"), "6.21371");
+  assert.equal(formatDistanceInputValue(21.0975, "mi"), "13.10938");
+  assert.equal(formatDistanceInputValue(42.195, "mi"), "26.21876");
 });

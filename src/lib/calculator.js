@@ -97,8 +97,67 @@ export function getPresetById(id) {
   return DISTANCE_PRESETS.find((preset) => preset.id === id) ?? DISTANCE_PRESETS[0];
 }
 
+function createCanonicalState() {
+  return {
+    distanceKm: null,
+    paceSpeedKmh: null,
+    speedKmh: null
+  };
+}
+
+function deriveCanonicalValues(state) {
+  const distance = parseDistanceInput(state.inputs.distance, {
+    showRequiredError: false
+  });
+  const pace = parsePaceInput(state.inputs, {
+    showRequiredError: false
+  });
+  const speed = parseSpeedInput(state.inputs.speed, {
+    showRequiredError: false
+  });
+
+  return {
+    distanceKm:
+      !distance.error && distance.value !== null
+        ? distanceToKilometers(distance.value, state.unit)
+        : null,
+    paceSpeedKmh:
+      !pace.error && pace.value !== null
+        ? paceToSpeedKmh(pace.value, state.unit)
+        : null,
+    speedKmh:
+      !speed.error && speed.value !== null
+        ? toKilometersPerHour(speed.value, state.unit)
+        : null
+  };
+}
+
+function getCanonicalValues(state) {
+  const derived = deriveCanonicalValues(state);
+
+  return {
+    distanceKm: Number.isFinite(state.canonical?.distanceKm)
+      ? state.canonical.distanceKm
+      : derived.distanceKm,
+    paceSpeedKmh: Number.isFinite(state.canonical?.paceSpeedKmh)
+      ? state.canonical.paceSpeedKmh
+      : derived.paceSpeedKmh,
+    speedKmh: Number.isFinite(state.canonical?.speedKmh)
+      ? state.canonical.speedKmh
+      : derived.speedKmh
+  };
+}
+
+function syncCanonicalValues(state) {
+  return {
+    ...state,
+    canonical: deriveCanonicalValues(state)
+  };
+}
+
 export function createFormState() {
   return {
+    canonical: createCanonicalState(),
     mode: MODES.PACE,
     unit: "km",
     convertSource: CONVERT_SOURCES.PACE,
@@ -214,16 +273,22 @@ export function formatDistance(distanceKm, unit = "km") {
 
 export function applyPresetSelection(state, presetId) {
   const preset = getPresetById(presetId);
+  const canonical = getCanonicalValues(state);
 
   if (preset.distanceKm === null) {
     return {
       ...state,
+      canonical,
       presetId: preset.id
     };
   }
 
   return {
     ...state,
+    canonical: {
+      ...canonical,
+      distanceKm: preset.distanceKm
+    },
     presetId: preset.id,
     inputs: {
       ...state.inputs,
@@ -233,24 +298,24 @@ export function applyPresetSelection(state, presetId) {
 }
 
 export function updateDistanceInput(state, distance) {
-  return {
+  return syncCanonicalValues({
     ...state,
     presetId: "custom",
     inputs: {
       ...state.inputs,
       distance
     }
-  };
+  });
 }
 
 export function updateInputValue(state, field, value) {
-  return {
+  return syncCanonicalValues({
     ...state,
     inputs: {
       ...state.inputs,
       [field]: value
     }
-  };
+  });
 }
 
 export function applyModeChange(state, mode) {
@@ -272,11 +337,11 @@ export function applyConvertSourceChange(state, source) {
     nextInputs.paceSeconds = "";
   }
 
-  return {
+  return syncCanonicalValues({
     ...state,
     convertSource: source,
     inputs: nextInputs
-  };
+  });
 }
 
 function convertPaceInputs(inputs, fromUnit, toUnit) {
@@ -305,6 +370,7 @@ export function applyUnitChange(state, nextUnit) {
     return state;
   }
 
+  const canonical = getCanonicalValues(state);
   const nextInputs = {
     ...state.inputs
   };
@@ -312,28 +378,21 @@ export function applyUnitChange(state, nextUnit) {
   if (state.presetId !== "custom") {
     const preset = getPresetById(state.presetId);
     nextInputs.distance = formatDistanceInputValue(preset.distanceKm, nextUnit);
-  } else {
-    const parsedDistance = parseDistanceInput(state.inputs.distance, {
-      showRequiredError: false
-    });
-
-    if (!parsedDistance.error && parsedDistance.value !== null) {
-      nextInputs.distance = formatDistanceInputValue(
-        distanceToKilometers(parsedDistance.value, state.unit),
-        nextUnit
-      );
-    }
+  } else if (Number.isFinite(canonical.distanceKm)) {
+    nextInputs.distance = formatDistanceInputValue(canonical.distanceKm, nextUnit);
   }
 
-  const convertedPace = convertPaceInputs(state.inputs, state.unit, nextUnit);
-  nextInputs.paceMinutes = convertedPace.minutes;
-  nextInputs.paceSeconds = convertedPace.seconds;
+  if (Number.isFinite(canonical.paceSpeedKmh)) {
+    const converted = speedToPaceSeconds(canonical.paceSpeedKmh, nextUnit);
+    const rounded = Math.round(converted);
 
-  const parsedSpeed = parseSpeedInput(state.inputs.speed, { showRequiredError: false });
+    nextInputs.paceMinutes = String(Math.floor(rounded / 60));
+    nextInputs.paceSeconds = padTwoDigits(rounded % 60);
+  }
 
-  if (!parsedSpeed.error && parsedSpeed.value !== null) {
+  if (Number.isFinite(canonical.speedKmh)) {
     const convertedSpeed = fromKilometersPerHour(
-      toKilometersPerHour(parsedSpeed.value, state.unit),
+      canonical.speedKmh,
       nextUnit
     );
     nextInputs.speed = formatSpeedInputValue(convertedSpeed);
@@ -341,6 +400,14 @@ export function applyUnitChange(state, nextUnit) {
 
   return {
     ...state,
+    canonical: {
+      distanceKm:
+        state.presetId !== "custom"
+          ? getPresetById(state.presetId).distanceKm
+          : canonical.distanceKm,
+      paceSpeedKmh: canonical.paceSpeedKmh,
+      speedKmh: canonical.speedKmh
+    },
     unit: nextUnit,
     inputs: nextInputs
   };
@@ -642,6 +709,7 @@ function createDisplaySummary(state, result) {
 
 export function deriveCalculatorView(state, previousResult = null) {
   const showRequiredErrors = shouldShowRequiredErrors(state, previousResult);
+  const canonical = getCanonicalValues(state);
   const errors = {
     distance: null,
     finish: null,
@@ -659,7 +727,7 @@ export function deriveCalculatorView(state, previousResult = null) {
     errors.distance = distance.error;
 
     if (!distance.error && distance.value !== null) {
-      distanceKm = distanceToKilometers(distance.value, state.unit);
+      distanceKm = canonical.distanceKm;
     }
   }
 
@@ -685,7 +753,7 @@ export function deriveCalculatorView(state, previousResult = null) {
     errors.pace = pace.error;
 
     if (!errors.distance && !errors.pace && distanceKm !== null) {
-      const speedKmh = paceToSpeedKmh(pace.value, state.unit);
+      const speedKmh = canonical.paceSpeedKmh;
       currentResult = createResult(state, speedKmh, distanceKm);
     }
   } else if (state.convertSource === CONVERT_SOURCES.PACE) {
@@ -696,7 +764,7 @@ export function deriveCalculatorView(state, previousResult = null) {
     errors.pace = pace.error;
 
     if (!errors.pace) {
-      const speedKmh = paceToSpeedKmh(pace.value, state.unit);
+      const speedKmh = canonical.paceSpeedKmh;
       currentResult = createResult(state, speedKmh, null);
     }
   } else {
@@ -707,11 +775,7 @@ export function deriveCalculatorView(state, previousResult = null) {
     errors.speed = speed.error;
 
     if (!errors.speed) {
-      currentResult = createResult(
-        state,
-        toKilometersPerHour(speed.value, state.unit),
-        null
-      );
+      currentResult = createResult(state, canonical.speedKmh, null);
     }
   }
 
