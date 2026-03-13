@@ -85,7 +85,16 @@ if [[ -z "${HANDOFF_BLOCKER_SNAPSHOT:-}" && -f "$summary_path" ]]; then
         }
       }
       in_blocker { print }
-    ' "$summary_path"
+    ' "$summary_path" | awk '
+      NF { seen=1 }
+      seen { lines[++count]=$0 }
+      NF { last=count }
+      END {
+        for (i = 1; i <= last; i += 1) {
+          print lines[i]
+        }
+      }
+    '
   )"
 fi
 

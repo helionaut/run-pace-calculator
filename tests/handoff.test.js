@@ -283,6 +283,7 @@ exit 1
   assert.match(summary, /## Current blocker snapshot \(\d{4}-\d{2}-\d{2}\)/);
   assert.match(summary, /- GitHub auth is not ready\./);
   assert.match(summary, /- GitHub DNS resolution failed\./);
+  assert.doesNotMatch(summary, /## Current blocker snapshot \(\d{4}-\d{2}-\d{2}\)\n\n\n-/);
 });
 
 test("prepare-handoff preserves an existing blocker snapshot when none is provided", async () => {
@@ -383,4 +384,5 @@ exit 1
   assert.match(summary, /## Current blocker snapshot \(\d{4}-\d{2}-\d{2}\)/);
   assert.match(summary, /- GitHub auth is not ready\./);
   assert.match(summary, /- GitHub DNS resolution failed\./);
+  assert.doesNotMatch(summary, /## Current blocker snapshot \(\d{4}-\d{2}-\d{2}\)\n\n\n-/);
 });
