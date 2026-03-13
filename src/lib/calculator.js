@@ -135,26 +135,39 @@ function getSelectedSpeedProvenance(displayMode, displayConvertSource, stale) {
   });
 }
 
-function createInputProvenance(state) {
+function createInputProvenance(state, displayedResult, resultState) {
+  const displayMode = displayedResult?.sourceMode ?? state.mode;
+  const displayConvertSource =
+    displayedResult?.sourceConvertSource ?? state.convertSource;
+  const stale = resultState === "stale";
+  const distanceIsDriving =
+    displayMode === MODES.PACE || displayMode === MODES.FINISH;
+  const finishIsDriving = displayMode === MODES.PACE;
+  const paceIsDriving =
+    displayMode === MODES.FINISH ||
+    (displayMode === MODES.CONVERT &&
+      displayConvertSource === CONVERT_SOURCES.PACE);
+  const speedIsDriving =
+    displayMode === MODES.CONVERT &&
+    displayConvertSource === CONVERT_SOURCES.SPEED;
   const distance = createProvenanceDescriptor({
-    source: "entered"
+    source: "entered",
+    stale: stale && distanceIsDriving
   });
   const finish = createProvenanceDescriptor({
     source: "entered",
-    locked: state.mode === MODES.PACE
+    locked: finishIsDriving,
+    stale: stale && finishIsDriving
   });
   const pace = createProvenanceDescriptor({
     source: "entered",
-    locked:
-      state.mode === MODES.FINISH ||
-      (state.mode === MODES.CONVERT &&
-        state.convertSource === CONVERT_SOURCES.PACE)
+    locked: paceIsDriving,
+    stale: stale && paceIsDriving
   });
   const speed = createProvenanceDescriptor({
     source: "entered",
-    locked:
-      state.mode === MODES.CONVERT &&
-      state.convertSource === CONVERT_SOURCES.SPEED
+    locked: speedIsDriving,
+    stale: stale && speedIsDriving
   });
 
   return {
@@ -1049,7 +1062,11 @@ export function deriveCalculatorView(state, previousResult = null) {
       ? createDisplaySummary(state, displayedResult, resultState)
       : null,
     errors,
-    inputProvenance: createInputProvenance(state),
+    inputProvenance: createInputProvenance(
+      state,
+      displayedResult,
+      resultState
+    ),
     resultState,
     showDistanceFields: state.mode !== MODES.CONVERT,
     showFinishFields: state.mode === MODES.PACE,

@@ -248,6 +248,84 @@ test("convert mode can mark the last answer stale after source changes", () => {
   assert.equal(staleView.errors.speed, "Enter a speed.");
 });
 
+test("stale input provenance stays aligned with the displayed last valid source", () => {
+  const finishState = buildState(
+    {
+      mode: MODES.FINISH
+    },
+    {
+      distance: "10",
+      paceMinutes: "5",
+      paceSeconds: "0"
+    }
+  );
+  const validView = deriveCalculatorView(finishState);
+  const stalePaceModeView = deriveCalculatorView(
+    buildState(
+      {
+        mode: MODES.PACE
+      },
+      {
+        distance: "10",
+        finishHours: "",
+        finishMinutes: "",
+        finishSeconds: ""
+      }
+    ),
+    validView.currentResult
+  );
+  const speedSourceState = applyConvertSourceChange(
+    buildState(
+      {
+        mode: MODES.CONVERT,
+        convertSource: CONVERT_SOURCES.PACE
+      },
+      {
+        paceMinutes: "5",
+        paceSeconds: "0"
+      }
+    ),
+    CONVERT_SOURCES.SPEED
+  );
+  const staleConvertView = deriveCalculatorView(
+    speedSourceState,
+    deriveCalculatorView(
+      buildState(
+        {
+          mode: MODES.CONVERT,
+          convertSource: CONVERT_SOURCES.PACE
+        },
+        {
+          paceMinutes: "5",
+          paceSeconds: "0"
+        }
+      )
+    ).currentResult
+  );
+
+  assert.equal(stalePaceModeView.resultState, "stale");
+  assert.equal(stalePaceModeView.display.lockedSummary.label, "Locked pace");
+  assert.deepEqual(
+    getBadgeLabels(stalePaceModeView.inputProvenance.finish),
+    ["Entered"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(stalePaceModeView.inputProvenance.pace),
+    ["Entered", "Locked", "Last valid"]
+  );
+
+  assert.equal(staleConvertView.resultState, "stale");
+  assert.equal(staleConvertView.display.lockedSummary.label, "Locked pace");
+  assert.deepEqual(
+    getBadgeLabels(staleConvertView.inputProvenance.speed),
+    ["Entered"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(staleConvertView.inputProvenance.pace),
+    ["Entered", "Locked", "Last valid"]
+  );
+});
+
 test("reset clears editable fields and results while preserving mode, unit, and convert source", () => {
   const resetState = resetFormState(
     buildState(
