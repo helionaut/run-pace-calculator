@@ -1,50 +1,34 @@
 ## Summary
 
-- add a polished static run pace calculator with pace, speed, and finish-time
-  input modes
-- add pure conversion helpers, Node tests, and a zero-dependency build for
-  GitHub Pages
-- tighten calculator validation so pace and finish-time fields reject invalid
-  decimal or out-of-range time parts without capping long pace minutes
-- make the calculator mode switcher keyboard-operable with real tab semantics
-- add product docs, deployment workflow, PR template, and offline handoff
-  scripts with a repo-local manifest fallback and relative bundle import fixes
-  for blocked publish environments
-- strengthen handoff verification so copied manifests also confirm the bundled
-  branch and head metadata
+- label result values as `Entered`, `Derived`, `Locked`, and `Last valid`
+  so provenance stays obvious across pace, finish-time, and convert modes
+- add matching provenance cues to the active input clusters and a dedicated
+  locked-value summary in the compact context card
+- preserve stale-result clarity and accessibility with explicit text labels,
+  screen-reader-friendly provenance regions, and tests for entered-vs-derived
+  plus stale-state rendering paths
 
 ## Testing
 
 - [x] `npm test`
 - [x] `npm run build`
 - [x] `npm run check`
-- [x] `npm run pr:dry-run`
-- [x] `npm run pr:publish`
-- [x] `npm run bundle:export`
-- [x] `./scripts/import_bundle.sh .handoff/HEL-8/run-pace-calculator-eugeniy-hel-8-initial-build-run-pace-calculator.bundle <repo>`
-- [x] `npm run handoff:prepare`
-- [x] `npm run handoff:verify -- .handoff/HEL-8/HEL-8-handoff-manifest.json`
-- [x] import the persisted `.handoff/HEL-8` bundle into a fresh clone and run
-  `npm run check`
-- [x] verify a copied handoff manifest still validates bundle branch/head
-  metadata outside the original workspace path
-- [x] `npm test` covers calculator logic and handoff manifest verification
-- [x] `npm run dev` (expected explicit bind error in this sandbox)
-- [x] `npm run preview` (expected explicit bind error in this sandbox)
+- [x] `npm run handoff:verify -- .handoff/HEL-19/HEL-19-handoff-manifest.json`
+- [ ] Other:
 
 ## Risks
 
-- Local HTTP serving could not be exercised in this sandbox because socket
-  binding fails with `PermissionError: [Errno 1] Operation not permitted`.
+- The UI change was validated through automated tests and static asset checks,
+  but not through an interactive browser session in this sandbox.
 
 ## Preview notes
 
-- The page opens with a large editorial hero, supported race-distance chips,
-  and a dark aside card that calls out the first-slice scope.
-- The calculator panel uses three pill-style mode tabs for Pace, Speed, and
-  Finish Time, with the active panel swapping inline below the controls.
-- The output area shows a highlighted projected finish card, equivalent pace
-  and speed cards, a split guide, and a race projection table below.
+- Input panels now show compact provenance badges so the active entered source
+  reads differently from calculator-derived fields.
+- The summary area adds provenance badges beside result values and a dedicated
+  locked-input block that stays readable when the result is stale.
+- Stale results continue to show the last valid answer, now explicitly marked
+  as `Last valid` instead of looking like fresh output.
 
 ## Checklist
 
@@ -56,10 +40,11 @@
 
 If GitHub access is still blocked in the current checkout:
 
-1. Run `npm run handoff:prepare` from this repo, or reuse the verified
-   handoff directory exported during this run.
-2. Import the included bundle into a writable clone with:
-   `git -C <target-repo-dir> fetch .handoff/HEL-8/run-pace-calculator-eugeniy-hel-8-initial-build-run-pace-calculator.bundle eugeniy/hel-8-initial-build-run-pace-calculator:eugeniy/hel-8-initial-build-run-pace-calculator`
-   `git -C <target-repo-dir> switch eugeniy/hel-8-initial-build-run-pace-calculator`
-3. Push branch `eugeniy/hel-8-initial-build-run-pace-calculator`.
-4. Create the PR using the title and body above.
+1. Reuse the verified handoff directory at
+   `.handoff/HEL-19/` or regenerate it with `npm run handoff:prepare`.
+2. Import the bundle into another writable clone with:
+   `git -C <target-repo-dir> fetch .handoff/HEL-19/run-pace-calculator-eugeniy-hel-19-add-confidence-focused-result-presentation-and-input.bundle eugeniy/hel-19-add-confidence-focused-result-presentation-and-input:eugeniy/hel-19-add-confidence-focused-result-presentation-and-input`
+   `git -C <target-repo-dir> switch eugeniy/hel-19-add-confidence-focused-result-presentation-and-input`
+3. Push branch `eugeniy/hel-19-add-confidence-focused-result-presentation-and-input`.
+4. Create the PR with a title matching this change, for example:
+   `Add provenance and locked-state cues to calculator results`
