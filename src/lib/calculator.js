@@ -1,0 +1,748 @@
+export const KM_PER_MILE = 1.609344;
+export const MAX_DISTANCE = 1000;
+export const MAX_DISTANCE_DECIMALS = 5;
+export const MAX_SPEED = 60;
+export const RESULT_PLACEHOLDER = "Enter valid values to calculate.";
+
+export const MODES = Object.freeze({
+  PACE: "pace",
+  FINISH: "finish",
+  CONVERT: "convert"
+});
+
+export const CONVERT_SOURCES = Object.freeze({
+  PACE: "pace",
+  SPEED: "speed"
+});
+
+export const DISTANCE_PRESETS = Object.freeze([
+  { id: "custom", label: "Custom", distanceKm: null },
+  { id: "5k", label: "5K", distanceKm: 5 },
+  { id: "10k", label: "10K", distanceKm: 10 },
+  { id: "half", label: "Half Marathon", distanceKm: 21.0975 },
+  { id: "marathon", label: "Marathon", distanceKm: 42.195 }
+]);
+
+const ALTERNATE_UNIT = Object.freeze({
+  km: "mi",
+  mi: "km"
+});
+
+function trimValue(value) {
+  return String(value ?? "").trim();
+}
+
+function hasValue(value) {
+  return trimValue(value) !== "";
+}
+
+function isWholeNumberText(value) {
+  return /^\d+$/.test(value);
+}
+
+function isDecimalText(value) {
+  return /^\d+(?:\.\d+)?$/.test(value);
+}
+
+function trimTrailingZeroes(value) {
+  return value.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, "");
+}
+
+function padTwoDigits(value) {
+  return String(value).padStart(2, "0");
+}
+
+function unitDistanceKm(unit) {
+  return unit === "mi" ? KM_PER_MILE : 1;
+}
+
+function getAlternateUnit(unit) {
+  return ALTERNATE_UNIT[unit] ?? "km";
+}
+
+function getRelevantFieldGroups(state) {
+  if (state.mode === MODES.PACE) {
+    return [
+      [state.inputs.distance],
+      [
+        state.inputs.finishHours,
+        state.inputs.finishMinutes,
+        state.inputs.finishSeconds
+      ]
+    ];
+  }
+
+  if (state.mode === MODES.FINISH) {
+    return [
+      [state.inputs.distance],
+      [state.inputs.paceMinutes, state.inputs.paceSeconds]
+    ];
+  }
+
+  if (state.convertSource === CONVERT_SOURCES.SPEED) {
+    return [[state.inputs.speed]];
+  }
+
+  return [[state.inputs.paceMinutes, state.inputs.paceSeconds]];
+}
+
+function shouldShowRequiredErrors(state, previousResult) {
+  return (
+    Boolean(previousResult) ||
+    getRelevantFieldGroups(state).some((group) => group.some(hasValue))
+  );
+}
+
+export function getPresetById(id) {
+  return DISTANCE_PRESETS.find((preset) => preset.id === id) ?? DISTANCE_PRESETS[0];
+}
+
+export function createFormState() {
+  return {
+    mode: MODES.PACE,
+    unit: "km",
+    convertSource: CONVERT_SOURCES.PACE,
+    presetId: "custom",
+    inputs: {
+      distance: "",
+      finishHours: "",
+      finishMinutes: "",
+      finishSeconds: "",
+      paceMinutes: "",
+      paceSeconds: "",
+      speed: ""
+    }
+  };
+}
+
+export function resetFormState(state) {
+  return {
+    ...createFormState(),
+    mode: state.mode,
+    unit: state.unit,
+    convertSource: state.convertSource
+  };
+}
+
+export function distanceFromKilometers(distanceKm, unit = "km") {
+  return distanceKm / unitDistanceKm(unit);
+}
+
+export function distanceToKilometers(distance, unit = "km") {
+  return distance * unitDistanceKm(unit);
+}
+
+export function toKilometersPerHour(speed, unit = "km") {
+  return unit === "mi" ? speed * KM_PER_MILE : speed;
+}
+
+export function fromKilometersPerHour(speedKmh, unit = "km") {
+  return unit === "mi" ? speedKmh / KM_PER_MILE : speedKmh;
+}
+
+export function finishTimeFromSpeed(speedKmh, distanceKm) {
+  return (distanceKm / speedKmh) * 3600;
+}
+
+export function speedFromFinishTime(totalSeconds, distanceKm) {
+  return distanceKm / (totalSeconds / 3600);
+}
+
+export function paceToSpeedKmh(paceSecondsPerUnit, unit = "km") {
+  return unitDistanceKm(unit) / (paceSecondsPerUnit / 3600);
+}
+
+export function speedToPaceSeconds(speedKmh, unit = "km") {
+  return (unitDistanceKm(unit) / speedKmh) * 3600;
+}
+
+export function formatEditableNumber(value, maxDecimals) {
+  return trimTrailingZeroes(value.toFixed(maxDecimals));
+}
+
+export function formatDistanceInputValue(distanceKm, unit = "km") {
+  return formatEditableNumber(distanceFromKilometers(distanceKm, unit), 5);
+}
+
+export function formatSpeedInputValue(speedInUnit) {
+  return formatEditableNumber(speedInUnit, 2);
+}
+
+export function formatDuration(totalSeconds) {
+  if (!Number.isFinite(totalSeconds) || totalSeconds < 0) {
+    return "--:--:--";
+  }
+
+  const rounded = Math.round(totalSeconds);
+  const hours = Math.floor(rounded / 3600);
+  const minutes = Math.floor((rounded % 3600) / 60);
+  const seconds = rounded % 60;
+
+  return `${padTwoDigits(hours)}:${padTwoDigits(minutes)}:${padTwoDigits(seconds)}`;
+}
+
+export function formatPace(totalSeconds, unit = "km") {
+  if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) {
+    return `--:-- /${unit}`;
+  }
+
+  const rounded = Math.round(totalSeconds);
+  const minutes = Math.floor(rounded / 60);
+  const seconds = rounded % 60;
+
+  return `${padTwoDigits(minutes)}:${padTwoDigits(seconds)} /${unit}`;
+}
+
+export function formatSpeed(speedKmh, unit = "km") {
+  if (!Number.isFinite(speedKmh) || speedKmh <= 0) {
+    return unit === "mi" ? "--.-- mph" : "--.-- km/h";
+  }
+
+  const suffix = unit === "mi" ? "mph" : "km/h";
+  const speedInUnit = fromKilometersPerHour(speedKmh, unit);
+
+  return `${speedInUnit.toFixed(2)} ${suffix}`;
+}
+
+export function formatDistance(distanceKm, unit = "km") {
+  if (!Number.isFinite(distanceKm) || distanceKm <= 0) {
+    return `-- ${unit}`;
+  }
+
+  return `${formatDistanceInputValue(distanceKm, unit)} ${unit}`;
+}
+
+export function applyPresetSelection(state, presetId) {
+  const preset = getPresetById(presetId);
+
+  if (preset.distanceKm === null) {
+    return {
+      ...state,
+      presetId: preset.id
+    };
+  }
+
+  return {
+    ...state,
+    presetId: preset.id,
+    inputs: {
+      ...state.inputs,
+      distance: formatDistanceInputValue(preset.distanceKm, state.unit)
+    }
+  };
+}
+
+export function updateDistanceInput(state, distance) {
+  return {
+    ...state,
+    presetId: "custom",
+    inputs: {
+      ...state.inputs,
+      distance
+    }
+  };
+}
+
+export function updateInputValue(state, field, value) {
+  return {
+    ...state,
+    inputs: {
+      ...state.inputs,
+      [field]: value
+    }
+  };
+}
+
+export function applyModeChange(state, mode) {
+  return {
+    ...state,
+    mode
+  };
+}
+
+export function applyConvertSourceChange(state, source) {
+  const nextInputs = {
+    ...state.inputs
+  };
+
+  if (source === CONVERT_SOURCES.PACE) {
+    nextInputs.speed = "";
+  } else {
+    nextInputs.paceMinutes = "";
+    nextInputs.paceSeconds = "";
+  }
+
+  return {
+    ...state,
+    convertSource: source,
+    inputs: nextInputs
+  };
+}
+
+function convertPaceInputs(inputs, fromUnit, toUnit) {
+  const parsed = parsePaceInput(inputs, { showRequiredError: false });
+
+  if (parsed.error || parsed.value === null) {
+    return {
+      minutes: inputs.paceMinutes,
+      seconds: inputs.paceSeconds
+    };
+  }
+
+  const converted = speedToPaceSeconds(paceToSpeedKmh(parsed.value, fromUnit), toUnit);
+  const rounded = Math.round(converted);
+  const minutes = Math.floor(rounded / 60);
+  const seconds = rounded % 60;
+
+  return {
+    minutes: String(minutes),
+    seconds: padTwoDigits(seconds)
+  };
+}
+
+export function applyUnitChange(state, nextUnit) {
+  if (nextUnit === state.unit) {
+    return state;
+  }
+
+  const nextInputs = {
+    ...state.inputs
+  };
+
+  if (state.presetId !== "custom") {
+    const preset = getPresetById(state.presetId);
+    nextInputs.distance = formatDistanceInputValue(preset.distanceKm, nextUnit);
+  } else {
+    const parsedDistance = parseDistanceInput(state.inputs.distance, {
+      showRequiredError: false
+    });
+
+    if (!parsedDistance.error && parsedDistance.value !== null) {
+      nextInputs.distance = formatDistanceInputValue(
+        distanceToKilometers(parsedDistance.value, state.unit),
+        nextUnit
+      );
+    }
+  }
+
+  const convertedPace = convertPaceInputs(state.inputs, state.unit, nextUnit);
+  nextInputs.paceMinutes = convertedPace.minutes;
+  nextInputs.paceSeconds = convertedPace.seconds;
+
+  const parsedSpeed = parseSpeedInput(state.inputs.speed, { showRequiredError: false });
+
+  if (!parsedSpeed.error && parsedSpeed.value !== null) {
+    const convertedSpeed = fromKilometersPerHour(
+      toKilometersPerHour(parsedSpeed.value, state.unit),
+      nextUnit
+    );
+    nextInputs.speed = formatSpeedInputValue(convertedSpeed);
+  }
+
+  return {
+    ...state,
+    unit: nextUnit,
+    inputs: nextInputs
+  };
+}
+
+export function parseDistanceInput(value, { showRequiredError = true } = {}) {
+  const raw = trimValue(value);
+
+  if (raw === "") {
+    return {
+      error: showRequiredError ? "Enter a distance." : null
+    };
+  }
+
+  if (!isDecimalText(raw)) {
+    return {
+      error: "Distance must use digits and one decimal point only."
+    };
+  }
+
+  const decimals = raw.includes(".") ? raw.split(".")[1].length : 0;
+
+  if (decimals > MAX_DISTANCE_DECIMALS) {
+    return {
+      error: "Distance must use 5 decimal places or fewer."
+    };
+  }
+
+  const numericValue = Number(raw);
+
+  if (!Number.isFinite(numericValue) || numericValue <= 0 || numericValue > MAX_DISTANCE) {
+    return {
+      error: "Distance must be greater than 0 and no more than 1000."
+    };
+  }
+
+  return {
+    error: null,
+    value: numericValue
+  };
+}
+
+export function parsePaceInput(inputs, { showRequiredError = true } = {}) {
+  const minutesRaw = trimValue(inputs.paceMinutes);
+  const secondsRaw = trimValue(inputs.paceSeconds);
+  const hasAnyInput = minutesRaw !== "" || secondsRaw !== "";
+
+  if (!hasAnyInput) {
+    return {
+      error: showRequiredError ? "Enter pace minutes and seconds." : null,
+      value: null
+    };
+  }
+
+  if (minutesRaw === "" || secondsRaw === "") {
+    return {
+      error: "Complete pace minutes and seconds.",
+      value: null
+    };
+  }
+
+  if (!isWholeNumberText(minutesRaw) || !isWholeNumberText(secondsRaw)) {
+    return {
+      error: "Use whole numbers for pace minutes and seconds.",
+      value: null
+    };
+  }
+
+  const minutes = Number(minutesRaw);
+  const seconds = Number(secondsRaw);
+
+  if (minutes < 0 || minutes > 59) {
+    return {
+      error: "Pace minutes must stay between 0 and 59.",
+      value: null
+    };
+  }
+
+  if (seconds < 0 || seconds > 59) {
+    return {
+      error: "Pace seconds must stay between 0 and 59.",
+      value: null
+    };
+  }
+
+  if (minutes === 0 && seconds === 0) {
+    return {
+      error: "Pace must be greater than 00:00.",
+      value: null
+    };
+  }
+
+  return {
+    error: null,
+    value: (minutes * 60) + seconds
+  };
+}
+
+export function parseFinishInput(inputs, { showRequiredError = true } = {}) {
+  const hoursRaw = trimValue(inputs.finishHours);
+  const minutesRaw = trimValue(inputs.finishMinutes);
+  const secondsRaw = trimValue(inputs.finishSeconds);
+  const hasAnyInput =
+    hoursRaw !== "" || minutesRaw !== "" || secondsRaw !== "";
+
+  if (!hasAnyInput) {
+    return {
+      error: showRequiredError ? "Enter finish hours, minutes, and seconds." : null,
+      value: null
+    };
+  }
+
+  if (hoursRaw === "" || minutesRaw === "" || secondsRaw === "") {
+    return {
+      error: "Complete finish hours, minutes, and seconds.",
+      value: null
+    };
+  }
+
+  if (
+    !isWholeNumberText(hoursRaw) ||
+    !isWholeNumberText(minutesRaw) ||
+    !isWholeNumberText(secondsRaw)
+  ) {
+    return {
+      error: "Use whole numbers for finish hours, minutes, and seconds.",
+      value: null
+    };
+  }
+
+  const hours = Number(hoursRaw);
+  const minutes = Number(minutesRaw);
+  const seconds = Number(secondsRaw);
+
+  if (hours < 0 || hours > 99) {
+    return {
+      error: "Finish hours must stay between 0 and 99.",
+      value: null
+    };
+  }
+
+  if (minutes < 0 || minutes > 59) {
+    return {
+      error: "Finish minutes must stay between 0 and 59.",
+      value: null
+    };
+  }
+
+  if (seconds < 0 || seconds > 59) {
+    return {
+      error: "Finish seconds must stay between 0 and 59.",
+      value: null
+    };
+  }
+
+  if (hours === 0 && minutes === 0 && seconds === 0) {
+    return {
+      error: "Finish time must be greater than 00:00:00.",
+      value: null
+    };
+  }
+
+  return {
+    error: null,
+    value: (hours * 3600) + (minutes * 60) + seconds
+  };
+}
+
+export function parseSpeedInput(value, { showRequiredError = true } = {}) {
+  const raw = trimValue(value);
+
+  if (raw === "") {
+    return {
+      error: showRequiredError ? "Enter a speed." : null,
+      value: null
+    };
+  }
+
+  if (!isDecimalText(raw)) {
+    return {
+      error: "Speed must use digits and one decimal point only.",
+      value: null
+    };
+  }
+
+  const numericValue = Number(raw);
+
+  if (!Number.isFinite(numericValue) || numericValue <= 0 || numericValue > MAX_SPEED) {
+    return {
+      error: "Speed must be greater than 0 and no more than 60.",
+      value: null
+    };
+  }
+
+  return {
+    error: null,
+    value: numericValue
+  };
+}
+
+function buildProjectionRows(speedKmh, unit, distanceKm, presetId) {
+  const namedPresets = DISTANCE_PRESETS.filter((preset) => preset.distanceKm !== null);
+  const rows = namedPresets.map((preset) => ({
+    id: preset.id,
+    label: preset.label,
+    detail: formatDistance(preset.distanceKm, unit),
+    finishSeconds: finishTimeFromSpeed(speedKmh, preset.distanceKm),
+    isSelected: preset.id === presetId
+  }));
+
+  if (Number.isFinite(distanceKm) && presetId === "custom") {
+    rows.unshift({
+      id: "selected",
+      label: "Custom",
+      detail: formatDistance(distanceKm, unit),
+      finishSeconds: finishTimeFromSpeed(speedKmh, distanceKm),
+      isSelected: true
+    });
+  }
+
+  return rows;
+}
+
+function createResult(state, speedKmh, distanceKm) {
+  return {
+    distanceKm,
+    finishSeconds: Number.isFinite(distanceKm)
+      ? finishTimeFromSpeed(speedKmh, distanceKm)
+      : null,
+    paceKmSeconds: speedToPaceSeconds(speedKmh, "km"),
+    paceMiSeconds: speedToPaceSeconds(speedKmh, "mi"),
+    projectionRows: buildProjectionRows(
+      speedKmh,
+      state.unit,
+      distanceKm,
+      state.presetId
+    ),
+    sourceConvertSource: state.convertSource,
+    sourceMode: state.mode,
+    speedKmh
+  };
+}
+
+function createDisplaySummary(state, result) {
+  const selectedUnit = state.unit;
+  const alternateUnit = getAlternateUnit(selectedUnit);
+  const displayMode = result.sourceMode ?? state.mode;
+  const displayConvertSource = result.sourceConvertSource ?? state.convertSource;
+  const selectedPace = formatPace(
+    speedToPaceSeconds(result.speedKmh, selectedUnit),
+    selectedUnit
+  );
+  const alternatePace = formatPace(
+    speedToPaceSeconds(result.speedKmh, alternateUnit),
+    alternateUnit
+  );
+  const selectedSpeed = formatSpeed(result.speedKmh, selectedUnit);
+  const alternateSpeed = formatSpeed(result.speedKmh, alternateUnit);
+  const selectedDistanceLabel = Number.isFinite(result.distanceKm)
+    ? formatDistance(result.distanceKm, selectedUnit)
+    : null;
+  let primaryLabel = "Result";
+  let primaryValue = RESULT_PLACEHOLDER;
+  let primaryMeta = "Enter valid values to calculate.";
+
+  if (displayMode === MODES.PACE) {
+    primaryLabel = "Pace";
+    primaryValue = selectedPace;
+    primaryMeta = `From ${formatDuration(result.finishSeconds)} over ${selectedDistanceLabel}.`;
+  } else if (displayMode === MODES.FINISH) {
+    primaryLabel = "Finish time";
+    primaryValue = formatDuration(result.finishSeconds);
+    primaryMeta = `At ${selectedPace} over ${selectedDistanceLabel}.`;
+  } else if (displayConvertSource === CONVERT_SOURCES.PACE) {
+    primaryLabel = "Speed";
+    primaryValue = selectedSpeed;
+    primaryMeta = `Converted from ${selectedPace}.`;
+  } else {
+    primaryLabel = "Pace";
+    primaryValue = selectedPace;
+    primaryMeta = `Converted from ${selectedSpeed}.`;
+  }
+
+  return {
+    alternatePace,
+    alternateSpeed,
+    primaryLabel,
+    primaryMeta,
+    primaryValue,
+    projectionRows: result.projectionRows.map((row) => ({
+      ...row,
+      finishLabel: formatDuration(row.finishSeconds)
+    })),
+    selectedDistanceLabel,
+    selectedPace,
+    selectedSpeed
+  };
+}
+
+export function deriveCalculatorView(state, previousResult = null) {
+  const showRequiredErrors = shouldShowRequiredErrors(state, previousResult);
+  const errors = {
+    distance: null,
+    finish: null,
+    pace: null,
+    speed: null
+  };
+  let distanceKm = null;
+  let currentResult = null;
+
+  if (state.mode === MODES.PACE || state.mode === MODES.FINISH) {
+    const distance = parseDistanceInput(state.inputs.distance, {
+      showRequiredError: showRequiredErrors
+    });
+
+    errors.distance = distance.error;
+
+    if (!distance.error && distance.value !== null) {
+      distanceKm = distanceToKilometers(distance.value, state.unit);
+    }
+  }
+
+  if (state.mode === MODES.PACE) {
+    const finish = parseFinishInput(state.inputs, {
+      showRequiredError: showRequiredErrors
+    });
+
+    errors.finish = finish.error;
+
+    if (!errors.distance && !errors.finish && distanceKm !== null) {
+      const speedKmh = speedFromFinishTime(finish.value, distanceKm);
+
+      if (Number.isFinite(speedKmh) && speedKmh > 0) {
+        currentResult = createResult(state, speedKmh, distanceKm);
+      }
+    }
+  } else if (state.mode === MODES.FINISH) {
+    const pace = parsePaceInput(state.inputs, {
+      showRequiredError: showRequiredErrors
+    });
+
+    errors.pace = pace.error;
+
+    if (!errors.distance && !errors.pace && distanceKm !== null) {
+      const speedKmh = paceToSpeedKmh(pace.value, state.unit);
+      currentResult = createResult(state, speedKmh, distanceKm);
+    }
+  } else if (state.convertSource === CONVERT_SOURCES.PACE) {
+    const pace = parsePaceInput(state.inputs, {
+      showRequiredError: showRequiredErrors
+    });
+
+    errors.pace = pace.error;
+
+    if (!errors.pace) {
+      const speedKmh = paceToSpeedKmh(pace.value, state.unit);
+      currentResult = createResult(state, speedKmh, null);
+    }
+  } else {
+    const speed = parseSpeedInput(state.inputs.speed, {
+      showRequiredError: showRequiredErrors
+    });
+
+    errors.speed = speed.error;
+
+    if (!errors.speed) {
+      currentResult = createResult(
+        state,
+        toKilometersPerHour(speed.value, state.unit),
+        null
+      );
+    }
+  }
+
+  const displayedResult = currentResult ?? previousResult;
+  const resultState = currentResult
+    ? "current"
+    : displayedResult
+      ? "stale"
+      : "empty";
+  let statusMessage = RESULT_PLACEHOLDER;
+
+  if (resultState === "current") {
+    statusMessage = "Results are current.";
+  } else if (resultState === "stale") {
+    statusMessage = "Out of date. Fix the highlighted fields to recalculate.";
+  }
+
+  return {
+    currentResult,
+    display: displayedResult ? createDisplaySummary(state, displayedResult) : null,
+    errors,
+    resultState,
+    showDistanceFields: state.mode !== MODES.CONVERT,
+    showFinishFields: state.mode === MODES.PACE,
+    showPaceFields:
+      state.mode === MODES.FINISH ||
+      (state.mode === MODES.CONVERT &&
+        state.convertSource === CONVERT_SOURCES.PACE),
+    showSpeedFields:
+      state.mode === MODES.CONVERT &&
+      state.convertSource === CONVERT_SOURCES.SPEED,
+    statusMessage
+  };
+}

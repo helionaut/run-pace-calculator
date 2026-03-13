@@ -60,7 +60,7 @@ export function createStaticServer({ rootDir }) {
 }
 
 export async function startStaticServer({
-  rootDir = REPO_ROOT,
+  rootDir = path.join(REPO_ROOT, "src"),
   port = 3000,
   host = "127.0.0.1",
 } = {}) {
@@ -79,8 +79,9 @@ const isDirectExecution =
   process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isDirectExecution) {
-  const rootArg = process.argv[2] ?? ".";
-  const portArg = Number.parseInt(process.argv[3] ?? process.env.PORT ?? "3000", 10);
+  const rootArg = process.argv[2] ?? "src";
+  const defaultPort = rootArg === "dist" ? "4173" : "3000";
+  const portArg = Number.parseInt(process.argv[3] ?? process.env.PORT ?? defaultPort, 10);
 
   if (!Number.isInteger(portArg) || portArg < 1) {
     console.error("Port must be a positive integer.");
@@ -88,7 +89,14 @@ if (isDirectExecution) {
   }
 
   startStaticServer({ rootDir: path.resolve(REPO_ROOT, rootArg), port: portArg }).catch((error) => {
-    console.error(error.message);
-    process.exitCode = 1;
+    if (error?.code === "EACCES" || error?.code === "EPERM") {
+      console.error(
+        `Local HTTP serving is blocked by this environment while binding port ${portArg}.`,
+      );
+    } else {
+      console.error(error.message);
+    }
+
+    process.exit(1);
   });
 }

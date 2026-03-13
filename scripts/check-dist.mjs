@@ -1,24 +1,24 @@
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { APP_FILES, DIST_DIR } from "./build.mjs";
+import { DIST_DIR, DIST_FILES } from "./build.mjs";
 
 async function assertFileExists(filePath) {
   await access(filePath);
 }
 
 async function main() {
-  for (const file of APP_FILES) {
+  for (const file of DIST_FILES) {
     await assertFileExists(path.join(DIST_DIR, file));
   }
 
   const html = await readFile(path.join(DIST_DIR, "index.html"), "utf8");
   const requiredSnippets = [
     "<title>Run Pace Calculator</title>",
-    '<link rel="stylesheet" href="./styles.css" />',
-    '<script src="./app.js" type="module"></script>',
-    'id="pace-output"',
-    'id="finish-output"',
+    '<link rel="icon" type="image/svg+xml" href="./favicon.svg" />',
+    '<script type="module" src="./main.js"></script>',
+    'id="primary-value"',
+    'id="projection-rows"',
   ];
 
   for (const snippet of requiredSnippets) {

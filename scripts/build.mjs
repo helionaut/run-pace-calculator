@@ -1,22 +1,27 @@
-import { copyFile, mkdir, rm } from "node:fs/promises";
+import { cp, mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+export const SOURCE_DIR = path.join(REPO_ROOT, "src");
 export const DIST_DIR = path.join(REPO_ROOT, "dist");
-export const APP_FILES = ["index.html", "styles.css", "app.js", "calculator.js"];
+export const DIST_FILES = [
+  "index.html",
+  "styles.css",
+  "main.js",
+  "favicon.svg",
+  "lib/calculator.js",
+  "lib/mode-navigation.js",
+];
 
 export async function buildStaticSite({
-  repoRoot = REPO_ROOT,
+  sourceDir = SOURCE_DIR,
   distDir = DIST_DIR,
-  files = APP_FILES,
+  files = DIST_FILES,
 } = {}) {
   await rm(distDir, { force: true, recursive: true });
   await mkdir(distDir, { recursive: true });
-
-  for (const file of files) {
-    await copyFile(path.join(repoRoot, file), path.join(distDir, file));
-  }
+  await cp(sourceDir, distDir, { recursive: true });
 
   return { distDir, files };
 }

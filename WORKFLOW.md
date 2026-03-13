@@ -19,7 +19,15 @@ workspace:
   root: /home/helionaut/workspaces
 hooks:
   after_create: |
-    git clone --depth 1 /home/helionaut/src/projects/run-pace-calculator .
+    local_repo=/home/helionaut/src/projects/run-pace-calculator
+    remote_repo=https://github.com/helionaut/run-pace-calculator.git
+
+    if [ -d "$local_repo/.git" ]; then
+      git clone --depth 1 "file://$local_repo" .
+      git remote set-url origin "$remote_repo"
+    else
+      git clone --depth 1 "$remote_repo" .
+    fi
   before_remove: |
     true
 agent:

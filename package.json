@@ -7,11 +7,16 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "node scripts/serve.mjs . 3000",
     "build": "node scripts/build.mjs",
-    "preview": "npm run build && node scripts/preview.mjs",
-    "test": "node --test",
-    "check:syntax": "node --check app.js && node --check calculator.js && node --check scripts/build.mjs && node --check scripts/check-dist.mjs && node --check scripts/preview.mjs && node --check scripts/serve.mjs",
-    "check": "npm run check:syntax && npm test && npm run build && node scripts/check-dist.mjs"
+    "bundle:export": "./scripts/export_bundle.sh",
+    "check:syntax": "node --check src/main.js && node --check src/lib/calculator.js && node --check src/lib/mode-navigation.js && node --check scripts/build.mjs && node --check scripts/check-dist.mjs && node --check scripts/serve.mjs && node --check scripts/verify-handoff.mjs",
+    "check": "npm run check:syntax && npm test && npm run build && node scripts/check-dist.mjs",
+    "dev": "node scripts/serve.mjs src 3000",
+    "handoff:prepare": "./scripts/prepare-handoff.sh",
+    "handoff:verify": "node scripts/verify-handoff.mjs",
+    "pr:dry-run": "./scripts/create_pr.sh --dry-run",
+    "pr:publish": "./scripts/create_pr.sh",
+    "preview": "npm run build && node scripts/serve.mjs dist 4173",
+    "test": "node --test"
   }
 }
