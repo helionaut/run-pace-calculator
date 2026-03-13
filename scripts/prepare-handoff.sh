@@ -74,6 +74,23 @@ file_size() {
   stat -f '%z' "$1"
 }
 
+existing_blocker_snapshot=""
+if [[ -z "${HANDOFF_BLOCKER_SNAPSHOT:-}" && -f "$summary_path" ]]; then
+  existing_blocker_snapshot="$(
+    awk '
+      /^## Current blocker snapshot / { in_blocker=1; next }
+      /^## / {
+        if (in_blocker) {
+          exit
+        }
+      }
+      in_blocker { print }
+    ' "$summary_path"
+  )"
+fi
+
+blocker_snapshot="${HANDOFF_BLOCKER_SNAPSHOT:-$existing_blocker_snapshot}"
+
 ./scripts/export_bundle.sh "$bundle_path" >/dev/null
 cp docs/pull-request-draft.md "$pr_draft_path"
 npm run pr:dry-run >"$dry_run_path"
@@ -127,12 +144,12 @@ summary, the manifest, and the exported bundle.
    Manual fallback body: \`${pr_body_source:-docs/pull-request-draft.md}\`
 EOF
 
-if [[ -n "${HANDOFF_BLOCKER_SNAPSHOT:-}" ]]; then
+if [[ -n "$blocker_snapshot" ]]; then
   cat >>"$summary_path" <<EOF
 
 ## Current blocker snapshot (${generated_on})
 
-${HANDOFF_BLOCKER_SNAPSHOT}
+${blocker_snapshot}
 EOF
 fi
 
