@@ -51,6 +51,9 @@ const elements = {
   selectedPaceValue: document.querySelector("#selected-pace-value"),
   selectedSpeedLabel: document.querySelector("#selected-speed-label"),
   selectedSpeedValue: document.querySelector("#selected-speed-value"),
+  splitCopy: document.querySelector("#split-copy"),
+  splitHeading: document.querySelector("#split-heading"),
+  splitRows: document.querySelector("#split-rows"),
   speedCluster: document.querySelector("#speed-cluster"),
   speedError: document.querySelector("#speed-error"),
   speedInput: document.querySelector("#speed-input"),
@@ -227,16 +230,21 @@ function renderBadge(resultState) {
   setTextContent(elements.resultBadge, "Awaiting input");
 }
 
+function createPlaceholderRow(message) {
+  const placeholderRow = document.createElement("tr");
+  const placeholderCell = document.createElement("td");
+
+  placeholderRow.className = "table-placeholder";
+  placeholderCell.colSpan = 2;
+  placeholderCell.textContent = message;
+  placeholderRow.append(placeholderCell);
+
+  return placeholderRow;
+}
+
 function renderProjectionTable(display) {
   if (!display) {
-    const placeholderRow = document.createElement("tr");
-    const placeholderCell = document.createElement("td");
-
-    placeholderRow.className = "table-placeholder";
-    placeholderCell.colSpan = 2;
-    placeholderCell.textContent = RESULT_PLACEHOLDER;
-    placeholderRow.append(placeholderCell);
-    elements.projectionRows.replaceChildren(placeholderRow);
+    elements.projectionRows.replaceChildren(createPlaceholderRow(RESULT_PLACEHOLDER));
     return;
   }
 
@@ -260,6 +268,47 @@ function renderProjectionTable(display) {
   );
 }
 
+function renderSplitTable(display) {
+  if (!display) {
+    setTextContent(elements.splitHeading, "Selected-distance splits");
+    setTextContent(
+      elements.splitCopy,
+      "Select a distance in Pace or Finish Time mode to see cumulative split targets."
+    );
+    elements.splitRows.replaceChildren(createPlaceholderRow(RESULT_PLACEHOLDER));
+    return;
+  }
+
+  setTextContent(elements.splitHeading, display.splitTitle);
+  setTextContent(elements.splitCopy, display.splitMeta);
+
+  if (display.splitRows.length === 0) {
+    elements.splitRows.replaceChildren(
+      createPlaceholderRow(display.splitPlaceholder)
+    );
+    return;
+  }
+
+  elements.splitRows.replaceChildren(
+    ...display.splitRows.map((row) => {
+      const tableRow = document.createElement("tr");
+      const splitCell = document.createElement("th");
+      const finishCell = document.createElement("td");
+
+      if (row.isPartial) {
+        tableRow.classList.add("is-final-partial");
+      }
+
+      splitCell.scope = "row";
+      splitCell.textContent = row.label;
+      finishCell.textContent = row.finishLabel;
+
+      tableRow.append(splitCell, finishCell);
+      return tableRow;
+    })
+  );
+}
+
 function renderResultSummary(view) {
   renderBadge(view.resultState);
 
@@ -277,6 +326,7 @@ function renderResultSummary(view) {
       "Common-race projections appear below after the first valid result."
     );
     renderProjectionTable(null);
+    renderSplitTable(null);
     return;
   }
 
@@ -305,6 +355,7 @@ function renderResultSummary(view) {
   }
 
   renderProjectionTable(view.display);
+  renderSplitTable(view.display);
 }
 
 function render() {

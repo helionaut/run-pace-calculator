@@ -54,6 +54,18 @@ test("pace mode calculates pace and speed from distance plus finish time", () =>
   assert.equal(view.display.primaryLabel, "Pace");
   assert.equal(view.display.primaryValue, "05:00 /km");
   assert.equal(view.display.selectedSpeed, "12.00 km/h");
+  assert.equal(view.display.splitTitle, "Kilometer splits");
+  assert.equal(view.display.splitRows.length, 10);
+  assert.deepEqual(
+    view.display.splitRows.slice(0, 2).map((row) => [row.label, row.finishLabel]),
+    [
+      ["1 km", "00:05:00"],
+      ["2 km", "00:10:00"]
+    ]
+  );
+  assert.equal(view.display.splitRows.at(-1).label, "10 km");
+  assert.equal(view.display.splitRows.at(-1).finishLabel, "00:50:00");
+  assert.equal(view.display.splitRows.at(-1).isPartial, false);
   assert.equal(view.errors.distance, null);
   assert.equal(view.errors.finish, null);
 });
@@ -74,6 +86,68 @@ test("finish mode calculates finish time from distance plus pace", () => {
   assert.equal(view.display.primaryLabel, "Finish time");
   assert.equal(view.display.primaryValue, "00:50:00");
   assert.equal(view.display.selectedSpeed, "12.00 km/h");
+  assert.equal(view.display.splitTitle, "Kilometer splits");
+  assert.equal(view.display.splitRows.length, 10);
+  assert.equal(view.display.splitRows.at(-1).label, "10 km");
+  assert.equal(view.display.splitRows.at(-1).finishLabel, "00:50:00");
+});
+
+test("convert mode uses the stored selected distance to render mile-based splits from speed", () => {
+  const view = deriveCalculatorView(
+    buildState(
+      {
+        mode: MODES.CONVERT,
+        convertSource: CONVERT_SOURCES.SPEED,
+        unit: "mi"
+      },
+      {
+        distance: "3",
+        speed: "7.5"
+      }
+    )
+  );
+
+  assert.equal(view.resultState, "current");
+  assert.equal(view.display.primaryLabel, "Pace");
+  assert.equal(view.display.primaryValue, "08:00 /mi");
+  assert.equal(view.display.splitTitle, "Mile splits");
+  assert.deepEqual(
+    view.display.splitRows.map((row) => [row.label, row.finishLabel]),
+    [
+      ["1 mi", "00:08:00"],
+      ["2 mi", "00:16:00"],
+      ["3 mi", "00:24:00"]
+    ]
+  );
+});
+
+test("half marathon includes a final partial split in metric mode", () => {
+  const presetState = applyPresetSelection(createFormState(), "half");
+  const view = deriveCalculatorView({
+    ...presetState,
+    mode: MODES.FINISH,
+    inputs: {
+      ...presetState.inputs,
+      paceMinutes: "5",
+      paceSeconds: "0"
+    }
+  });
+
+  assert.equal(view.resultState, "current");
+  assert.equal(view.display.splitTitle, "Kilometer splits");
+  assert.match(view.display.splitMeta, /final partial split/i);
+  assert.equal(view.display.splitRows.length, 22);
+  assert.deepEqual(
+    view.display.splitRows.slice(-2).map((row) => [
+      row.label,
+      row.finishLabel,
+      row.isPartial
+    ]),
+    [
+      ["21 km", "01:45:00", false],
+      ["Finish (21.0975 km)", "01:45:29", true]
+    ]
+  );
 });
 
 test("incomplete structured finish time blocks a fresh calculation", () => {
