@@ -6,12 +6,15 @@
   supports live pace, speed, and finish-time derivation plus pace/time locks
 - add DOM integration coverage for slider and lock behavior, update layout
   accessibility checks, and refresh repo smoke checks for the new markup
+- refresh product docs and the publish helper so the shipped repo and eventual
+  PR metadata match the redesigned one-screen calculator
 
 ## Testing
 
 - [x] `npm test`
 - [x] `npm run build`
 - [x] `npm run check`
+- [x] `npm run pr:dry-run`
 - [x] Other: added unit coverage for pace -> speed/time, speed -> pace/time,
       locked time + distance changes, and locked pace + distance changes
 - [x] Other: added DOM integration coverage for slider-driven recalculation and

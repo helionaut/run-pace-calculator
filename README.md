@@ -143,7 +143,7 @@ the issue key parsed from the current branch name. That directory stays in the
 workspace and is ignored by git. You can still pass an explicit output path:
 
 ```sh
-npm run handoff:prepare -- /tmp/hel-8-handoff
+npm run handoff:prepare -- /tmp/hel-16-handoff
 ```
 
 To verify the exported handoff before resuming elsewhere:
