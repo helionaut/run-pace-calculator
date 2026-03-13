@@ -27,6 +27,21 @@ const ALTERNATE_UNIT = Object.freeze({
   km: "mi",
   mi: "km"
 });
+const VALID_UNITS = Object.freeze(["km", "mi"]);
+const URL_STATE_KEYS = Object.freeze({
+  CONVERT_SOURCE: "source",
+  DISTANCE: "distance",
+  FINISH_HOURS: "fh",
+  FINISH_MINUTES: "fm",
+  FINISH_SECONDS: "fs",
+  MODE: "mode",
+  PACE_MINUTES: "pm",
+  PACE_SECONDS: "ps",
+  PRESET: "preset",
+  SPEED: "speed",
+  UNIT: "unit"
+});
+const URL_STATE_KEY_SET = new Set(Object.values(URL_STATE_KEYS));
 
 function trimValue(value) {
   return String(value ?? "").trim();
@@ -58,6 +73,44 @@ function unitDistanceKm(unit) {
 
 function getAlternateUnit(unit) {
   return ALTERNATE_UNIT[unit] ?? "km";
+}
+
+function isSupportedUnit(unit) {
+  return VALID_UNITS.includes(unit);
+}
+
+function isSupportedMode(mode) {
+  return Object.values(MODES).includes(mode);
+}
+
+function isSupportedConvertSource(source) {
+  return Object.values(CONVERT_SOURCES).includes(source);
+}
+
+function isSupportedPresetId(presetId) {
+  return DISTANCE_PRESETS.some((preset) => preset.id === presetId);
+}
+
+function hasAnyUrlState(params) {
+  return [...URL_STATE_KEY_SET].some((key) => params.has(key));
+}
+
+function hasUnexpectedUrlStateKeys(params, allowedKeys) {
+  for (const key of URL_STATE_KEY_SET) {
+    if (params.has(key) && !allowedKeys.has(key)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function createUrlSearchParams(searchParams) {
+  if (searchParams instanceof URLSearchParams) {
+    return searchParams;
+  }
+
+  return new URLSearchParams(searchParams);
 }
 
 function getRelevantFieldGroups(state) {
@@ -118,15 +171,15 @@ function deriveCanonicalValues(state) {
 
   return {
     distanceKm:
-      !distance.error && distance.value !== null
+      !distance.error && distance.value != null
         ? distanceToKilometers(distance.value, state.unit)
         : null,
     paceSpeedKmh:
-      !pace.error && pace.value !== null
+      !pace.error && pace.value != null
         ? paceToSpeedKmh(pace.value, state.unit)
         : null,
     speedKmh:
-      !speed.error && speed.value !== null
+      !speed.error && speed.value != null
         ? toKilometersPerHour(speed.value, state.unit)
         : null
   };
@@ -172,6 +225,196 @@ export function createFormState() {
       speed: ""
     }
   };
+}
+
+function buildUrlStateParams(state) {
+  const view = deriveCalculatorView(state);
+
+  if (!view.currentResult) {
+    return null;
+  }
+
+  const params = new URLSearchParams();
+
+  params.set(URL_STATE_KEYS.MODE, state.mode);
+  params.set(URL_STATE_KEYS.UNIT, state.unit);
+
+  if (state.mode === MODES.CONVERT) {
+    params.set(URL_STATE_KEYS.CONVERT_SOURCE, state.convertSource);
+
+    if (state.convertSource === CONVERT_SOURCES.PACE) {
+      params.set(URL_STATE_KEYS.PACE_MINUTES, state.inputs.paceMinutes);
+      params.set(URL_STATE_KEYS.PACE_SECONDS, state.inputs.paceSeconds);
+    } else {
+      params.set(URL_STATE_KEYS.SPEED, state.inputs.speed);
+    }
+
+    return params;
+  }
+
+  params.set(URL_STATE_KEYS.PRESET, state.presetId);
+
+  if (state.presetId === "custom") {
+    params.set(URL_STATE_KEYS.DISTANCE, state.inputs.distance);
+  }
+
+  if (state.mode === MODES.PACE) {
+    params.set(URL_STATE_KEYS.FINISH_HOURS, state.inputs.finishHours);
+    params.set(URL_STATE_KEYS.FINISH_MINUTES, state.inputs.finishMinutes);
+    params.set(URL_STATE_KEYS.FINISH_SECONDS, state.inputs.finishSeconds);
+  } else {
+    params.set(URL_STATE_KEYS.PACE_MINUTES, state.inputs.paceMinutes);
+    params.set(URL_STATE_KEYS.PACE_SECONDS, state.inputs.paceSeconds);
+  }
+
+  return params;
+}
+
+function applyRestoredInputValues(state, inputValues) {
+  return Object.entries(inputValues).reduce(
+    (nextState, [field, value]) => updateInputValue(nextState, field, value),
+    state
+  );
+}
+
+export function serializeCalculatorState(state) {
+  return buildUrlStateParams(state)?.toString() ?? "";
+}
+
+export function restoreCalculatorState(searchParams) {
+  const params = createUrlSearchParams(searchParams);
+  const defaultState = createFormState();
+
+  if (!hasAnyUrlState(params)) {
+    return defaultState;
+  }
+
+  const mode = params.get(URL_STATE_KEYS.MODE);
+  const unit = params.get(URL_STATE_KEYS.UNIT);
+
+  if (!isSupportedMode(mode) || !isSupportedUnit(unit)) {
+    return defaultState;
+  }
+
+  let state = applyUnitChange(applyModeChange(defaultState, mode), unit);
+
+  if (mode === MODES.CONVERT) {
+    const convertSource = params.get(URL_STATE_KEYS.CONVERT_SOURCE);
+
+    if (!isSupportedConvertSource(convertSource)) {
+      return defaultState;
+    }
+
+    const allowedKeys = new Set([
+      URL_STATE_KEYS.MODE,
+      URL_STATE_KEYS.UNIT,
+      URL_STATE_KEYS.CONVERT_SOURCE
+    ]);
+
+    if (convertSource === CONVERT_SOURCES.PACE) {
+      allowedKeys.add(URL_STATE_KEYS.PACE_MINUTES);
+      allowedKeys.add(URL_STATE_KEYS.PACE_SECONDS);
+    } else {
+      allowedKeys.add(URL_STATE_KEYS.SPEED);
+    }
+
+    if (hasUnexpectedUrlStateKeys(params, allowedKeys)) {
+      return defaultState;
+    }
+
+    state = applyConvertSourceChange(state, convertSource);
+
+    if (convertSource === CONVERT_SOURCES.PACE) {
+      if (
+        !params.has(URL_STATE_KEYS.PACE_MINUTES) ||
+        !params.has(URL_STATE_KEYS.PACE_SECONDS)
+      ) {
+        return defaultState;
+      }
+
+      state = applyRestoredInputValues(state, {
+        paceMinutes: params.get(URL_STATE_KEYS.PACE_MINUTES),
+        paceSeconds: params.get(URL_STATE_KEYS.PACE_SECONDS)
+      });
+    } else {
+      if (!params.has(URL_STATE_KEYS.SPEED)) {
+        return defaultState;
+      }
+
+      state = applyRestoredInputValues(state, {
+        speed: params.get(URL_STATE_KEYS.SPEED)
+      });
+    }
+  } else {
+    const presetId = params.get(URL_STATE_KEYS.PRESET);
+
+    if (!isSupportedPresetId(presetId)) {
+      return defaultState;
+    }
+
+    const allowedKeys = new Set([
+      URL_STATE_KEYS.MODE,
+      URL_STATE_KEYS.UNIT,
+      URL_STATE_KEYS.PRESET
+    ]);
+
+    if (presetId === "custom") {
+      allowedKeys.add(URL_STATE_KEYS.DISTANCE);
+    }
+
+    if (mode === MODES.PACE) {
+      allowedKeys.add(URL_STATE_KEYS.FINISH_HOURS);
+      allowedKeys.add(URL_STATE_KEYS.FINISH_MINUTES);
+      allowedKeys.add(URL_STATE_KEYS.FINISH_SECONDS);
+    } else {
+      allowedKeys.add(URL_STATE_KEYS.PACE_MINUTES);
+      allowedKeys.add(URL_STATE_KEYS.PACE_SECONDS);
+    }
+
+    if (hasUnexpectedUrlStateKeys(params, allowedKeys)) {
+      return defaultState;
+    }
+
+    if (presetId === "custom") {
+      if (!params.has(URL_STATE_KEYS.DISTANCE)) {
+        return defaultState;
+      }
+
+      state = updateDistanceInput(state, params.get(URL_STATE_KEYS.DISTANCE));
+    } else {
+      state = applyPresetSelection(state, presetId);
+    }
+
+    if (mode === MODES.PACE) {
+      if (
+        !params.has(URL_STATE_KEYS.FINISH_HOURS) ||
+        !params.has(URL_STATE_KEYS.FINISH_MINUTES) ||
+        !params.has(URL_STATE_KEYS.FINISH_SECONDS)
+      ) {
+        return defaultState;
+      }
+
+      state = applyRestoredInputValues(state, {
+        finishHours: params.get(URL_STATE_KEYS.FINISH_HOURS),
+        finishMinutes: params.get(URL_STATE_KEYS.FINISH_MINUTES),
+        finishSeconds: params.get(URL_STATE_KEYS.FINISH_SECONDS)
+      });
+    } else {
+      if (
+        !params.has(URL_STATE_KEYS.PACE_MINUTES) ||
+        !params.has(URL_STATE_KEYS.PACE_SECONDS)
+      ) {
+        return defaultState;
+      }
+
+      state = applyRestoredInputValues(state, {
+        paceMinutes: params.get(URL_STATE_KEYS.PACE_MINUTES),
+        paceSeconds: params.get(URL_STATE_KEYS.PACE_SECONDS)
+      });
+    }
+  }
+
+  return deriveCalculatorView(state).currentResult ? state : defaultState;
 }
 
 export function resetFormState(state) {
@@ -726,7 +969,7 @@ export function deriveCalculatorView(state, previousResult = null) {
 
     errors.distance = distance.error;
 
-    if (!distance.error && distance.value !== null) {
+    if (!distance.error && distance.value != null) {
       distanceKm = canonical.distanceKm;
     }
   }
@@ -738,7 +981,7 @@ export function deriveCalculatorView(state, previousResult = null) {
 
     errors.finish = finish.error;
 
-    if (!errors.distance && !errors.finish && distanceKm !== null) {
+    if (!errors.distance && !errors.finish && Number.isFinite(distanceKm)) {
       const speedKmh = speedFromFinishTime(finish.value, distanceKm);
 
       if (Number.isFinite(speedKmh) && speedKmh > 0) {
@@ -752,7 +995,13 @@ export function deriveCalculatorView(state, previousResult = null) {
 
     errors.pace = pace.error;
 
-    if (!errors.distance && !errors.pace && distanceKm !== null) {
+    if (
+      !errors.distance &&
+      !errors.pace &&
+      Number.isFinite(distanceKm) &&
+      Number.isFinite(canonical.paceSpeedKmh) &&
+      canonical.paceSpeedKmh > 0
+    ) {
       const speedKmh = canonical.paceSpeedKmh;
       currentResult = createResult(state, speedKmh, distanceKm);
     }
@@ -763,7 +1012,11 @@ export function deriveCalculatorView(state, previousResult = null) {
 
     errors.pace = pace.error;
 
-    if (!errors.pace) {
+    if (
+      !errors.pace &&
+      Number.isFinite(canonical.paceSpeedKmh) &&
+      canonical.paceSpeedKmh > 0
+    ) {
       const speedKmh = canonical.paceSpeedKmh;
       currentResult = createResult(state, speedKmh, null);
     }
@@ -774,7 +1027,11 @@ export function deriveCalculatorView(state, previousResult = null) {
 
     errors.speed = speed.error;
 
-    if (!errors.speed) {
+    if (
+      !errors.speed &&
+      Number.isFinite(canonical.speedKmh) &&
+      canonical.speedKmh > 0
+    ) {
       currentResult = createResult(state, canonical.speedKmh, null);
     }
   }

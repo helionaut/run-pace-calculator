@@ -1,65 +1,50 @@
 ## Summary
 
-- add a polished static run pace calculator with pace, speed, and finish-time
-  input modes
-- add pure conversion helpers, Node tests, and a zero-dependency build for
-  GitHub Pages
-- tighten calculator validation so pace and finish-time fields reject invalid
-  decimal or out-of-range time parts without capping long pace minutes
-- make the calculator mode switcher keyboard-operable with real tab semantics
-- add product docs, deployment workflow, PR template, and offline handoff
-  scripts with a repo-local manifest fallback and relative bundle import fixes
-  for blocked publish environments
-- strengthen handoff verification so copied manifests also confirm the bundled
-  branch and head metadata
+- add URL serialization for valid calculator scenarios so users can copy a
+  deep link and reopen the same state later
+- restore calculator state from `location.search` on load for mode, unit,
+  preset or custom distance, convert source, and entered metrics
+- reject malformed or contradictory query state by falling back to the default
+  calculator and keep empty or invalid edits off the URL
 
 ## Testing
 
 - [x] `npm test`
 - [x] `npm run build`
 - [x] `npm run check`
-- [x] `npm run pr:dry-run`
-- [x] `npm run pr:publish`
-- [x] `npm run bundle:export`
-- [x] `./scripts/import_bundle.sh .handoff/HEL-8/run-pace-calculator-eugeniy-hel-8-initial-build-run-pace-calculator.bundle <repo>`
-- [x] `npm run handoff:prepare`
-- [x] `npm run handoff:verify -- .handoff/HEL-8/HEL-8-handoff-manifest.json`
-- [x] import the persisted `.handoff/HEL-8` bundle into a fresh clone and run
-  `npm run check`
-- [x] verify a copied handoff manifest still validates bundle branch/head
-  metadata outside the original workspace path
-- [x] `npm test` covers calculator logic and handoff manifest verification
-- [x] `npm run dev` (expected explicit bind error in this sandbox)
-- [x] `npm run preview` (expected explicit bind error in this sandbox)
+- [x] `npm run handoff:verify -- /home/helionaut/workspaces/HEL-17/.handoff/HEL-17/HEL-17-handoff-manifest.json`
 
 ## Risks
 
-- Local HTTP serving could not be exercised in this sandbox because socket
-  binding fails with `PermissionError: [Errno 1] Operation not permitted`.
+- the Linear issue text references a redesigned calculator with slider and lock
+  controls, but this checkout only contains the current preset or custom
+  distance and convert-source state model, so URL persistence covers that
+  shipped UI rather than absent controls
+- GitHub publishing is still blocked in this environment by invalid `gh`
+  auth and failed DNS resolution for `github.com`
 
-## Preview notes
+## Preview Notes
 
-- The page opens with a large editorial hero, supported race-distance chips,
-  and a dark aside card that calls out the first-slice scope.
-- The calculator panel uses three pill-style mode tabs for Pace, Speed, and
-  Finish Time, with the active panel swapping inline below the controls.
-- The output area shows a highlighted projected finish card, equivalent pace
-  and speed cards, a split guide, and a race projection table below.
+- no visual UI was added; the behavior change is that valid calculator states
+  now populate the query string and reload into the same scenario
+- resetting to an empty calculator removes the query string and returns the
+  page to a clean URL
 
 ## Checklist
 
-- [x] Scope matches the linked Linear issue
+- [x] Scope matches the linked Linear issue as far as this checkout's current
+  state model allows
 - [x] Docs updated if behavior or workflow changed
 - [x] Screenshots or preview notes added when UI changed
 
-## Publish notes
+## Publish Notes
 
 If GitHub access is still blocked in the current checkout:
 
-1. Run `npm run handoff:prepare` from this repo, or reuse the verified
-   handoff directory exported during this run.
-2. Import the included bundle into a writable clone with:
-   `git -C <target-repo-dir> fetch .handoff/HEL-8/run-pace-calculator-eugeniy-hel-8-initial-build-run-pace-calculator.bundle eugeniy/hel-8-initial-build-run-pace-calculator:eugeniy/hel-8-initial-build-run-pace-calculator`
-   `git -C <target-repo-dir> switch eugeniy/hel-8-initial-build-run-pace-calculator`
-3. Push branch `eugeniy/hel-8-initial-build-run-pace-calculator`.
-4. Create the PR using the title and body above.
+1. Import the handoff bundle into a writable clone with:
+   `git -C <target-repo-dir> fetch /home/helionaut/workspaces/HEL-17/.handoff/HEL-17/run-pace-calculator-eugeniy-hel-17-add-shareable-url-state-for-calculator-inputs-and-lock-mode.bundle eugeniy/hel-17-add-shareable-url-state-for-calculator-inputs-and-lock-mode:eugeniy/hel-17-add-shareable-url-state-for-calculator-inputs-and-lock-mode`
+   `git -C <target-repo-dir> switch eugeniy/hel-17-add-shareable-url-state-for-calculator-inputs-and-lock-mode`
+2. Push branch `eugeniy/hel-17-add-shareable-url-state-for-calculator-inputs-and-lock-mode`.
+3. Create the PR with title `Add shareable URL state for calculator inputs`,
+   or rerun `./scripts/create_pr.sh` after import to use
+   `docs/pull-request-title.txt` and the body above.

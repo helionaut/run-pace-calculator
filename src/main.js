@@ -7,9 +7,10 @@ import {
   applyModeChange,
   applyPresetSelection,
   applyUnitChange,
-  createFormState,
   deriveCalculatorView,
   resetFormState,
+  restoreCalculatorState,
+  serializeCalculatorState,
   updateDistanceInput,
   updateInputValue
 } from "./lib/calculator.js";
@@ -61,7 +62,7 @@ const elements = {
 
 const modeButtons = [...elements.modeButtons];
 const modeOrder = modeButtons.map((button) => button.dataset.mode);
-let state = createFormState();
+let state = restoreCalculatorState(window.location.search);
 let lastValidResult = null;
 
 function getAlternateUnit(unit) {
@@ -307,6 +308,18 @@ function renderResultSummary(view) {
   renderProjectionTable(view.display);
 }
 
+function syncUrlState() {
+  const search = serializeCalculatorState(state);
+  const nextUrl = search
+    ? `${window.location.pathname}?${search}${window.location.hash}`
+    : `${window.location.pathname}${window.location.hash}`;
+  const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+  if (nextUrl !== currentUrl) {
+    window.history.replaceState(null, "", nextUrl);
+  }
+}
+
 function render() {
   const view = deriveCalculatorView(state, lastValidResult);
 
@@ -341,6 +354,7 @@ function render() {
   );
 
   renderResultSummary(view);
+  syncUrlState();
 }
 
 function bindModeEvents() {

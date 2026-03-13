@@ -73,6 +73,12 @@ file_size() {
   stat -f '%z' "$1"
 }
 
+for existing_bundle in "$output_dir"/"${repo_slug}"-*.bundle; do
+  if [[ -e "$existing_bundle" && "$existing_bundle" != "$bundle_path" ]]; then
+    rm -f "$existing_bundle"
+  fi
+done
+
 ./scripts/export_bundle.sh "$bundle_path" >/dev/null
 cp docs/pull-request-draft.md "$pr_draft_path"
 npm run pr:dry-run >"$dry_run_path"
