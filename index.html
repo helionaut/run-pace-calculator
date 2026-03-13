@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <meta
+      name="description"
+      content="Convert running pace and speed, then project finish times for common race distances."
+    />
+    <title>Run Pace Calculator</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero panel">
+        <div class="hero-copy">
+          <p class="eyebrow">Static runner toolkit</p>
+          <h1>Convert pace, lock a race goal, and see the finish clock instantly.</h1>
+          <p class="hero-text">
+            Move between <strong>min/km</strong> and <strong>km/h</strong>,
+            then project what that effort means for everything from a fast 5K to a full marathon.
+          </p>
+        </div>
+        <div class="hero-highlights">
+          <div class="highlight-chip">
+            <span class="highlight-label">Build target</span>
+            <strong>Static site</strong>
+          </div>
+          <div class="highlight-chip">
+            <span class="highlight-label">Coverage</span>
+            <strong>5K to marathon</strong>
+          </div>
+          <div class="highlight-chip">
+            <span class="highlight-label">Layout</span>
+            <strong>Desktop + mobile</strong>
+          </div>
+        </div>
+      </header>
+
+      <main class="content-grid">
+        <section class="panel input-panel">
+          <div class="panel-header">
+            <div>
+              <p class="section-kicker">Inputs</p>
+              <h2>Calculator</h2>
+            </div>
+            <button class="ghost-button" id="reset-button" type="button">Reset</button>
+          </div>
+
+          <form class="input-form" novalidate>
+            <label class="field">
+              <span class="field-label">Pace</span>
+              <span class="field-unit">min/km</span>
+              <input
+                aria-describedby="pace-hint pace-error"
+                autocomplete="off"
+                id="pace"
+                inputmode="text"
+                placeholder="4:45"
+                spellcheck="false"
+                type="text"
+              />
+              <span class="field-hint" id="pace-hint">Use m:ss, for example 5:00.</span>
+              <span aria-live="polite" class="field-error" id="pace-error"></span>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Speed</span>
+              <span class="field-unit">km/h</span>
+              <input
+                autocomplete="off"
+                aria-describedby="speed-hint speed-error"
+                id="speed"
+                inputmode="decimal"
+                placeholder="12.00"
+                spellcheck="false"
+                type="text"
+              />
+              <span class="field-hint" id="speed-hint">The last pace or speed field you edit drives the outputs.</span>
+              <span aria-live="polite" class="field-error" id="speed-error"></span>
+            </label>
+
+            <label class="field field-distance">
+              <span class="field-label">Distance</span>
+              <span class="field-unit">km</span>
+              <input
+                autocomplete="off"
+                aria-describedby="distance-hint distance-error"
+                id="distance"
+                inputmode="decimal"
+                placeholder="10"
+                spellcheck="false"
+                type="text"
+              />
+              <span class="field-hint" id="distance-hint">Choose a common race below or enter any custom distance.</span>
+              <span aria-live="polite" class="field-error" id="distance-error"></span>
+            </label>
+          </form>
+
+          <div class="preset-strip" aria-label="Common race distances">
+            <button class="preset-button" data-preset-distance="5" type="button">5K</button>
+            <button class="preset-button" data-preset-distance="10" type="button">10K</button>
+            <button class="preset-button" data-preset-distance="21.0975" type="button">Half</button>
+            <button class="preset-button" data-preset-distance="42.195" type="button">Marathon</button>
+          </div>
+        </section>
+
+        <section class="panel output-panel">
+          <div class="panel-header">
+            <div>
+              <p class="section-kicker">Outputs</p>
+              <h2>Readout</h2>
+            </div>
+            <span aria-live="polite" class="source-badge" id="source-badge"></span>
+          </div>
+
+          <div class="metric-grid">
+            <article class="metric-card metric-card-pace">
+              <span class="metric-label">Converted pace</span>
+              <strong class="metric-value" id="pace-output">—</strong>
+              <span class="metric-footnote">Normalized to min/km</span>
+            </article>
+
+            <article class="metric-card metric-card-speed">
+              <span class="metric-label">Converted speed</span>
+              <strong class="metric-value" id="speed-output">—</strong>
+              <span class="metric-footnote">Normalized to km/h</span>
+            </article>
+          </div>
+
+          <article class="finish-card">
+            <span class="metric-label">Predicted finish time</span>
+            <strong class="finish-value" id="finish-output">—</strong>
+            <span class="metric-footnote" id="finish-caption">
+              Add a pace or a speed to project a finish time.
+            </span>
+          </article>
+        </section>
+      </main>
+
+      <section class="panel projection-panel">
+        <div class="panel-header">
+          <div>
+            <p class="section-kicker">Common races</p>
+            <h2>Tap a distance to load it</h2>
+          </div>
+        </div>
+
+        <div class="projection-grid" id="projections"></div>
+      </section>
+    </div>
+
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>
