@@ -1,65 +1,41 @@
 ## Summary
 
-- add a polished static run pace calculator with pace, speed, and finish-time
-  input modes
-- add pure conversion helpers, Node tests, and a zero-dependency build for
-  GitHub Pages
-- tighten calculator validation so pace and finish-time fields reject invalid
-  decimal or out-of-range time parts without capping long pace minutes
-- make the calculator mode switcher keyboard-operable with real tab semantics
-- add product docs, deployment workflow, PR template, and offline handoff
-  scripts with a repo-local manifest fallback and relative bundle import fixes
-  for blocked publish environments
-- strengthen handoff verification so copied manifests also confirm the bundled
-  branch and head metadata
+- redesign the calculator into a compact one-screen tool with the distance
+  slider, active metric card, and live derived outputs visible together
+- replace the old mode-based state model with a unified calculator engine that
+  supports live pace, speed, and finish-time derivation plus pace/time locks
+- add DOM integration coverage for slider and lock behavior, update layout
+  accessibility checks, and refresh repo smoke checks for the new markup
 
 ## Testing
 
 - [x] `npm test`
 - [x] `npm run build`
 - [x] `npm run check`
-- [x] `npm run pr:dry-run`
-- [x] `npm run pr:publish`
-- [x] `npm run bundle:export`
-- [x] `./scripts/import_bundle.sh .handoff/HEL-8/run-pace-calculator-eugeniy-hel-8-initial-build-run-pace-calculator.bundle <repo>`
-- [x] `npm run handoff:prepare`
-- [x] `npm run handoff:verify -- .handoff/HEL-8/HEL-8-handoff-manifest.json`
-- [x] import the persisted `.handoff/HEL-8` bundle into a fresh clone and run
-  `npm run check`
-- [x] verify a copied handoff manifest still validates bundle branch/head
-  metadata outside the original workspace path
-- [x] `npm test` covers calculator logic and handoff manifest verification
-- [x] `npm run dev` (expected explicit bind error in this sandbox)
-- [x] `npm run preview` (expected explicit bind error in this sandbox)
+- [x] Other: added unit coverage for pace -> speed/time, speed -> pace/time,
+      locked time + distance changes, and locked pace + distance changes
+- [x] Other: added DOM integration coverage for slider-driven recalculation and
+      lock interactions
 
 ## Risks
 
-- Local HTTP serving could not be exercised in this sandbox because socket
-  binding fails with `PermissionError: [Errno 1] Operation not permitted`.
+- The sandbox has no browser or image-capture binary available, so I could not
+  attach before/after screenshots from this environment.
 
 ## Preview notes
 
-- The page opens with a large editorial hero, supported race-distance chips,
-  and a dark aside card that calls out the first-slice scope.
-- The calculator panel uses three pill-style mode tabs for Pace, Speed, and
-  Finish Time, with the active panel swapping inline below the controls.
-- The output area shows a highlighted projected finish card, equivalent pace
-  and speed cards, a split guide, and a race projection table below.
+- Before: the page opened with a large editorial hero and mode-based form
+  panels that pushed the main interaction below the fold on common laptop
+  viewports.
+- After: the primary view is a single compact frame with a live distance
+  slider, preset chips, and three visible metric cards for pace, speed, and
+  finish time.
+- Interaction: entering pace immediately reveals speed and finish time for the
+  selected distance; locking time or pace keeps that metric fixed while the
+  slider recomputes the others.
 
 ## Checklist
 
 - [x] Scope matches the linked Linear issue
 - [x] Docs updated if behavior or workflow changed
 - [x] Screenshots or preview notes added when UI changed
-
-## Publish notes
-
-If GitHub access is still blocked in the current checkout:
-
-1. Run `npm run handoff:prepare` from this repo, or reuse the verified
-   handoff directory exported during this run.
-2. Import the included bundle into a writable clone with:
-   `git -C <target-repo-dir> fetch .handoff/HEL-8/run-pace-calculator-eugeniy-hel-8-initial-build-run-pace-calculator.bundle eugeniy/hel-8-initial-build-run-pace-calculator:eugeniy/hel-8-initial-build-run-pace-calculator`
-   `git -C <target-repo-dir> switch eugeniy/hel-8-initial-build-run-pace-calculator`
-3. Push branch `eugeniy/hel-8-initial-build-run-pace-calculator`.
-4. Create the PR using the title and body above.

@@ -2,17 +2,18 @@ export const KM_PER_MILE = 1.609344;
 export const MAX_DISTANCE = 1000;
 export const MAX_DISTANCE_DECIMALS = 5;
 export const MAX_SPEED = 60;
-export const RESULT_PLACEHOLDER = "Enter valid values to calculate.";
+export const RESULT_PLACEHOLDER =
+  "Choose a distance, then edit pace, speed, or time.";
 
-export const MODES = Object.freeze({
+export const DRIVER_METRICS = Object.freeze({
   PACE: "pace",
-  FINISH: "finish",
-  CONVERT: "convert"
+  SPEED: "speed",
+  TIME: "time"
 });
 
-export const CONVERT_SOURCES = Object.freeze({
+export const LOCK_METRICS = Object.freeze({
   PACE: "pace",
-  SPEED: "speed"
+  TIME: "time"
 });
 
 export const DISTANCE_PRESETS = Object.freeze([
@@ -23,10 +24,16 @@ export const DISTANCE_PRESETS = Object.freeze([
   { id: "marathon", label: "Marathon", distanceKm: 42.195 }
 ]);
 
+const DEFAULT_PRESET_ID = "10k";
 const ALTERNATE_UNIT = Object.freeze({
   km: "mi",
   mi: "km"
 });
+const LOCKABLE_METRICS = new Set(Object.values(LOCK_METRICS));
+const PRESET_MATCH_TOLERANCE = 1e-5;
+const SLIDER_MIN = 0.5;
+const SLIDER_BASE_MAX = 60;
+const SLIDER_STEP = "0.00001";
 
 function trimValue(value) {
   return String(value ?? "").trim();
@@ -60,127 +67,516 @@ function getAlternateUnit(unit) {
   return ALTERNATE_UNIT[unit] ?? "km";
 }
 
-function getRelevantFieldGroups(state) {
-  if (state.mode === MODES.PACE) {
-    return [
-      [state.inputs.distance],
-      [
-        state.inputs.finishHours,
-        state.inputs.finishMinutes,
-        state.inputs.finishSeconds
-      ]
-    ];
-  }
-
-  if (state.mode === MODES.FINISH) {
-    return [
-      [state.inputs.distance],
-      [state.inputs.paceMinutes, state.inputs.paceSeconds]
-    ];
-  }
-
-  if (state.convertSource === CONVERT_SOURCES.SPEED) {
-    return [[state.inputs.speed]];
-  }
-
-  return [[state.inputs.paceMinutes, state.inputs.paceSeconds]];
+function getDefaultPreset() {
+  return getPresetById(DEFAULT_PRESET_ID);
 }
 
-function shouldShowRequiredErrors(state, previousResult) {
+function almostEqual(a, b) {
+  return Math.abs(a - b) <= PRESET_MATCH_TOLERANCE;
+}
+
+function getPresetIdForDistanceKm(distanceKm) {
   return (
-    Boolean(previousResult) ||
-    getRelevantFieldGroups(state).some((group) => group.some(hasValue))
+    DISTANCE_PRESETS.find(
+      (preset) =>
+        preset.distanceKm !== null && almostEqual(preset.distanceKm, distanceKm)
+    )?.id ?? "custom"
   );
+}
+
+function getMetricFields(metric) {
+  if (metric === DRIVER_METRICS.PACE) {
+    return ["paceMinutes", "paceSeconds"];
+  }
+
+  if (metric === DRIVER_METRICS.TIME) {
+    return ["timeHours", "timeMinutes", "timeSeconds"];
+  }
+
+  return ["speed"];
+}
+
+function shouldShowRequiredError(state, metric) {
+  return getMetricFields(metric).some((field) => hasValue(state.inputs[field]));
+}
+
+function getEffectiveDriverMetric(state) {
+  return state.lockMetric ?? state.driverMetric;
+}
+
+function deriveCanonicalSpeedKmh(state) {
+  const driverMetric = getEffectiveDriverMetric(state);
+
+  if (driverMetric === DRIVER_METRICS.PACE) {
+    const pace = parsePaceInput(state.inputs, {
+      showRequiredError: false
+    });
+
+    return !pace.error && pace.value !== null
+      ? paceToSpeedKmh(pace.value, state.unit)
+      : null;
+  }
+
+  if (driverMetric === DRIVER_METRICS.SPEED) {
+    const speed = parseSpeedInput(state.inputs.speed, {
+      showRequiredError: false
+    });
+
+    return !speed.error && speed.value !== null
+      ? toKilometersPerHour(speed.value, state.unit)
+      : null;
+  }
+
+  const distance = parseDistanceInput(state.inputs.distance, {
+    showRequiredError: false
+  });
+  const time = parseTimeInput(state.inputs, {
+    showRequiredError: false
+  });
+
+  if (
+    distance.error ||
+    distance.value === null ||
+    time.error ||
+    time.value === null
+  ) {
+    return null;
+  }
+
+  return speedFromFinishTime(
+    time.value,
+    distanceToKilometers(distance.value, state.unit)
+  );
+}
+
+function syncCanonicalSpeed(state) {
+  const canonicalSpeedKmh = deriveCanonicalSpeedKmh(state);
+
+  return {
+    ...state,
+    canonicalSpeedKmh:
+      Number.isFinite(canonicalSpeedKmh) && canonicalSpeedKmh > 0
+        ? canonicalSpeedKmh
+        : null
+  };
+}
+
+function getSelectedDistanceUnitValue(distanceKm, unit) {
+  return distanceFromKilometers(distanceKm, unit);
+}
+
+function getSliderMaximum(distanceKm, unit) {
+  const selectedUnitDistance = getSelectedDistanceUnitValue(distanceKm, unit);
+
+  return formatEditableNumber(
+    Math.max(SLIDER_BASE_MAX, selectedUnitDistance),
+    MAX_DISTANCE_DECIMALS
+  );
+}
+
+function formatPaceFields(totalSeconds) {
+  if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) {
+    return {
+      minutes: "",
+      seconds: ""
+    };
+  }
+
+  const rounded = Math.round(totalSeconds);
+
+  return {
+    minutes: String(Math.floor(rounded / 60)),
+    seconds: padTwoDigits(rounded % 60)
+  };
+}
+
+function formatTimeFields(totalSeconds) {
+  if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) {
+    return {
+      hours: "",
+      minutes: "",
+      seconds: ""
+    };
+  }
+
+  const rounded = Math.round(totalSeconds);
+  const hours = Math.floor(rounded / 3600);
+  const minutes = Math.floor((rounded % 3600) / 60);
+  const seconds = rounded % 60;
+
+  return {
+    hours: String(hours),
+    minutes: padTwoDigits(minutes),
+    seconds: padTwoDigits(seconds)
+  };
+}
+
+function seedMetricInputs(inputs, metric, calculation, unit) {
+  if (metric === DRIVER_METRICS.PACE) {
+    if (!Number.isFinite(calculation.speedKmh) || calculation.speedKmh <= 0) {
+      return inputs;
+    }
+
+    const pace = formatPaceFields(speedToPaceSeconds(calculation.speedKmh, unit));
+
+    return {
+      ...inputs,
+      paceMinutes: pace.minutes,
+      paceSeconds: pace.seconds
+    };
+  }
+
+  if (metric === DRIVER_METRICS.SPEED) {
+    if (!Number.isFinite(calculation.speedKmh) || calculation.speedKmh <= 0) {
+      return inputs;
+    }
+
+    return {
+      ...inputs,
+      speed: formatSpeedInputValue(
+        fromKilometersPerHour(calculation.speedKmh, unit)
+      )
+    };
+  }
+
+  if (!Number.isFinite(calculation.finishSeconds) || calculation.finishSeconds <= 0) {
+    return inputs;
+  }
+
+  const time = formatTimeFields(calculation.finishSeconds);
+
+  return {
+    ...inputs,
+    timeHours: time.hours,
+    timeMinutes: time.minutes,
+    timeSeconds: time.seconds
+  };
+}
+
+function getMetricStateLabel(metric, driverMetric, lockMetric, hasDerivedValue) {
+  if (lockMetric === metric) {
+    return "Locked";
+  }
+
+  if (driverMetric === metric) {
+    return "Input";
+  }
+
+  if (hasDerivedValue) {
+    return "Derived";
+  }
+
+  return "Waiting";
+}
+
+function getDriverButtonLabel(metric, driverMetric, lockMetric) {
+  if (metric === driverMetric && lockMetric === metric) {
+    return "Locked input";
+  }
+
+  if (metric === driverMetric) {
+    return "Editing";
+  }
+
+  if (lockMetric) {
+    return "Unlock to edit";
+  }
+
+  return "Use as input";
+}
+
+function buildProjectionRows(speedKmh, unit) {
+  return DISTANCE_PRESETS.filter((preset) => preset.distanceKm !== null).map(
+    (preset) => ({
+      id: preset.id,
+      label: preset.label,
+      detail: formatDistance(preset.distanceKm, unit),
+      finishLabel: Number.isFinite(speedKmh) && speedKmh > 0
+        ? formatDuration(finishTimeFromSpeed(speedKmh, preset.distanceKm))
+        : "--:--:--"
+    })
+  );
+}
+
+function deriveCalculation(state) {
+  const driverMetric = getEffectiveDriverMetric(state);
+  const errors = {
+    distance: null,
+    pace: null,
+    speed: null,
+    time: null
+  };
+  const distance = parseDistanceInput(state.inputs.distance, {
+    showRequiredError: true
+  });
+  const hasDistance = !distance.error && distance.value !== null;
+  const distanceKm = hasDistance
+    ? distanceToKilometers(distance.value, state.unit)
+    : null;
+  let speedKmh = null;
+  let finishSeconds = null;
+
+  errors.distance = distance.error;
+
+  if (driverMetric === DRIVER_METRICS.PACE) {
+    const pace = parsePaceInput(state.inputs, {
+      showRequiredError: shouldShowRequiredError(state, DRIVER_METRICS.PACE)
+    });
+
+    errors.pace = pace.error;
+
+    if (!errors.pace && pace.value !== null) {
+      speedKmh =
+        Number.isFinite(state.canonicalSpeedKmh) && state.canonicalSpeedKmh > 0
+          ? state.canonicalSpeedKmh
+          : paceToSpeedKmh(pace.value, state.unit);
+    }
+
+    if (Number.isFinite(speedKmh) && speedKmh > 0 && distanceKm !== null) {
+      finishSeconds = finishTimeFromSpeed(speedKmh, distanceKm);
+    }
+  } else if (driverMetric === DRIVER_METRICS.SPEED) {
+    const speed = parseSpeedInput(state.inputs.speed, {
+      showRequiredError: shouldShowRequiredError(state, DRIVER_METRICS.SPEED)
+    });
+
+    errors.speed = speed.error;
+
+    if (!errors.speed && speed.value !== null) {
+      speedKmh =
+        Number.isFinite(state.canonicalSpeedKmh) && state.canonicalSpeedKmh > 0
+          ? state.canonicalSpeedKmh
+          : toKilometersPerHour(speed.value, state.unit);
+    }
+
+    if (Number.isFinite(speedKmh) && speedKmh > 0 && distanceKm !== null) {
+      finishSeconds = finishTimeFromSpeed(speedKmh, distanceKm);
+    }
+  } else {
+    const time = parseTimeInput(state.inputs, {
+      showRequiredError: shouldShowRequiredError(state, DRIVER_METRICS.TIME)
+    });
+
+    errors.time = time.error;
+
+    if (!errors.time && time.value !== null && distanceKm !== null) {
+      speedKmh = speedFromFinishTime(time.value, distanceKm);
+      finishSeconds = time.value;
+    }
+  }
+
+  return {
+    distanceKm,
+    driverMetric,
+    errors,
+    finishSeconds,
+    speedKmh
+  };
+}
+
+function canLockMetric(metric, calculation) {
+  if (metric === LOCK_METRICS.PACE) {
+    return Number.isFinite(calculation.speedKmh) && calculation.speedKmh > 0;
+  }
+
+  if (metric === LOCK_METRICS.TIME) {
+    return (
+      Number.isFinite(calculation.finishSeconds) && calculation.finishSeconds > 0
+    );
+  }
+
+  return false;
+}
+
+function createDistanceView(state, calculation) {
+  return {
+    error: calculation.errors.distance,
+    inputValue: state.inputs.distance,
+    label: `Distance (${state.unit})`,
+    presetId: state.presetId,
+    presets: DISTANCE_PRESETS.filter((preset) => preset.distanceKm !== null).map(
+      (preset) => ({
+        ...preset,
+        isSelected: state.presetId === preset.id
+      })
+    ),
+    sliderMaximum: getSliderMaximum(state.canonicalDistanceKm, state.unit),
+    sliderMinimum: formatEditableNumber(SLIDER_MIN, MAX_DISTANCE_DECIMALS),
+    sliderStep: SLIDER_STEP,
+    sliderValue: formatDistanceInputValue(state.canonicalDistanceKm, state.unit),
+    summary: formatDistance(state.canonicalDistanceKm, state.unit)
+  };
+}
+
+function createPaceCardView(state, calculation) {
+  const driverMetric = getEffectiveDriverMetric(state);
+  const alternateUnit = getAlternateUnit(state.unit);
+  const isEditable = driverMetric === DRIVER_METRICS.PACE;
+  const derivedPaceSeconds = Number.isFinite(calculation.speedKmh)
+    ? speedToPaceSeconds(calculation.speedKmh, state.unit)
+    : null;
+  const displayInputs = isEditable
+    ? {
+        minutes: state.inputs.paceMinutes,
+        seconds: state.inputs.paceSeconds
+      }
+    : formatPaceFields(derivedPaceSeconds);
+
+  return {
+    editable: isEditable,
+    error: isEditable ? calculation.errors.pace : null,
+    inputValues: displayInputs,
+    label: `Pace /${state.unit}`,
+    lockDisabled:
+      state.lockMetric === LOCK_METRICS.PACE
+        ? false
+        : !canLockMetric(LOCK_METRICS.PACE, calculation),
+    lockLabel:
+      state.lockMetric === LOCK_METRICS.PACE ? "Unlock" : "Lock",
+    lockPressed: state.lockMetric === LOCK_METRICS.PACE,
+    secondary: Number.isFinite(calculation.speedKmh)
+      ? `Also ${formatPace(
+          speedToPaceSeconds(calculation.speedKmh, alternateUnit),
+          alternateUnit
+        )}`
+      : `Also --:-- /${alternateUnit}`,
+    stateLabel: getMetricStateLabel(
+      DRIVER_METRICS.PACE,
+      driverMetric,
+      state.lockMetric,
+      Number.isFinite(derivedPaceSeconds)
+    )
+  };
+}
+
+function createSpeedCardView(state, calculation) {
+  const driverMetric = getEffectiveDriverMetric(state);
+  const alternateUnit = getAlternateUnit(state.unit);
+  const isEditable = driverMetric === DRIVER_METRICS.SPEED;
+
+  return {
+    editable: isEditable,
+    error: isEditable ? calculation.errors.speed : null,
+    inputValue: isEditable
+      ? state.inputs.speed
+      : Number.isFinite(calculation.speedKmh)
+        ? formatSpeedInputValue(fromKilometersPerHour(calculation.speedKmh, state.unit))
+        : "",
+    label: state.unit === "mi" ? "Speed (mph)" : "Speed (km/h)",
+    secondary: Number.isFinite(calculation.speedKmh)
+      ? `Also ${formatSpeed(calculation.speedKmh, alternateUnit)}`
+      : alternateUnit === "mi"
+        ? "Also --.-- mph"
+        : "Also --.-- km/h",
+    stateLabel: getMetricStateLabel(
+      DRIVER_METRICS.SPEED,
+      driverMetric,
+      state.lockMetric,
+      Number.isFinite(calculation.speedKmh)
+    )
+  };
+}
+
+function createTimeCardView(state, calculation) {
+  const driverMetric = getEffectiveDriverMetric(state);
+  const isEditable = driverMetric === DRIVER_METRICS.TIME;
+  const displayInputs = isEditable
+    ? {
+        hours: state.inputs.timeHours,
+        minutes: state.inputs.timeMinutes,
+        seconds: state.inputs.timeSeconds
+      }
+    : formatTimeFields(calculation.finishSeconds);
+  const distanceText = calculation.distanceKm !== null
+    ? `For ${formatDistance(calculation.distanceKm, state.unit)}`
+    : "Set a valid distance to project finish time.";
+
+  return {
+    editable: isEditable,
+    error: isEditable ? calculation.errors.time : null,
+    inputValues: displayInputs,
+    label: "Finish time",
+    lockDisabled:
+      state.lockMetric === LOCK_METRICS.TIME
+        ? false
+        : !canLockMetric(LOCK_METRICS.TIME, calculation),
+    lockLabel:
+      state.lockMetric === LOCK_METRICS.TIME ? "Unlock" : "Lock",
+    lockPressed: state.lockMetric === LOCK_METRICS.TIME,
+    secondary: distanceText,
+    stateLabel: getMetricStateLabel(
+      DRIVER_METRICS.TIME,
+      driverMetric,
+      state.lockMetric,
+      Number.isFinite(calculation.finishSeconds)
+    )
+  };
+}
+
+function createStatusMessage(state, calculation) {
+  const driverMetric = getEffectiveDriverMetric(state);
+  const driverError =
+    driverMetric === DRIVER_METRICS.PACE
+      ? calculation.errors.pace
+      : driverMetric === DRIVER_METRICS.SPEED
+        ? calculation.errors.speed
+        : calculation.errors.time;
+
+  if (calculation.errors.distance || driverError) {
+    return "Fix the highlighted fields to keep live results moving.";
+  }
+
+  if (state.lockMetric === LOCK_METRICS.TIME) {
+    return "Time locked. Drag distance to see the required pace and speed.";
+  }
+
+  if (state.lockMetric === LOCK_METRICS.PACE) {
+    return "Pace locked. Drag distance to update the finish time.";
+  }
+
+  if (driverMetric === DRIVER_METRICS.PACE) {
+    return "Edit pace to update speed and finish time instantly.";
+  }
+
+  if (driverMetric === DRIVER_METRICS.SPEED) {
+    return "Edit speed to update pace and finish time instantly.";
+  }
+
+  return "Edit finish time to see the pace and speed needed for this distance.";
 }
 
 export function getPresetById(id) {
   return DISTANCE_PRESETS.find((preset) => preset.id === id) ?? DISTANCE_PRESETS[0];
 }
 
-function createCanonicalState() {
-  return {
-    distanceKm: null,
-    paceSpeedKmh: null,
-    speedKmh: null
-  };
-}
-
-function deriveCanonicalValues(state) {
-  const distance = parseDistanceInput(state.inputs.distance, {
-    showRequiredError: false
-  });
-  const pace = parsePaceInput(state.inputs, {
-    showRequiredError: false
-  });
-  const speed = parseSpeedInput(state.inputs.speed, {
-    showRequiredError: false
-  });
-
-  return {
-    distanceKm:
-      !distance.error && distance.value !== null
-        ? distanceToKilometers(distance.value, state.unit)
-        : null,
-    paceSpeedKmh:
-      !pace.error && pace.value !== null
-        ? paceToSpeedKmh(pace.value, state.unit)
-        : null,
-    speedKmh:
-      !speed.error && speed.value !== null
-        ? toKilometersPerHour(speed.value, state.unit)
-        : null
-  };
-}
-
-function getCanonicalValues(state) {
-  const derived = deriveCanonicalValues(state);
-
-  return {
-    distanceKm: Number.isFinite(state.canonical?.distanceKm)
-      ? state.canonical.distanceKm
-      : derived.distanceKm,
-    paceSpeedKmh: Number.isFinite(state.canonical?.paceSpeedKmh)
-      ? state.canonical.paceSpeedKmh
-      : derived.paceSpeedKmh,
-    speedKmh: Number.isFinite(state.canonical?.speedKmh)
-      ? state.canonical.speedKmh
-      : derived.speedKmh
-  };
-}
-
-function syncCanonicalValues(state) {
-  return {
-    ...state,
-    canonical: deriveCanonicalValues(state)
-  };
-}
-
 export function createFormState() {
+  const preset = getDefaultPreset();
+
   return {
-    canonical: createCanonicalState(),
-    mode: MODES.PACE,
-    unit: "km",
-    convertSource: CONVERT_SOURCES.PACE,
-    presetId: "custom",
+    canonicalDistanceKm: preset.distanceKm,
+    canonicalSpeedKmh: null,
+    driverMetric: DRIVER_METRICS.PACE,
     inputs: {
-      distance: "",
-      finishHours: "",
-      finishMinutes: "",
-      finishSeconds: "",
+      distance: formatDistanceInputValue(preset.distanceKm, "km"),
       paceMinutes: "",
       paceSeconds: "",
-      speed: ""
-    }
+      speed: "",
+      timeHours: "",
+      timeMinutes: "",
+      timeSeconds: ""
+    },
+    lockMetric: null,
+    presetId: preset.id,
+    unit: "km"
   };
 }
 
 export function resetFormState(state) {
-  return {
-    ...createFormState(),
-    mode: state.mode,
-    unit: state.unit,
-    convertSource: state.convertSource
-  };
+  const nextState = createFormState();
+
+  return state.unit === nextState.unit
+    ? nextState
+    : applyUnitChange(nextState, state.unit);
 }
 
 export function distanceFromKilometers(distanceKm, unit = "km") {
@@ -273,43 +669,56 @@ export function formatDistance(distanceKm, unit = "km") {
 
 export function applyPresetSelection(state, presetId) {
   const preset = getPresetById(presetId);
-  const canonical = getCanonicalValues(state);
 
   if (preset.distanceKm === null) {
-    return {
+    return syncCanonicalSpeed({
       ...state,
-      canonical,
-      presetId: preset.id
-    };
+      presetId: "custom"
+    });
   }
 
-  return {
+  return syncCanonicalSpeed({
     ...state,
-    canonical: {
-      ...canonical,
-      distanceKm: preset.distanceKm
-    },
-    presetId: preset.id,
+    canonicalDistanceKm: preset.distanceKm,
     inputs: {
       ...state.inputs,
       distance: formatDistanceInputValue(preset.distanceKm, state.unit)
-    }
-  };
+    },
+    presetId: preset.id
+  });
 }
 
 export function updateDistanceInput(state, distance) {
-  return syncCanonicalValues({
+  const parsed = parseDistanceInput(distance, {
+    showRequiredError: false
+  });
+
+  if (parsed.error || parsed.value === null) {
+    return syncCanonicalSpeed({
+      ...state,
+      inputs: {
+        ...state.inputs,
+        distance
+      },
+      presetId: "custom"
+    });
+  }
+
+  const distanceKm = distanceToKilometers(parsed.value, state.unit);
+
+  return syncCanonicalSpeed({
     ...state,
-    presetId: "custom",
+    canonicalDistanceKm: distanceKm,
     inputs: {
       ...state.inputs,
       distance
-    }
+    },
+    presetId: getPresetIdForDistanceKm(distanceKm)
   });
 }
 
 export function updateInputValue(state, field, value) {
-  return syncCanonicalValues({
+  return syncCanonicalSpeed({
     ...state,
     inputs: {
       ...state.inputs,
@@ -318,50 +727,62 @@ export function updateInputValue(state, field, value) {
   });
 }
 
-export function applyModeChange(state, mode) {
-  return {
-    ...state,
-    mode
-  };
-}
-
-export function applyConvertSourceChange(state, source) {
-  const nextInputs = {
-    ...state.inputs
-  };
-
-  if (source === CONVERT_SOURCES.PACE) {
-    nextInputs.speed = "";
-  } else {
-    nextInputs.paceMinutes = "";
-    nextInputs.paceSeconds = "";
+export function setActiveMetric(state, metric) {
+  if (!Object.values(DRIVER_METRICS).includes(metric)) {
+    return state;
   }
 
-  return syncCanonicalValues({
-    ...state,
-    convertSource: source,
-    inputs: nextInputs
-  });
-}
+  if (state.lockMetric && state.lockMetric !== metric) {
+    return state;
+  }
 
-function convertPaceInputs(inputs, fromUnit, toUnit) {
-  const parsed = parsePaceInput(inputs, { showRequiredError: false });
-
-  if (parsed.error || parsed.value === null) {
+  if (getEffectiveDriverMetric(state) === metric) {
     return {
-      minutes: inputs.paceMinutes,
-      seconds: inputs.paceSeconds
+      ...state,
+      driverMetric: metric
     };
   }
 
-  const converted = speedToPaceSeconds(paceToSpeedKmh(parsed.value, fromUnit), toUnit);
-  const rounded = Math.round(converted);
-  const minutes = Math.floor(rounded / 60);
-  const seconds = rounded % 60;
+  const calculation = deriveCalculation(state);
 
   return {
-    minutes: String(minutes),
-    seconds: padTwoDigits(seconds)
+    ...state,
+    canonicalSpeedKmh:
+      Number.isFinite(calculation.speedKmh) && calculation.speedKmh > 0
+        ? calculation.speedKmh
+        : null,
+    driverMetric: metric,
+    inputs: seedMetricInputs(state.inputs, metric, calculation, state.unit)
+  };
+}
+
+export function toggleMetricLock(state, metric) {
+  if (!LOCKABLE_METRICS.has(metric)) {
+    return state;
+  }
+
+  if (state.lockMetric === metric) {
+    return {
+      ...state,
+      lockMetric: null
+    };
+  }
+
+  const calculation = deriveCalculation(state);
+
+  if (!canLockMetric(metric, calculation)) {
+    return state;
+  }
+
+  const unlockedState = {
+    ...state,
+    lockMetric: null
+  };
+  const nextState = setActiveMetric(unlockedState, metric);
+
+  return {
+    ...nextState,
+    lockMetric: metric
   };
 }
 
@@ -370,46 +791,41 @@ export function applyUnitChange(state, nextUnit) {
     return state;
   }
 
-  const canonical = getCanonicalValues(state);
-  const nextInputs = {
-    ...state.inputs
+  const calculation = deriveCalculation(state);
+  const driverMetric = getEffectiveDriverMetric(state);
+  let nextInputs = {
+    ...state.inputs,
+    distance: formatDistanceInputValue(state.canonicalDistanceKm, nextUnit)
   };
 
-  if (state.presetId !== "custom") {
-    const preset = getPresetById(state.presetId);
-    nextInputs.distance = formatDistanceInputValue(preset.distanceKm, nextUnit);
-  } else if (Number.isFinite(canonical.distanceKm)) {
-    nextInputs.distance = formatDistanceInputValue(canonical.distanceKm, nextUnit);
-  }
-
-  if (Number.isFinite(canonical.paceSpeedKmh)) {
-    const converted = speedToPaceSeconds(canonical.paceSpeedKmh, nextUnit);
-    const rounded = Math.round(converted);
-
-    nextInputs.paceMinutes = String(Math.floor(rounded / 60));
-    nextInputs.paceSeconds = padTwoDigits(rounded % 60);
-  }
-
-  if (Number.isFinite(canonical.speedKmh)) {
-    const convertedSpeed = fromKilometersPerHour(
-      canonical.speedKmh,
+  if (
+    driverMetric === DRIVER_METRICS.PACE &&
+    Number.isFinite(calculation.speedKmh) &&
+    calculation.speedKmh > 0
+  ) {
+    nextInputs = seedMetricInputs(
+      nextInputs,
+      DRIVER_METRICS.PACE,
+      calculation,
       nextUnit
     );
-    nextInputs.speed = formatSpeedInputValue(convertedSpeed);
+  } else if (
+    driverMetric === DRIVER_METRICS.SPEED &&
+    Number.isFinite(calculation.speedKmh) &&
+    calculation.speedKmh > 0
+  ) {
+    nextInputs = seedMetricInputs(
+      nextInputs,
+      DRIVER_METRICS.SPEED,
+      calculation,
+      nextUnit
+    );
   }
 
   return {
     ...state,
-    canonical: {
-      distanceKm:
-        state.presetId !== "custom"
-          ? getPresetById(state.presetId).distanceKm
-          : canonical.distanceKm,
-      paceSpeedKmh: canonical.paceSpeedKmh,
-      speedKmh: canonical.speedKmh
-    },
-    unit: nextUnit,
-    inputs: nextInputs
+    inputs: nextInputs,
+    unit: nextUnit
   };
 }
 
@@ -418,13 +834,15 @@ export function parseDistanceInput(value, { showRequiredError = true } = {}) {
 
   if (raw === "") {
     return {
-      error: showRequiredError ? "Enter a distance." : null
+      error: showRequiredError ? "Enter a distance." : null,
+      value: null
     };
   }
 
   if (!isDecimalText(raw)) {
     return {
-      error: "Distance must use digits and one decimal point only."
+      error: "Distance must use digits and one decimal point only.",
+      value: null
     };
   }
 
@@ -432,15 +850,21 @@ export function parseDistanceInput(value, { showRequiredError = true } = {}) {
 
   if (decimals > MAX_DISTANCE_DECIMALS) {
     return {
-      error: "Distance must use 5 decimal places or fewer."
+      error: "Distance must use 5 decimal places or fewer.",
+      value: null
     };
   }
 
   const numericValue = Number(raw);
 
-  if (!Number.isFinite(numericValue) || numericValue <= 0 || numericValue > MAX_DISTANCE) {
+  if (
+    !Number.isFinite(numericValue) ||
+    numericValue <= 0 ||
+    numericValue > MAX_DISTANCE
+  ) {
     return {
-      error: "Distance must be greater than 0 and no more than 1000."
+      error: "Distance must be greater than 0 and no more than 1000.",
+      value: null
     };
   }
 
@@ -479,9 +903,9 @@ export function parsePaceInput(inputs, { showRequiredError = true } = {}) {
   const minutes = Number(minutesRaw);
   const seconds = Number(secondsRaw);
 
-  if (minutes < 0 || minutes > 59) {
+  if (minutes < 0) {
     return {
-      error: "Pace minutes must stay between 0 and 59.",
+      error: "Pace minutes must be 0 or greater.",
       value: null
     };
   }
@@ -506,10 +930,10 @@ export function parsePaceInput(inputs, { showRequiredError = true } = {}) {
   };
 }
 
-export function parseFinishInput(inputs, { showRequiredError = true } = {}) {
-  const hoursRaw = trimValue(inputs.finishHours);
-  const minutesRaw = trimValue(inputs.finishMinutes);
-  const secondsRaw = trimValue(inputs.finishSeconds);
+export function parseTimeInput(inputs, { showRequiredError = true } = {}) {
+  const hoursRaw = trimValue(inputs.timeHours);
+  const minutesRaw = trimValue(inputs.timeMinutes);
+  const secondsRaw = trimValue(inputs.timeSeconds);
   const hasAnyInput =
     hoursRaw !== "" || minutesRaw !== "" || secondsRaw !== "";
 
@@ -576,6 +1000,10 @@ export function parseFinishInput(inputs, { showRequiredError = true } = {}) {
   };
 }
 
+export function parseFinishInput(inputs, options) {
+  return parseTimeInput(inputs, options);
+}
+
 export function parseSpeedInput(value, { showRequiredError = true } = {}) {
   const raw = trimValue(value);
 
@@ -595,7 +1023,11 @@ export function parseSpeedInput(value, { showRequiredError = true } = {}) {
 
   const numericValue = Number(raw);
 
-  if (!Number.isFinite(numericValue) || numericValue <= 0 || numericValue > MAX_SPEED) {
+  if (
+    !Number.isFinite(numericValue) ||
+    numericValue <= 0 ||
+    numericValue > MAX_SPEED
+  ) {
     return {
       error: "Speed must be greater than 0 and no more than 60.",
       value: null
@@ -608,205 +1040,58 @@ export function parseSpeedInput(value, { showRequiredError = true } = {}) {
   };
 }
 
-function buildProjectionRows(speedKmh, unit, distanceKm, presetId) {
-  const namedPresets = DISTANCE_PRESETS.filter((preset) => preset.distanceKm !== null);
-  const rows = namedPresets.map((preset) => ({
-    id: preset.id,
-    label: preset.label,
-    detail: formatDistance(preset.distanceKm, unit),
-    finishSeconds: finishTimeFromSpeed(speedKmh, preset.distanceKm),
-    isSelected: preset.id === presetId
-  }));
-
-  if (Number.isFinite(distanceKm) && presetId === "custom") {
-    rows.unshift({
-      id: "selected",
-      label: "Custom",
-      detail: formatDistance(distanceKm, unit),
-      finishSeconds: finishTimeFromSpeed(speedKmh, distanceKm),
-      isSelected: true
-    });
-  }
-
-  return rows;
-}
-
-function createResult(state, speedKmh, distanceKm) {
-  return {
-    distanceKm,
-    finishSeconds: Number.isFinite(distanceKm)
-      ? finishTimeFromSpeed(speedKmh, distanceKm)
-      : null,
-    paceKmSeconds: speedToPaceSeconds(speedKmh, "km"),
-    paceMiSeconds: speedToPaceSeconds(speedKmh, "mi"),
-    projectionRows: buildProjectionRows(
-      speedKmh,
-      state.unit,
-      distanceKm,
-      state.presetId
-    ),
-    sourceConvertSource: state.convertSource,
-    sourceMode: state.mode,
-    speedKmh
-  };
-}
-
-function createDisplaySummary(state, result) {
-  const selectedUnit = state.unit;
-  const alternateUnit = getAlternateUnit(selectedUnit);
-  const displayMode = result.sourceMode ?? state.mode;
-  const displayConvertSource = result.sourceConvertSource ?? state.convertSource;
-  const selectedPace = formatPace(
-    speedToPaceSeconds(result.speedKmh, selectedUnit),
-    selectedUnit
-  );
-  const alternatePace = formatPace(
-    speedToPaceSeconds(result.speedKmh, alternateUnit),
-    alternateUnit
-  );
-  const selectedSpeed = formatSpeed(result.speedKmh, selectedUnit);
-  const alternateSpeed = formatSpeed(result.speedKmh, alternateUnit);
-  const selectedDistanceLabel = Number.isFinite(result.distanceKm)
-    ? formatDistance(result.distanceKm, selectedUnit)
-    : null;
-  let primaryLabel = "Result";
-  let primaryValue = RESULT_PLACEHOLDER;
-  let primaryMeta = "Enter valid values to calculate.";
-
-  if (displayMode === MODES.PACE) {
-    primaryLabel = "Pace";
-    primaryValue = selectedPace;
-    primaryMeta = `From ${formatDuration(result.finishSeconds)} over ${selectedDistanceLabel}.`;
-  } else if (displayMode === MODES.FINISH) {
-    primaryLabel = "Finish time";
-    primaryValue = formatDuration(result.finishSeconds);
-    primaryMeta = `At ${selectedPace} over ${selectedDistanceLabel}.`;
-  } else if (displayConvertSource === CONVERT_SOURCES.PACE) {
-    primaryLabel = "Speed";
-    primaryValue = selectedSpeed;
-    primaryMeta = `Converted from ${selectedPace}.`;
-  } else {
-    primaryLabel = "Pace";
-    primaryValue = selectedPace;
-    primaryMeta = `Converted from ${selectedSpeed}.`;
-  }
+export function deriveCalculatorView(state) {
+  const calculation = deriveCalculation(state);
+  const driverMetric = getEffectiveDriverMetric(state);
 
   return {
-    alternatePace,
-    alternateSpeed,
-    primaryLabel,
-    primaryMeta,
-    primaryValue,
-    projectionRows: result.projectionRows.map((row) => ({
-      ...row,
-      finishLabel: formatDuration(row.finishSeconds)
-    })),
-    selectedDistanceLabel,
-    selectedPace,
-    selectedSpeed
-  };
-}
-
-export function deriveCalculatorView(state, previousResult = null) {
-  const showRequiredErrors = shouldShowRequiredErrors(state, previousResult);
-  const canonical = getCanonicalValues(state);
-  const errors = {
-    distance: null,
-    finish: null,
-    pace: null,
-    speed: null
-  };
-  let distanceKm = null;
-  let currentResult = null;
-
-  if (state.mode === MODES.PACE || state.mode === MODES.FINISH) {
-    const distance = parseDistanceInput(state.inputs.distance, {
-      showRequiredError: showRequiredErrors
-    });
-
-    errors.distance = distance.error;
-
-    if (!distance.error && distance.value !== null) {
-      distanceKm = canonical.distanceKm;
-    }
-  }
-
-  if (state.mode === MODES.PACE) {
-    const finish = parseFinishInput(state.inputs, {
-      showRequiredError: showRequiredErrors
-    });
-
-    errors.finish = finish.error;
-
-    if (!errors.distance && !errors.finish && distanceKm !== null) {
-      const speedKmh = speedFromFinishTime(finish.value, distanceKm);
-
-      if (Number.isFinite(speedKmh) && speedKmh > 0) {
-        currentResult = createResult(state, speedKmh, distanceKm);
+    cards: {
+      pace: createPaceCardView(state, calculation),
+      speed: createSpeedCardView(state, calculation),
+      time: createTimeCardView(state, calculation)
+    },
+    distance: createDistanceView(state, calculation),
+    driverButtons: {
+      pace: {
+        disabled:
+          driverMetric === DRIVER_METRICS.PACE ||
+          Boolean(state.lockMetric && state.lockMetric !== DRIVER_METRICS.PACE),
+        label: getDriverButtonLabel(
+          DRIVER_METRICS.PACE,
+          driverMetric,
+          state.lockMetric
+        )
+      },
+      speed: {
+        disabled:
+          driverMetric === DRIVER_METRICS.SPEED || Boolean(state.lockMetric),
+        label: getDriverButtonLabel(
+          DRIVER_METRICS.SPEED,
+          driverMetric,
+          state.lockMetric
+        )
+      },
+      time: {
+        disabled:
+          driverMetric === DRIVER_METRICS.TIME ||
+          Boolean(state.lockMetric && state.lockMetric !== DRIVER_METRICS.TIME),
+        label: getDriverButtonLabel(
+          DRIVER_METRICS.TIME,
+          driverMetric,
+          state.lockMetric
+        )
       }
-    }
-  } else if (state.mode === MODES.FINISH) {
-    const pace = parsePaceInput(state.inputs, {
-      showRequiredError: showRequiredErrors
-    });
-
-    errors.pace = pace.error;
-
-    if (!errors.distance && !errors.pace && distanceKm !== null) {
-      const speedKmh = canonical.paceSpeedKmh;
-      currentResult = createResult(state, speedKmh, distanceKm);
-    }
-  } else if (state.convertSource === CONVERT_SOURCES.PACE) {
-    const pace = parsePaceInput(state.inputs, {
-      showRequiredError: showRequiredErrors
-    });
-
-    errors.pace = pace.error;
-
-    if (!errors.pace) {
-      const speedKmh = canonical.paceSpeedKmh;
-      currentResult = createResult(state, speedKmh, null);
-    }
-  } else {
-    const speed = parseSpeedInput(state.inputs.speed, {
-      showRequiredError: showRequiredErrors
-    });
-
-    errors.speed = speed.error;
-
-    if (!errors.speed) {
-      currentResult = createResult(state, canonical.speedKmh, null);
-    }
-  }
-
-  const displayedResult = currentResult ?? previousResult;
-  const resultState = currentResult
-    ? "current"
-    : displayedResult
-      ? "stale"
-      : "empty";
-  let statusMessage = RESULT_PLACEHOLDER;
-
-  if (resultState === "current") {
-    statusMessage = "Results are current.";
-  } else if (resultState === "stale") {
-    statusMessage = "Out of date. Fix the highlighted fields to recalculate.";
-  }
-
-  return {
-    currentResult,
-    display: displayedResult ? createDisplaySummary(state, displayedResult) : null,
-    errors,
-    resultState,
-    showDistanceFields: state.mode !== MODES.CONVERT,
-    showFinishFields: state.mode === MODES.PACE,
-    showPaceFields:
-      state.mode === MODES.FINISH ||
-      (state.mode === MODES.CONVERT &&
-        state.convertSource === CONVERT_SOURCES.PACE),
-    showSpeedFields:
-      state.mode === MODES.CONVERT &&
-      state.convertSource === CONVERT_SOURCES.SPEED,
-    statusMessage
+    },
+    driverMetric,
+    hasLiveResult:
+      (Number.isFinite(calculation.speedKmh) && calculation.speedKmh > 0) ||
+      (Number.isFinite(calculation.finishSeconds) && calculation.finishSeconds > 0),
+    lockMetric: state.lockMetric,
+    projectionRows: buildProjectionRows(calculation.speedKmh, state.unit),
+    selectedDistanceLabel: calculation.distanceKm !== null
+      ? formatDistance(calculation.distanceKm, state.unit)
+      : formatDistance(state.canonicalDistanceKm, state.unit),
+    statusMessage: createStatusMessage(state, calculation),
+    unit: state.unit
   };
 }

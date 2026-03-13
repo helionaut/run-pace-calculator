@@ -9,10 +9,12 @@ Production URL: https://helionaut.github.io/run-pace-calculator/
 
 ## What Ships In The Current Slice
 
-- Pace, speed, finish-time, and conversion modes
+- A compact one-screen calculator with pace, speed, and finish-time cards
+- A live distance slider with common race preset chips
+- Pace and finish-time locks that keep one driving value fixed while distance moves
 - Metric and imperial conversions
-- Projection table from one mile through the marathon
-- Responsive layout with inline validation and keyboard-operable mode tabs
+- A compact projection disclosure for common race distances
+- Responsive layout with inline validation and keyboard-operable inputs, slider, and lock controls
 - Zero-dependency static build suitable for GitHub Pages
 - Product docs for the PRD, requirements, and implementation plan
 
@@ -98,8 +100,8 @@ short explicit error instead of a server traceback.
 - `src/main.js` wires DOM events and rendering.
 - `src/lib/calculator.js` contains the shared conversion and formatting logic.
 - `src/lib/mode-navigation.js` contains the keyboard tab-navigation helper.
-- `tests/*.test.js` covers calculator logic, build/serve harness behavior,
-  handoff verification, import flow, and mode navigation.
+- `tests/*.test.js` covers calculator logic, DOM interaction behavior,
+  build/serve harness behavior, handoff verification, import flow, and mode navigation.
 - `scripts/build.mjs` produces the static build output.
 - `scripts/serve.mjs` serves either `src/` or `dist/` locally.
 - `scripts/check-dist.mjs` smoke-checks the built artifact.
