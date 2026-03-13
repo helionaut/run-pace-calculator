@@ -190,8 +190,9 @@ then pushes the current branch and creates or updates the PR from
 now writes a full handoff directory to `.handoff/<issue-key>` by default
 instead of only exporting a raw bundle to `/tmp`. Once publish succeeds in a
 browser-enabled environment, use the demo script already packaged in
-`.handoff/<issue-key>/SUMMARY.md` to capture the required media for the PR and
-Linear issue.
+`.handoff/<issue-key>/SUMMARY.md` to attach the PR back to the Linear issue,
+move it to `Human Review`, and capture the required media for the PR and Linear
+issue.
 
 To rehearse that flow without network access:
 

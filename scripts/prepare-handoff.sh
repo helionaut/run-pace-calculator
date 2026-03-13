@@ -160,13 +160,16 @@ summary, the manifest, and the exported bundle.
    \`node scripts/verify-handoff.mjs <handoff-dir>/${manifest_name}\`
 4. Publish the branch and create or update the PR:
    \`npm run pr:publish\`
-5. In a browser-enabled environment, use the demo script above to capture the
+5. Attach the resulting PR to \`${issue_identifier}\` and move the issue to
+   \`Human Review\`.
+6. In a browser-enabled environment, use the demo script above to capture the
    required before/after screenshot or short recording for the PR and Linear
    issue.
 
 ## Included artifacts
 
 - \`${bundle_name}\`
+- \`SUMMARY.md\`
 - \`pull-request-draft.md\`
 - \`publish-dry-run.txt\`
 - \`commits.txt\`
