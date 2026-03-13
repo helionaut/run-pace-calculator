@@ -39,6 +39,10 @@ test("blank state stays empty without showing required-field errors", () => {
   assert.equal(view.display, null);
   assert.equal(view.errors.distance, null);
   assert.equal(view.errors.finish, null);
+  assert.deepEqual(view.inputProvenance.distance.badges, []);
+  assert.deepEqual(view.inputProvenance.finish.badges, []);
+  assert.deepEqual(view.inputProvenance.pace.badges, []);
+  assert.deepEqual(view.inputProvenance.speed.badges, []);
 });
 
 test("pace mode calculates pace and speed from distance plus finish time", () => {
@@ -217,6 +221,11 @@ test("stale mode preserves the last valid result when a required field becomes i
     getBadgeLabels(staleView.display.lockedSummary.provenance),
     ["Entered", "Locked", "Last valid"]
   );
+  assert.deepEqual(
+    getBadgeLabels(staleView.inputProvenance.distance),
+    ["Entered"]
+  );
+  assert.deepEqual(staleView.inputProvenance.finish.badges, []);
   assert.equal(
     staleView.errors.finish,
     "Finish seconds must stay between 0 and 59."
@@ -248,7 +257,7 @@ test("convert mode can mark the last answer stale after source changes", () => {
   assert.equal(staleView.errors.speed, "Enter a speed.");
 });
 
-test("stale input provenance stays aligned with the displayed last valid source", () => {
+test("stale input provenance does not relabel blank current fields as entered", () => {
   const finishState = buildState(
     {
       mode: MODES.FINISH
@@ -306,24 +315,23 @@ test("stale input provenance stays aligned with the displayed last valid source"
   assert.equal(stalePaceModeView.resultState, "stale");
   assert.equal(stalePaceModeView.display.lockedSummary.label, "Locked pace");
   assert.deepEqual(
-    getBadgeLabels(stalePaceModeView.inputProvenance.finish),
-    ["Entered"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(stalePaceModeView.inputProvenance.pace),
+    getBadgeLabels(stalePaceModeView.display.lockedSummary.provenance),
     ["Entered", "Locked", "Last valid"]
   );
+  assert.deepEqual(
+    getBadgeLabels(stalePaceModeView.inputProvenance.finish),
+    []
+  );
+  assert.deepEqual(stalePaceModeView.inputProvenance.pace.badges, []);
 
   assert.equal(staleConvertView.resultState, "stale");
   assert.equal(staleConvertView.display.lockedSummary.label, "Locked pace");
   assert.deepEqual(
-    getBadgeLabels(staleConvertView.inputProvenance.speed),
-    ["Entered"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(staleConvertView.inputProvenance.pace),
+    getBadgeLabels(staleConvertView.display.lockedSummary.provenance),
     ["Entered", "Locked", "Last valid"]
   );
+  assert.deepEqual(staleConvertView.inputProvenance.speed.badges, []);
+  assert.deepEqual(staleConvertView.inputProvenance.pace.badges, []);
 });
 
 test("reset clears editable fields and results while preserving mode, unit, and convert source", () => {

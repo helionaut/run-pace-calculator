@@ -14,6 +14,10 @@ import {
   updateInputValue
 } from "./lib/calculator.js";
 import { getModeFromNavigationKey } from "./lib/mode-navigation.js";
+import {
+  renderProvenanceBadges,
+  setClusterState
+} from "./lib/provenance-ui.js";
 
 const elements = {
   alternatePaceLabel: document.querySelector("#alternate-pace-label"),
@@ -221,41 +225,6 @@ function renderVisibility(view) {
   elements.finishCluster.hidden = !view.showFinishFields;
   elements.paceCluster.hidden = !view.showPaceFields;
   elements.speedCluster.hidden = !view.showSpeedFields;
-}
-
-function renderProvenanceBadges(element, descriptor, label) {
-  const badges = descriptor?.badges ?? [];
-
-  element.hidden = badges.length === 0;
-
-  if (badges.length === 0) {
-    element.replaceChildren();
-    return;
-  }
-
-  const srLabel = document.createElement("span");
-
-  srLabel.className = "sr-only";
-  srLabel.textContent = `${label}: `;
-
-  element.replaceChildren(
-    srLabel,
-    ...badges.map((badge) => {
-      const badgeElement = document.createElement("span");
-
-      badgeElement.className = `provenance-badge provenance-badge--${badge.tone}`;
-      badgeElement.textContent = badge.label;
-      return badgeElement;
-    })
-  );
-}
-
-function setClusterState(cluster, descriptor) {
-  const badges = descriptor?.badges ?? [];
-  const tones = new Set(badges.map((badge) => badge.tone));
-
-  cluster.classList.toggle("field-cluster--entered", tones.has("entered"));
-  cluster.classList.toggle("field-cluster--locked", tones.has("locked"));
 }
 
 function renderInputProvenance(view) {

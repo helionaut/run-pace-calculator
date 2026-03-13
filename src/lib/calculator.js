@@ -135,39 +135,80 @@ function getSelectedSpeedProvenance(displayMode, displayConvertSource, stale) {
   });
 }
 
-function createInputProvenance(state, displayedResult, resultState) {
-  const displayMode = displayedResult?.sourceMode ?? state.mode;
-  const displayConvertSource =
-    displayedResult?.sourceConvertSource ?? state.convertSource;
-  const stale = resultState === "stale";
-  const distanceIsDriving =
-    displayMode === MODES.PACE || displayMode === MODES.FINISH;
-  const finishIsDriving = displayMode === MODES.PACE;
+function hasValidDistanceInput(state) {
+  const distance = parseDistanceInput(state.inputs.distance, {
+    showRequiredError: false
+  });
+
+  return !distance.error && distance.value !== null && distance.value !== undefined;
+}
+
+function hasValidFinishInput(state) {
+  const finish = parseFinishInput(state.inputs, {
+    showRequiredError: false
+  });
+
+  return !finish.error && finish.value !== null && finish.value !== undefined;
+}
+
+function hasValidPaceInput(state) {
+  const pace = parsePaceInput(state.inputs, {
+    showRequiredError: false
+  });
+
+  return !pace.error && pace.value !== null && pace.value !== undefined;
+}
+
+function hasValidSpeedInput(state) {
+  const speed = parseSpeedInput(state.inputs.speed, {
+    showRequiredError: false
+  });
+
+  return !speed.error && speed.value !== null && speed.value !== undefined;
+}
+
+function createInputDescriptor({
+  entered = false,
+  locked = false
+} = {}) {
+  if (!entered) {
+    return createProvenanceDescriptor();
+  }
+
+  return createProvenanceDescriptor({
+    source: "entered",
+    locked
+  });
+}
+
+function createInputProvenance(state, resultState) {
+  const hasCurrentResult = resultState === "current";
+  const finishIsDriving = hasCurrentResult && state.mode === MODES.PACE;
   const paceIsDriving =
-    displayMode === MODES.FINISH ||
-    (displayMode === MODES.CONVERT &&
-      displayConvertSource === CONVERT_SOURCES.PACE);
+    hasCurrentResult &&
+    (
+      state.mode === MODES.FINISH ||
+      (state.mode === MODES.CONVERT &&
+        state.convertSource === CONVERT_SOURCES.PACE)
+    );
   const speedIsDriving =
-    displayMode === MODES.CONVERT &&
-    displayConvertSource === CONVERT_SOURCES.SPEED;
+    hasCurrentResult &&
+    state.mode === MODES.CONVERT &&
+    state.convertSource === CONVERT_SOURCES.SPEED;
   const distance = createProvenanceDescriptor({
-    source: "entered",
-    stale: stale && distanceIsDriving
+    source: hasValidDistanceInput(state) ? "entered" : null
   });
-  const finish = createProvenanceDescriptor({
-    source: "entered",
-    locked: finishIsDriving,
-    stale: stale && finishIsDriving
+  const finish = createInputDescriptor({
+    entered: hasValidFinishInput(state),
+    locked: finishIsDriving
   });
-  const pace = createProvenanceDescriptor({
-    source: "entered",
-    locked: paceIsDriving,
-    stale: stale && paceIsDriving
+  const pace = createInputDescriptor({
+    entered: hasValidPaceInput(state),
+    locked: paceIsDriving
   });
-  const speed = createProvenanceDescriptor({
-    source: "entered",
-    locked: speedIsDriving,
-    stale: stale && speedIsDriving
+  const speed = createInputDescriptor({
+    entered: hasValidSpeedInput(state),
+    locked: speedIsDriving
   });
 
   return {
@@ -1062,11 +1103,7 @@ export function deriveCalculatorView(state, previousResult = null) {
       ? createDisplaySummary(state, displayedResult, resultState)
       : null,
     errors,
-    inputProvenance: createInputProvenance(
-      state,
-      displayedResult,
-      resultState
-    ),
+    inputProvenance: createInputProvenance(state, resultState),
     resultState,
     showDistanceFields: state.mode !== MODES.CONVERT,
     showFinishFields: state.mode === MODES.PACE,
