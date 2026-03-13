@@ -148,6 +148,39 @@ test("verifyManifest rejects mismatched artifact metadata", async () => {
   assert.equal(manifest.head, "def456");
 });
 
+test("verifyManifest rejects mismatched SHA256SUMS entries", async () => {
+  const handoffDir = await mkdtemp(path.join(os.tmpdir(), "hel-18-handoff-checksums."));
+  const artifactPath = path.join(handoffDir, "artifact.txt");
+  const manifestPath = path.join(handoffDir, "manifest.json");
+  const checksumsPath = path.join(handoffDir, "SHA256SUMS");
+
+  await writeFile(artifactPath, "actual content\n");
+  await writeFile(
+    manifestPath,
+    JSON.stringify(
+      {
+        head: "def456",
+        artifacts: [
+          {
+            name: "artifact",
+            path: "artifact.txt",
+            sha256: sha256("actual content\n"),
+            size: Buffer.byteLength("actual content\n")
+          }
+        ]
+      },
+      null,
+      2
+    )
+  );
+  await writeFile(checksumsPath, `${"0".repeat(64)}  artifact.txt\n`, "utf8");
+
+  await assert.rejects(
+    () => verifyManifest(manifestPath),
+    /SHA256SUMS mismatch for artifact\.txt/
+  );
+});
+
 test("verifyManifest rejects bundles whose recorded head does not match", async () => {
   const handoffDir = await mkdtemp(path.join(os.tmpdir(), "hel-8-handoff-verify."));
   const sourceRepo = path.join(handoffDir, "source");
@@ -615,9 +648,11 @@ exit 1
   const manifest = JSON.parse(
     await readFile(path.join(outputDir, "HEL-99-handoff-manifest.json"), "utf8")
   );
+  const verifyResult = await verifyManifest(path.join(outputDir, "HEL-99-handoff-manifest.json"));
 
   assert.match(summary, /- Resume helper: resume-handoff\.sh/);
   assert.match(summary, /- Checksums: SHA256SUMS/);
   assert.match(summary, /- Packaged archive: HEL-99-handoff\.tar\.gz/);
   assert.equal(manifest.artifacts.some((artifact) => artifact.name === "resume_script"), true);
+  assert.equal(verifyResult.checksumCount, 7);
 });
