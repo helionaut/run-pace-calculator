@@ -240,6 +240,14 @@ exit 1
   assert.match(result.stderr, /GitHub auth is not ready/);
   assert.match(result.stderr, /GitHub DNS resolution failed/);
   assert.match(result.stderr, /GitHub HTTPS reachability check failed/);
+  assert.match(result.stderr, /Resume script: .*resume-handoff\.sh/);
+  assert.match(result.stderr, /Checksums: .*SHA256SUMS/);
+  assert.match(result.stderr, /Archive: .*HEL-99-handoff\.tar\.gz/);
+  assert.match(result.stderr, /To resume the fallback handoff in another clone:/);
+  assert.match(
+    result.stderr,
+    /resume-handoff\.sh <target-repo-dir> --validate --dry-run-publish/
+  );
 
   const summary = await readFile(path.join(handoffDir, "SUMMARY.md"), "utf8");
 

@@ -88,8 +88,11 @@ default_handoff_dir="${HANDOFF_DIR:-$repo_root/.handoff/$issue_identifier}"
 prepare_handoff_fallback() {
   local reason="$1"
   local handoff_output
+  local archive_path
   local bundle_path
+  local checksums_path
   local manifest_path
+  local resume_script_path
 
   printf '%s\n' "$reason" >&2
 
@@ -101,8 +104,11 @@ prepare_handoff_fallback() {
   fi
 
   printf '%s\n' "$handoff_output" >&2
+  archive_path="$(printf '%s\n' "$handoff_output" | awk -F': ' '/^Archive:/ {print $2; exit}')"
   bundle_path="$(printf '%s\n' "$handoff_output" | awk -F': ' '/^Bundle:/ {print $2; exit}')"
+  checksums_path="$(printf '%s\n' "$handoff_output" | awk -F': ' '/^Checksums:/ {print $2; exit}')"
   manifest_path="$(printf '%s\n' "$handoff_output" | awk -F': ' '/^Manifest:/ {print $2; exit}')"
+  resume_script_path="$(printf '%s\n' "$handoff_output" | awk -F': ' '/^Resume script:/ {print $2; exit}')"
 
   if [[ -z "$bundle_path" ]]; then
     echo "Could not determine the handoff bundle path." >&2
@@ -114,11 +120,23 @@ prepare_handoff_fallback() {
     return 1
   fi
 
+  if [[ -n "$resume_script_path" ]]; then
+    echo "To resume the fallback handoff in another clone:" >&2
+    echo "  $resume_script_path <target-repo-dir> --validate --dry-run-publish" >&2
+  fi
+
   echo "To verify the fallback handoff locally:" >&2
   echo "  npm run handoff:verify -- $manifest_path" >&2
+  if [[ -n "$checksums_path" ]]; then
+    echo "To verify the packaged checksums:" >&2
+    echo "  sha256sum -c $checksums_path" >&2
+  fi
   echo "To import the fallback bundle into another clone:" >&2
   echo "  git -C <target-repo-dir> fetch $bundle_path $branch:$branch" >&2
   echo "  git -C <target-repo-dir> switch $branch" >&2
+  if [[ -n "$archive_path" ]]; then
+    echo "Packaged archive: $archive_path" >&2
+  fi
   return 1
 }
 
