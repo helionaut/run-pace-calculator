@@ -42,9 +42,9 @@
 If GitHub access is still blocked in the current checkout:
 
 1. Import the handoff bundle into a writable clone with:
-   `git -C <target-repo-dir> fetch /home/helionaut/workspaces/HEL-17/.handoff/HEL-17/run-pace-calculator-hel-17-shareable-url-state.bundle hel-17-shareable-url-state:hel-17-shareable-url-state`
-   `git -C <target-repo-dir> switch hel-17-shareable-url-state`
-2. Push branch `hel-17-shareable-url-state`.
+   `git -C <target-repo-dir> fetch /home/helionaut/workspaces/HEL-17/.handoff/HEL-17/run-pace-calculator-eugeniy-hel-17-add-shareable-url-state-for-calculator-inputs-and-lock-mode.bundle eugeniy/hel-17-add-shareable-url-state-for-calculator-inputs-and-lock-mode:eugeniy/hel-17-add-shareable-url-state-for-calculator-inputs-and-lock-mode`
+   `git -C <target-repo-dir> switch eugeniy/hel-17-add-shareable-url-state-for-calculator-inputs-and-lock-mode`
+2. Push branch `eugeniy/hel-17-add-shareable-url-state-for-calculator-inputs-and-lock-mode`.
 3. Create the PR with title `Add shareable URL state for calculator inputs`,
    or rerun `./scripts/create_pr.sh` after import to use
    `docs/pull-request-title.txt` and the body above.
