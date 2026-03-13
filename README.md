@@ -3,6 +3,8 @@
 Run Pace Calculator is a static web app for converting running pace, speed, and
 projected finish time across common race distances.
 
+Production URL: https://helionaut.github.io/run-pace-calculator/
+
 ## What ships in this first slice
 
 - Pace, speed, and finish-time driven calculator modes
@@ -26,7 +28,11 @@ npm run dev
   publish dry-run
 - `npm run dev` serves the source files locally at `http://localhost:4173`
 - `npm run build` copies the static site into `dist/`
+- `npm run validate` runs the deploy-oriented validation path: tests, build,
+  and syntax-checking for the Pages verification script
 - `npm run preview` serves the built output from `dist/`
+- `npm run verify:pages -- https://helionaut.github.io/run-pace-calculator/`
+  compares the deployed site with the local `dist/` artifact
 - If the environment blocks local socket binding, `dev` and `preview` exit with
   a short explicit error instead of a server traceback
 
@@ -52,7 +58,16 @@ npm run dev
 ## Deployment
 
 `.github/workflows/deploy-pages.yml` builds the static site and publishes `dist/`
-to GitHub Pages on pushes to `main`.
+to GitHub Pages on pushes to `main`, then verifies that the published site
+matches the artifact built from that same commit.
+
+One-time repository setup in GitHub:
+
+1. Open `Settings -> Pages`.
+2. Set `Source` to `GitHub Actions`.
+
+See [DEPLOYING.md](DEPLOYING.md) for the release checklist and post-deploy
+verification flow.
 
 ## Offline handoff
 
