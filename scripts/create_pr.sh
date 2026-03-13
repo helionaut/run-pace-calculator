@@ -66,9 +66,11 @@ prepare_handoff_fallback() {
   local bundle_path
   local manifest_path
 
-  echo "$reason" >&2
+  printf '%s\n' "$reason" >&2
 
-  if ! handoff_output="$(./scripts/prepare-handoff.sh "$default_handoff_dir")"; then
+  if ! handoff_output="$(
+    HANDOFF_BLOCKER_SNAPSHOT="$reason" ./scripts/prepare-handoff.sh "$default_handoff_dir"
+  )"; then
     echo "Offline handoff preparation also failed." >&2
     return 1
   fi
@@ -142,18 +144,25 @@ fi
 npm test
 npm run build
 
+blockers=()
+
 if ! gh auth status >/dev/null 2>&1; then
-  prepare_handoff_fallback "GitHub auth is not ready. Run 'gh auth status' for details."
+  blockers+=("GitHub auth is not ready. Run 'gh auth status' for details.")
 fi
 
 if ! python3 -c "import socket; socket.getaddrinfo('github.com', 443)" >/dev/null 2>&1; then
-  prepare_handoff_fallback "GitHub DNS resolution failed. Check outbound network access."
+  blockers+=("GitHub DNS resolution failed. Check outbound network access.")
 fi
 
 if command -v curl >/dev/null 2>&1; then
   if ! curl --silent --show-error --output /dev/null --connect-timeout 5 https://github.com; then
-    prepare_handoff_fallback "GitHub HTTPS reachability check failed. Check outbound network access."
+    blockers+=("GitHub HTTPS reachability check failed. Check outbound network access.")
   fi
+fi
+
+if [[ ${#blockers[@]} -gt 0 ]]; then
+  blocker_snapshot="$(printf -- '- %s\n' "${blockers[@]}")"
+  prepare_handoff_fallback "$blocker_snapshot"
 fi
 
 git push -u origin HEAD

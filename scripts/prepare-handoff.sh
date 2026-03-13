@@ -17,6 +17,7 @@ fi
 branch="$(git branch --show-current)"
 head="$(git rev-parse HEAD)"
 generated_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+generated_on="${generated_at%%T*}"
 
 repo_slug="$(
   sed -n 's/^[[:space:]]*"slug":[[:space:]]*"\([^"]*\)".*/\1/p' .bootstrap/project.json |
@@ -124,6 +125,18 @@ summary, the manifest, and the exported bundle.
    \`npm run pr:publish\`
    Manual fallback title: \`${pr_title:-see publish-dry-run.txt}\`
    Manual fallback body: \`${pr_body_source:-docs/pull-request-draft.md}\`
+EOF
+
+if [[ -n "${HANDOFF_BLOCKER_SNAPSHOT:-}" ]]; then
+  cat >>"$summary_path" <<EOF
+
+## Current blocker snapshot (${generated_on})
+
+${HANDOFF_BLOCKER_SNAPSHOT}
+EOF
+fi
+
+cat >>"$summary_path" <<EOF
 
 ## Included artifacts
 
