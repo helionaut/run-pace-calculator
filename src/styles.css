@@ -509,6 +509,7 @@ select[aria-invalid="true"] {
 
 table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
 }
 
@@ -517,6 +518,7 @@ thead th {
   border-bottom: 1px solid rgba(19, 38, 31, 0.12);
   color: var(--muted);
   text-align: left;
+  overflow-wrap: anywhere;
 }
 
 tbody th,
@@ -524,6 +526,7 @@ tbody td {
   padding: 18px 0;
   border-bottom: 1px solid rgba(19, 38, 31, 0.08);
   text-align: left;
+  overflow-wrap: anywhere;
 }
 
 tbody th {
@@ -597,5 +600,22 @@ tbody tr.is-selected td {
 
   .field--wide {
     max-width: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .page-shell {
+    padding: 14px 12px 24px;
+  }
+
+  .hero,
+  .calculator,
+  .summary,
+  .projections {
+    padding: 18px 14px;
+  }
+
+  .field-cluster {
+    padding: 16px;
   }
 }
