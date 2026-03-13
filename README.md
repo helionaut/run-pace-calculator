@@ -1,8 +1,19 @@
 # Run Pace Calculator
 
-Static web app repository for the Run Pace Calculator. This repo now has one
-canonical engineering path for local setup, app preview, and pull-request
-validation before more product work lands.
+Static web app for runners to convert between pace and speed and project finish
+times for common race distances. This repo now has one canonical engineering
+path for local setup, app preview, and pull-request validation before more
+feature work lands.
+
+## Features
+
+- Pace input in `m:ss /km`
+- Speed input in `km/h`
+- Distance input with quick presets for `5K`, `10K`, `Half marathon`, and
+  `Marathon`
+- Predicted finish time for the selected distance
+- Responsive layout for mobile and desktop
+- Inline validation with readable formatting
 
 ## Prerequisites
 
@@ -33,7 +44,15 @@ validation before more product work lands.
 
    This recreates `dist/` from the tracked static app files.
 
-4. Run the full non-interactive validation gate:
+4. Preview the built artifact locally:
+
+   ```sh
+   npm run preview
+   ```
+
+   This rebuilds `dist/` and serves it at `http://127.0.0.1:4173`.
+
+5. Run the full non-interactive validation gate:
 
    ```sh
    npm run check
@@ -41,9 +60,6 @@ validation before more product work lands.
 
    This runs syntax checks, the Node test suite, a production build, and a
    smoke check against the built artifact.
-
-Use `npm run preview` when you want to inspect the built `dist/` output locally
-at `http://127.0.0.1:4173`.
 
 ## Day-To-Day Commands
 
@@ -60,10 +76,14 @@ GitHub Actions runs `npm run check` for every pull request.
 
 ## Intended Repo Structure
 
-- `index.html` contains the static app shell.
-- `styles.css` contains the base page layout and component styles.
-- `script.js` contains browser-side bootstrapping for the static shell.
-- `scripts/` contains build, local serving, and validation utilities.
-- `test/` contains the Node-based harness tests.
+- `index.html` contains the calculator UI shell.
+- `styles.css` defines the responsive visual design.
+- `app.js` wires DOM events and rendering.
+- `calculator.js` contains the shared conversion and formatting logic.
+- `scripts/build.mjs` produces the static build output.
+- `scripts/preview.mjs` serves the built site for local review.
+- `scripts/serve.mjs` serves the source app or another static directory locally.
+- `scripts/check-dist.mjs` smoke-checks the built artifact.
+- `calculator.test.js` and `test/` contain the Node-based test harness.
 - `.github/workflows/` contains CI definitions.
 - `.codex/skills/` contains repo-local Symphony/Codex workflows.

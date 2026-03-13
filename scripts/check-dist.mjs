@@ -16,8 +16,9 @@ async function main() {
   const requiredSnippets = [
     "<title>Run Pace Calculator</title>",
     '<link rel="stylesheet" href="./styles.css" />',
-    '<script type="module" src="./script.js"></script>',
-    "Engineering harness ready for calculator feature work.",
+    '<script src="./app.js" type="module"></script>',
+    'id="pace-output"',
+    'id="finish-output"',
   ];
 
   for (const snippet of requiredSnippets) {

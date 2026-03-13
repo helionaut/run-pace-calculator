@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const DIST_DIR = path.join(REPO_ROOT, "dist");
-export const APP_FILES = ["index.html", "styles.css", "script.js"];
+export const APP_FILES = ["index.html", "styles.css", "app.js", "calculator.js"];
 
 export async function buildStaticSite({
   repoRoot = REPO_ROOT,
