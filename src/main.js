@@ -1,212 +1,449 @@
 import {
-  DISTANCES,
-  calculatePerformance,
-  formatDuration,
-  formatPace,
-  formatSpeed
+  CONVERT_SOURCES,
+  DISTANCE_PRESETS,
+  MODES,
+  RESULT_PLACEHOLDER,
+  applyConvertSourceChange,
+  applyModeChange,
+  applyPresetSelection,
+  applyUnitChange,
+  createFormState,
+  deriveCalculatorView,
+  resetFormState,
+  updateDistanceInput,
+  updateInputValue
 } from "./lib/calculator.js";
 import { getModeFromNavigationKey } from "./lib/mode-navigation.js";
 
 const elements = {
-  distanceSelect: document.querySelector("#distance-select"),
-  finishCaption: document.querySelector("#finish-caption"),
+  alternatePaceLabel: document.querySelector("#alternate-pace-label"),
+  alternatePaceValue: document.querySelector("#alternate-pace-value"),
+  alternateSpeedLabel: document.querySelector("#alternate-speed-label"),
+  alternateSpeedValue: document.querySelector("#alternate-speed-value"),
+  convertSourceButtons: document.querySelectorAll("[data-convert-source-button]"),
+  convertSourceCluster: document.querySelector("#convert-source-cluster"),
+  distanceCluster: document.querySelector("#distance-cluster"),
+  distanceError: document.querySelector("#distance-error"),
+  distanceInput: document.querySelector("#distance-input"),
+  distanceLabel: document.querySelector("#distance-label"),
+  finishCluster: document.querySelector("#finish-cluster"),
+  finishError: document.querySelector("#finish-error"),
   finishHours: document.querySelector("#finish-hours"),
   finishMinutes: document.querySelector("#finish-minutes"),
   finishSeconds: document.querySelector("#finish-seconds"),
-  finishValue: document.querySelector("#finish-value"),
   heroChips: document.querySelector("#hero-chips"),
   modeButtons: document.querySelectorAll("[data-mode-button]"),
-  paceKmValue: document.querySelector("#pace-km-value"),
-  paceMiValue: document.querySelector("#pace-mi-value"),
+  paceCluster: document.querySelector("#pace-cluster"),
+  paceCopy: document.querySelector("#pace-copy"),
+  paceError: document.querySelector("#pace-error"),
   paceMinutes: document.querySelector("#pace-minutes"),
   paceSeconds: document.querySelector("#pace-seconds"),
-  paceUnit: document.querySelector("#pace-unit"),
-  panels: document.querySelectorAll("[data-input-panel]"),
+  presetSelect: document.querySelector("#preset-select"),
+  primaryLabel: document.querySelector("#primary-label"),
+  primaryMeta: document.querySelector("#primary-meta"),
+  primaryValue: document.querySelector("#primary-value"),
   projectionRows: document.querySelector("#projection-rows"),
-  speedKmhValue: document.querySelector("#speed-kmh-value"),
-  speedMphValue: document.querySelector("#speed-mph-value"),
-  speedUnit: document.querySelector("#speed-unit"),
-  speedValue: document.querySelector("#speed-value"),
-  splitGrid: document.querySelector("#split-grid"),
-  statusMessage: document.querySelector("#status-message")
+  resetButton: document.querySelector("#reset-button"),
+  resultBadge: document.querySelector("#result-badge"),
+  resultNote: document.querySelector("#result-note"),
+  selectedDistance: document.querySelector("#selected-distance"),
+  selectedPaceLabel: document.querySelector("#selected-pace-label"),
+  selectedPaceValue: document.querySelector("#selected-pace-value"),
+  selectedSpeedLabel: document.querySelector("#selected-speed-label"),
+  selectedSpeedValue: document.querySelector("#selected-speed-value"),
+  speedCluster: document.querySelector("#speed-cluster"),
+  speedError: document.querySelector("#speed-error"),
+  speedInput: document.querySelector("#speed-input"),
+  speedLabel: document.querySelector("#speed-label"),
+  statusMessage: document.querySelector("#status-message"),
+  unitButtons: document.querySelectorAll("[data-unit-button]")
 };
 
-const state = {
-  mode: "pace"
-};
 const modeButtons = [...elements.modeButtons];
-const modes = modeButtons.map((button) => button.dataset.mode);
+const modeOrder = modeButtons.map((button) => button.dataset.mode);
+let state = createFormState();
+let lastValidResult = null;
 
-function populateDistances() {
-  for (const distance of DISTANCES) {
-    const option = document.createElement("option");
-    option.value = distance.id;
-    option.textContent = `${distance.name} (${distance.shortLabel})`;
-    elements.distanceSelect.append(option);
+function getAlternateUnit(unit) {
+  return unit === "km" ? "mi" : "km";
+}
+
+function getSpeedUnitLabel(unit) {
+  return unit === "km" ? "km/h" : "mph";
+}
+
+function setTextContent(element, value) {
+  element.textContent = value;
+}
+
+function setInputValue(element, value) {
+  if (element.value !== value) {
+    element.value = value;
   }
+}
 
-  elements.distanceSelect.value = "10k";
+function setInvalid(inputs, message) {
+  const hasError = Boolean(message);
+
+  for (const input of inputs) {
+    input.setAttribute("aria-invalid", String(hasError));
+  }
+}
+
+function renderError(errorElement, inputs, message) {
+  errorElement.textContent = message ?? "";
+  errorElement.classList.toggle("is-visible", Boolean(message));
+  setInvalid(inputs, message);
 }
 
 function populateHeroChips() {
-  for (const distance of DISTANCES) {
-    const chip = document.createElement("span");
-    chip.className = "chip";
-    chip.textContent = distance.shortLabel;
-    elements.heroChips.append(chip);
-  }
+  const presets = DISTANCE_PRESETS.filter((preset) => preset.distanceKm !== null);
+
+  elements.heroChips.replaceChildren(
+    ...presets.map((preset) => {
+      const chip = document.createElement("span");
+
+      chip.className = "chip";
+      chip.textContent = preset.label;
+      return chip;
+    })
+  );
 }
 
-function setMode(nextMode, { focusButton = false } = {}) {
-  state.mode = nextMode;
+function populatePresetSelect() {
+  elements.presetSelect.replaceChildren(
+    ...DISTANCE_PRESETS.map((preset) => {
+      const option = document.createElement("option");
 
+      option.value = preset.id;
+      option.textContent = preset.label;
+      return option;
+    })
+  );
+}
+
+function renderModeButtons() {
   for (const button of modeButtons) {
-    const isActive = button.dataset.mode === nextMode;
+    const isActive = button.dataset.mode === state.mode;
+
     button.classList.toggle("is-active", isActive);
     button.setAttribute("aria-selected", String(isActive));
     button.tabIndex = isActive ? 0 : -1;
-
-    if (isActive && focusButton) {
-      button.focus();
-    }
   }
+}
 
-  for (const panel of elements.panels) {
-    panel.hidden = panel.dataset.inputPanel !== nextMode;
+function renderUnitButtons() {
+  for (const button of elements.unitButtons) {
+    const isActive = button.dataset.unit === state.unit;
+
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
   }
-
-  render();
 }
 
-function readInput() {
-  return {
-    distanceId: elements.distanceSelect.value,
-    finishHours: elements.finishHours.value,
-    finishMinutes: elements.finishMinutes.value,
-    finishSeconds: elements.finishSeconds.value,
-    mode: state.mode,
-    paceMinutes: elements.paceMinutes.value,
-    paceSeconds: elements.paceSeconds.value,
-    paceUnit: elements.paceUnit.value,
-    speedUnit: elements.speedUnit.value,
-    speedValue: elements.speedValue.value
-  };
+function renderConvertSourceButtons() {
+  for (const button of elements.convertSourceButtons) {
+    const isActive = button.dataset.convertSource === state.convertSource;
+
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  }
 }
 
-function renderProjectionRows(projections) {
-  elements.projectionRows.replaceChildren(
-    ...projections.map((projection) => {
-      const row = document.createElement("tr");
-      const distanceCell = document.createElement("th");
-      const finishCell = document.createElement("td");
+function renderStaticLabels() {
+  const alternateUnit = getAlternateUnit(state.unit);
+  const selectedSpeedUnit = getSpeedUnitLabel(state.unit);
+  const alternateSpeedUnit = getSpeedUnitLabel(alternateUnit);
 
-      distanceCell.scope = "row";
-      distanceCell.textContent = projection.name;
-      finishCell.textContent = formatDuration(projection.finishSeconds);
-
-      row.append(distanceCell, finishCell);
-      return row;
-    })
+  setTextContent(elements.distanceLabel, `Distance (${state.unit})`);
+  setTextContent(
+    elements.speedLabel,
+    `Speed (${selectedSpeedUnit})`
   );
-}
-
-function renderSplitGuide(splits) {
-  elements.splitGrid.replaceChildren(
-    ...splits.map((split) => {
-      const card = document.createElement("div");
-      const label = document.createElement("p");
-      const value = document.createElement("p");
-
-      card.className = "split-card";
-      label.className = "split-card__label";
-      value.className = "split-card__value";
-
-      label.textContent = split.label;
-      value.textContent = formatDuration(split.finishSeconds);
-
-      card.append(label, value);
-      return card;
-    })
+  setTextContent(
+    elements.selectedPaceLabel,
+    `Pace /${state.unit}`
   );
+  setTextContent(
+    elements.selectedSpeedLabel,
+    `Speed ${selectedSpeedUnit}`
+  );
+  setTextContent(
+    elements.alternatePaceLabel,
+    `Pace /${alternateUnit}`
+  );
+  setTextContent(
+    elements.alternateSpeedLabel,
+    `Speed ${alternateSpeedUnit}`
+  );
+
+  if (state.mode === MODES.CONVERT) {
+    setTextContent(
+      elements.paceCopy,
+      `Enter pace in /${state.unit}. Switching the convert source keeps the last valid result visible but marks it out of date.`
+    );
+  } else {
+    setTextContent(
+      elements.paceCopy,
+      `Enter pace in /${state.unit}. Both fields must be present before the calculator can project a finish time.`
+    );
+  }
 }
 
-function resetOutput(message) {
-  elements.finishValue.textContent = "--";
-  elements.finishCaption.textContent = "Fix the active input to continue.";
-  elements.paceKmValue.textContent = "--";
-  elements.paceMiValue.textContent = "--";
-  elements.speedKmhValue.textContent = "--";
-  elements.speedMphValue.textContent = "--";
-  elements.projectionRows.replaceChildren();
-  elements.splitGrid.replaceChildren();
-  elements.statusMessage.textContent = message;
-  elements.statusMessage.classList.add("status-message--error");
+function renderInputValues() {
+  setInputValue(elements.distanceInput, state.inputs.distance);
+  setInputValue(elements.finishHours, state.inputs.finishHours);
+  setInputValue(elements.finishMinutes, state.inputs.finishMinutes);
+  setInputValue(elements.finishSeconds, state.inputs.finishSeconds);
+  setInputValue(elements.paceMinutes, state.inputs.paceMinutes);
+  setInputValue(elements.paceSeconds, state.inputs.paceSeconds);
+  setInputValue(elements.speedInput, state.inputs.speed);
+  elements.presetSelect.value = state.presetId;
 }
 
-function render() {
-  const result = calculatePerformance(readInput());
+function renderVisibility(view) {
+  elements.distanceCluster.hidden = !view.showDistanceFields;
+  elements.convertSourceCluster.hidden = state.mode !== MODES.CONVERT;
+  elements.finishCluster.hidden = !view.showFinishFields;
+  elements.paceCluster.hidden = !view.showPaceFields;
+  elements.speedCluster.hidden = !view.showSpeedFields;
+}
 
-  if (result.error) {
-    resetOutput(result.error);
+function renderBadge(resultState) {
+  elements.resultBadge.className = "result-badge";
+
+  if (resultState === "current") {
+    elements.resultBadge.classList.add("result-badge--current");
+    setTextContent(elements.resultBadge, "Current");
     return;
   }
 
-  elements.finishValue.textContent = formatDuration(result.selectedFinishSeconds);
-  elements.finishCaption.textContent = `${result.selectedDistance.name} at the current steady effort.`;
-  elements.paceKmValue.textContent = formatPace(
-    result.pacePerKilometerSeconds,
-    "km"
-  );
-  elements.paceMiValue.textContent = formatPace(result.pacePerMileSeconds, "mi");
-  elements.speedKmhValue.textContent = formatSpeed(result.speedKmh, "kmh");
-  elements.speedMphValue.textContent = formatSpeed(result.speedKmh, "mph");
-  elements.statusMessage.textContent = `Calculated from ${state.mode.replace(
-    "-",
-    " "
-  )} input.`;
-  elements.statusMessage.classList.remove("status-message--error");
+  if (resultState === "stale") {
+    elements.resultBadge.classList.add("result-badge--stale");
+    setTextContent(elements.resultBadge, "Out of date");
+    return;
+  }
 
-  renderProjectionRows(result.projections);
-  renderSplitGuide(result.splits);
+  setTextContent(elements.resultBadge, "Awaiting input");
 }
 
-function bindEvents() {
+function renderProjectionTable(display) {
+  if (!display) {
+    const placeholderRow = document.createElement("tr");
+    const placeholderCell = document.createElement("td");
+
+    placeholderRow.className = "table-placeholder";
+    placeholderCell.colSpan = 2;
+    placeholderCell.textContent = RESULT_PLACEHOLDER;
+    placeholderRow.append(placeholderCell);
+    elements.projectionRows.replaceChildren(placeholderRow);
+    return;
+  }
+
+  elements.projectionRows.replaceChildren(
+    ...display.projectionRows.map((row) => {
+      const tableRow = document.createElement("tr");
+      const distanceCell = document.createElement("th");
+      const finishCell = document.createElement("td");
+
+      if (row.isSelected) {
+        tableRow.classList.add("is-selected");
+      }
+
+      distanceCell.scope = "row";
+      distanceCell.textContent = `${row.label} (${row.detail})`;
+      finishCell.textContent = row.finishLabel;
+
+      tableRow.append(distanceCell, finishCell);
+      return tableRow;
+    })
+  );
+}
+
+function renderResultSummary(view) {
+  renderBadge(view.resultState);
+
+  if (!view.display) {
+    setTextContent(elements.primaryLabel, "Result");
+    setTextContent(elements.primaryValue, "--");
+    setTextContent(elements.primaryMeta, RESULT_PLACEHOLDER);
+    setTextContent(elements.selectedPaceValue, "--");
+    setTextContent(elements.selectedSpeedValue, "--");
+    setTextContent(elements.alternatePaceValue, "--");
+    setTextContent(elements.alternateSpeedValue, "--");
+    setTextContent(elements.selectedDistance, "--");
+    setTextContent(
+      elements.resultNote,
+      "Common-race projections appear below after the first valid result."
+    );
+    renderProjectionTable(null);
+    return;
+  }
+
+  setTextContent(elements.primaryLabel, view.display.primaryLabel);
+  setTextContent(elements.primaryValue, view.display.primaryValue);
+  setTextContent(elements.primaryMeta, view.display.primaryMeta);
+  setTextContent(elements.selectedPaceValue, view.display.selectedPace);
+  setTextContent(elements.selectedSpeedValue, view.display.selectedSpeed);
+  setTextContent(elements.alternatePaceValue, view.display.alternatePace);
+  setTextContent(elements.alternateSpeedValue, view.display.alternateSpeed);
+
+  if (view.display.selectedDistanceLabel) {
+    setTextContent(elements.selectedDistance, view.display.selectedDistanceLabel);
+    setTextContent(
+      elements.resultNote,
+      view.resultState === "stale"
+        ? "These numbers are still visible, but they no longer match the current invalid edit."
+        : "This is the distance currently driving the distance-based result."
+    );
+  } else {
+    setTextContent(elements.selectedDistance, "No distance needed");
+    setTextContent(
+      elements.resultNote,
+      "Convert mode projects the common race table from the same effort without needing a custom distance."
+    );
+  }
+
+  renderProjectionTable(view.display);
+}
+
+function render() {
+  const view = deriveCalculatorView(state, lastValidResult);
+
+  if (view.currentResult) {
+    lastValidResult = view.currentResult;
+  }
+
+  renderModeButtons();
+  renderUnitButtons();
+  renderConvertSourceButtons();
+  renderStaticLabels();
+  renderInputValues();
+  renderVisibility(view);
+
+  renderError(elements.distanceError, [elements.distanceInput], view.errors.distance);
+  renderError(
+    elements.finishError,
+    [elements.finishHours, elements.finishMinutes, elements.finishSeconds],
+    view.errors.finish
+  );
+  renderError(
+    elements.paceError,
+    [elements.paceMinutes, elements.paceSeconds],
+    view.errors.pace
+  );
+  renderError(elements.speedError, [elements.speedInput], view.errors.speed);
+
+  setTextContent(elements.statusMessage, view.statusMessage);
+  elements.statusMessage.classList.toggle(
+    "status-message--error",
+    view.resultState === "stale"
+  );
+
+  renderResultSummary(view);
+}
+
+function bindModeEvents() {
   for (const button of modeButtons) {
     button.addEventListener("click", () => {
-      setMode(button.dataset.mode);
+      state = applyModeChange(state, button.dataset.mode);
+      render();
     });
 
     button.addEventListener("keydown", (event) => {
-      const nextMode = getModeFromNavigationKey(modes, state.mode, event.key);
+      const nextMode = getModeFromNavigationKey(
+        modeOrder,
+        state.mode,
+        event.key
+      );
 
       if (!nextMode) {
         return;
       }
 
       event.preventDefault();
-      setMode(nextMode, { focusButton: true });
+      state = applyModeChange(state, nextMode);
+      render();
+
+      const activeButton = modeButtons.find(
+        (candidate) => candidate.dataset.mode === nextMode
+      );
+
+      activeButton?.focus();
     });
-  }
-
-  const inputs = [
-    elements.distanceSelect,
-    elements.finishHours,
-    elements.finishMinutes,
-    elements.finishSeconds,
-    elements.paceMinutes,
-    elements.paceSeconds,
-    elements.paceUnit,
-    elements.speedUnit,
-    elements.speedValue
-  ];
-
-  for (const input of inputs) {
-    input.addEventListener("input", render);
-    input.addEventListener("change", render);
   }
 }
 
-populateDistances();
+function bindUnitEvents() {
+  for (const button of elements.unitButtons) {
+    button.addEventListener("click", () => {
+      state = applyUnitChange(state, button.dataset.unit);
+      render();
+    });
+  }
+}
+
+function bindConvertSourceEvents() {
+  for (const button of elements.convertSourceButtons) {
+    button.addEventListener("click", () => {
+      state = applyConvertSourceChange(state, button.dataset.convertSource);
+      render();
+    });
+  }
+}
+
+function bindInputEvents() {
+  elements.presetSelect.addEventListener("change", () => {
+    state = applyPresetSelection(state, elements.presetSelect.value);
+    render();
+  });
+
+  elements.distanceInput.addEventListener("input", () => {
+    state = updateDistanceInput(state, elements.distanceInput.value);
+    render();
+  });
+
+  elements.finishHours.addEventListener("input", () => {
+    state = updateInputValue(state, "finishHours", elements.finishHours.value);
+    render();
+  });
+
+  elements.finishMinutes.addEventListener("input", () => {
+    state = updateInputValue(state, "finishMinutes", elements.finishMinutes.value);
+    render();
+  });
+
+  elements.finishSeconds.addEventListener("input", () => {
+    state = updateInputValue(state, "finishSeconds", elements.finishSeconds.value);
+    render();
+  });
+
+  elements.paceMinutes.addEventListener("input", () => {
+    state = updateInputValue(state, "paceMinutes", elements.paceMinutes.value);
+    render();
+  });
+
+  elements.paceSeconds.addEventListener("input", () => {
+    state = updateInputValue(state, "paceSeconds", elements.paceSeconds.value);
+    render();
+  });
+
+  elements.speedInput.addEventListener("input", () => {
+    state = updateInputValue(state, "speed", elements.speedInput.value);
+    render();
+  });
+
+  elements.resetButton.addEventListener("click", () => {
+    state = resetFormState(state);
+    lastValidResult = null;
+    render();
+  });
+}
+
 populateHeroChips();
-bindEvents();
+populatePresetSelect();
+bindModeEvents();
+bindUnitEvents();
+bindConvertSourceEvents();
+bindInputEvents();
 render();

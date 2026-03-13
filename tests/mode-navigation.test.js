@@ -3,19 +3,19 @@ import assert from "node:assert/strict";
 
 import { getModeFromNavigationKey } from "../src/lib/mode-navigation.js";
 
-const modes = ["pace", "speed", "finish"];
+const modes = ["pace", "finish", "convert"];
 
 test("mode navigation advances and wraps with arrow keys", () => {
-  assert.equal(getModeFromNavigationKey(modes, "pace", "ArrowRight"), "speed");
-  assert.equal(getModeFromNavigationKey(modes, "finish", "ArrowRight"), "pace");
-  assert.equal(getModeFromNavigationKey(modes, "pace", "ArrowLeft"), "finish");
-  assert.equal(getModeFromNavigationKey(modes, "speed", "ArrowDown"), "finish");
-  assert.equal(getModeFromNavigationKey(modes, "pace", "ArrowUp"), "finish");
+  assert.equal(getModeFromNavigationKey(modes, "pace", "ArrowRight"), "finish");
+  assert.equal(getModeFromNavigationKey(modes, "convert", "ArrowRight"), "pace");
+  assert.equal(getModeFromNavigationKey(modes, "pace", "ArrowLeft"), "convert");
+  assert.equal(getModeFromNavigationKey(modes, "finish", "ArrowDown"), "convert");
+  assert.equal(getModeFromNavigationKey(modes, "pace", "ArrowUp"), "convert");
 });
 
 test("mode navigation supports home and end keys", () => {
-  assert.equal(getModeFromNavigationKey(modes, "finish", "Home"), "pace");
-  assert.equal(getModeFromNavigationKey(modes, "pace", "End"), "finish");
+  assert.equal(getModeFromNavigationKey(modes, "convert", "Home"), "pace");
+  assert.equal(getModeFromNavigationKey(modes, "pace", "End"), "convert");
 });
 
 test("mode navigation ignores unrelated keys and empty mode lists", () => {
