@@ -18,20 +18,38 @@ function formatNumber(value, digits = 2) {
     .replace(/(\.\d*[1-9])0+$/, "$1");
 }
 
+function readNumberInput(element) {
+  const rawValue = element.value.trim();
+
+  if (rawValue === "") {
+    return Number.NaN;
+  }
+
+  return Number(rawValue);
+}
+
 export function createApp(rootDocument = document) {
   const state = {
     speedKph: paceSecondsToSpeedKph(330, "km"),
     customDistanceKm: 10,
+    errors: {
+      pace: "",
+      speed: "",
+      distance: "",
+    },
   };
 
   const elements = {
     paceMinutes: rootDocument.querySelector("#pace-minutes"),
     paceSeconds: rootDocument.querySelector("#pace-seconds"),
     paceUnit: rootDocument.querySelector("#pace-unit"),
+    paceMessage: rootDocument.querySelector("#pace-message"),
     speedValue: rootDocument.querySelector("#speed-value"),
     speedUnit: rootDocument.querySelector("#speed-unit"),
+    speedMessage: rootDocument.querySelector("#speed-message"),
     distanceValue: rootDocument.querySelector("#distance-value"),
     distanceUnit: rootDocument.querySelector("#distance-unit"),
+    distanceMessage: rootDocument.querySelector("#distance-message"),
     statusLine: rootDocument.querySelector("#status-line"),
     customDistanceLabel: rootDocument.querySelector("#custom-distance-label"),
     customFinish: rootDocument.querySelector("#custom-finish"),
@@ -49,26 +67,71 @@ export function createApp(rootDocument = document) {
     predictionTableBody: rootDocument.querySelector("#prediction-table-body"),
   };
 
+  function setInvalidState(inputs, messageElement, message) {
+    const isInvalid = message.length > 0;
+
+    for (const input of inputs) {
+      if (isInvalid) {
+        input.setAttribute("aria-invalid", "true");
+      } else {
+        input.removeAttribute("aria-invalid");
+      }
+    }
+
+    messageElement.textContent = message;
+    messageElement.setAttribute(
+      "data-state",
+      isInvalid ? "error" : "default",
+    );
+  }
+
+  function syncValidationUi() {
+    setInvalidState(
+      [elements.paceMinutes, elements.paceSeconds],
+      elements.paceMessage,
+      state.errors.pace,
+    );
+    setInvalidState(
+      [elements.speedValue],
+      elements.speedMessage,
+      state.errors.speed,
+    );
+    setInvalidState(
+      [elements.distanceValue],
+      elements.distanceMessage,
+      state.errors.distance,
+    );
+  }
+
   function getPaceSecondsFromInputs() {
-    const minutes = Number(elements.paceMinutes.value);
-    const seconds = Number(elements.paceSeconds.value);
+    const minutes = readNumberInput(elements.paceMinutes);
+    const seconds = readNumberInput(elements.paceSeconds);
 
     if (
       !Number.isFinite(minutes) ||
       minutes < 0 ||
+      !Number.isInteger(minutes) ||
       !Number.isFinite(seconds) ||
-      seconds < 0
+      seconds < 0 ||
+      seconds > 59 ||
+      !Number.isInteger(seconds)
     ) {
       return null;
     }
 
-    return Math.floor(minutes) * 60 + Math.floor(seconds);
+    const totalSeconds = Math.floor(minutes) * 60 + Math.floor(seconds);
+
+    return totalSeconds > 0 ? totalSeconds : null;
   }
 
   function commitPaceInputs() {
     const totalSeconds = getPaceSecondsFromInputs();
 
     if (!totalSeconds) {
+      state.errors.pace =
+        "Enter a pace greater than 0:00 with whole seconds from 0 to 59.";
+      syncValidationUi();
+      render();
       return;
     }
 
@@ -78,37 +141,55 @@ export function createApp(rootDocument = document) {
     );
 
     if (Number.isFinite(nextSpeed)) {
+      state.errors.pace = "";
       state.speedKph = nextSpeed;
+      syncValidationUi();
       render();
     }
   }
 
   function commitSpeedInput() {
-    const rawValue = Number(elements.speedValue.value);
+    const rawValue = readNumberInput(elements.speedValue);
 
     if (!Number.isFinite(rawValue) || rawValue <= 0) {
+      state.errors.speed = "Enter a speed greater than 0.";
+      syncValidationUi();
+      render();
       return;
     }
 
+    state.errors.speed = "";
     state.speedKph =
       elements.speedUnit.value === "mph"
         ? convertSpeed(rawValue, "mi", "km")
         : rawValue;
 
+    syncValidationUi();
     render();
   }
 
   function commitDistanceInput() {
-    const rawValue = Number(elements.distanceValue.value);
+    const rawValue = readNumberInput(elements.distanceValue);
     const nextDistance = distanceToKm(rawValue, elements.distanceUnit.value);
 
     if (Number.isFinite(nextDistance)) {
+      state.errors.distance = "";
       state.customDistanceKm = nextDistance;
+      syncValidationUi();
       render();
+      return;
     }
+
+    state.errors.distance = "Enter a distance greater than 0.";
+    syncValidationUi();
+    render();
   }
 
   function setPaceInputs(speedKph) {
+    if (state.errors.pace) {
+      return;
+    }
+
     const parts = splitPaceSeconds(
       speedKphToPaceSeconds(speedKph, elements.paceUnit.value),
     );
@@ -122,6 +203,10 @@ export function createApp(rootDocument = document) {
   }
 
   function setSpeedInput(speedKph) {
+    if (state.errors.speed) {
+      return;
+    }
+
     const displayedSpeed =
       elements.speedUnit.value === "mph"
         ? convertSpeed(speedKph, "km", "mi")
@@ -131,6 +216,10 @@ export function createApp(rootDocument = document) {
   }
 
   function setDistanceInput(distanceKm) {
+    if (state.errors.distance) {
+      return;
+    }
+
     const displayedDistance =
       elements.distanceUnit.value === "mi"
         ? convertSpeed(distanceKm, "km", "mi")
@@ -172,6 +261,7 @@ export function createApp(rootDocument = document) {
     const speedMph = convertSpeed(speedKph, "km", "mi");
     const paceKm = formatPace(speedKph, "km");
     const paceMi = formatPace(speedKph, "mi");
+    const errorCount = Object.values(state.errors).filter(Boolean).length;
     const customDistanceLabel = formatDistance(
       state.customDistanceKm,
       elements.distanceUnit.value,
@@ -187,7 +277,13 @@ export function createApp(rootDocument = document) {
 
     elements.heroPace.textContent = paceKm;
     elements.heroSpeed.textContent = `${formatNumber(speedKph)} km/h`;
-    elements.statusLine.textContent = `${paceKm} equals ${paceMi} at ${formatNumber(speedKph)} km/h or ${formatNumber(speedMph)} mph.`;
+    elements.statusLine.textContent = errorCount > 0
+      ? `Showing the last valid projection while you correct the marked ${errorCount === 1 ? "field" : "fields"}.`
+      : `${paceKm} equals ${paceMi} at ${formatNumber(speedKph)} km/h or ${formatNumber(speedMph)} mph.`;
+    elements.statusLine.setAttribute(
+      "data-state",
+      errorCount > 0 ? "error" : "default",
+    );
     elements.customDistanceLabel.textContent = customDistanceLabel;
     elements.customFinish.textContent = customFinish;
     elements.customDetail.textContent = `Based on ${paceKm} or ${formatNumber(speedMph)} mph.`;
@@ -210,16 +306,8 @@ export function createApp(rootDocument = document) {
   elements.distanceValue.addEventListener("input", commitDistanceInput);
   elements.distanceUnit.addEventListener("change", render);
 
-  for (const input of [
-    elements.paceMinutes,
-    elements.paceSeconds,
-    elements.speedValue,
-    elements.distanceValue,
-  ]) {
-    input.addEventListener("blur", render);
-  }
-
   render();
+  syncValidationUi();
 
   return { elements, render, state };
 }

@@ -39,82 +39,122 @@
             <h2>Set your effort</h2>
           </div>
 
-          <label class="field">
-            <span class="field-label">Pace</span>
-            <div class="pace-row">
-              <input
-                id="pace-minutes"
-                class="field-input"
-                type="number"
-                min="0"
-                step="1"
-                inputmode="numeric"
-                value="5"
-                aria-label="Pace minutes"
-              />
-              <span class="pace-separator" aria-hidden="true">:</span>
-              <input
-                id="pace-seconds"
-                class="field-input"
-                type="number"
-                min="0"
-                max="59"
-                step="1"
-                inputmode="numeric"
-                value="30"
-                aria-label="Pace seconds"
-              />
-              <select id="pace-unit" class="field-select" aria-label="Pace unit">
-                <option value="km">/km</option>
-                <option value="mi">/mi</option>
-              </select>
+          <fieldset class="field-group">
+            <legend class="field-label">Pace</legend>
+            <div class="control-grid control-grid-pace">
+              <label class="control">
+                <span class="control-label">Minutes</span>
+                <input
+                  id="pace-minutes"
+                  class="field-input"
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputmode="numeric"
+                  value="5"
+                  aria-describedby="pace-hint pace-message"
+                />
+              </label>
+              <label class="control">
+                <span class="control-label">Seconds</span>
+                <input
+                  id="pace-seconds"
+                  class="field-input"
+                  type="number"
+                  min="0"
+                  max="59"
+                  step="1"
+                  inputmode="numeric"
+                  value="30"
+                  aria-describedby="pace-hint pace-message"
+                />
+              </label>
+              <label class="control">
+                <span class="control-label">Unit</span>
+                <select
+                  id="pace-unit"
+                  class="field-select"
+                  aria-describedby="pace-hint pace-message"
+                >
+                  <option value="km">/km</option>
+                  <option value="mi">/mi</option>
+                </select>
+              </label>
             </div>
-          </label>
+            <p id="pace-hint" class="field-hint">
+              Use whole minutes and seconds from 0 to 59.
+            </p>
+            <p id="pace-message" class="field-message" aria-live="polite"></p>
+          </fieldset>
 
-          <label class="field">
-            <span class="field-label">Speed</span>
-            <div class="inline-row">
-              <input
-                id="speed-value"
-                class="field-input"
-                type="number"
-                min="0"
-                step="0.01"
-                inputmode="decimal"
-                aria-label="Speed value"
-              />
-              <select id="speed-unit" class="field-select" aria-label="Speed unit">
-                <option value="kmh">km/h</option>
-                <option value="mph">mph</option>
-              </select>
+          <fieldset class="field-group">
+            <legend class="field-label">Speed</legend>
+            <div class="control-grid control-grid-inline">
+              <label class="control">
+                <span class="control-label">Value</span>
+                <input
+                  id="speed-value"
+                  class="field-input"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputmode="decimal"
+                  aria-describedby="speed-hint speed-message"
+                />
+              </label>
+              <label class="control">
+                <span class="control-label">Unit</span>
+                <select
+                  id="speed-unit"
+                  class="field-select"
+                  aria-describedby="speed-hint speed-message"
+                >
+                  <option value="kmh">km/h</option>
+                  <option value="mph">mph</option>
+                </select>
+              </label>
             </div>
-          </label>
+            <p id="speed-hint" class="field-hint">
+              Enter a positive speed value in either unit.
+            </p>
+            <p id="speed-message" class="field-message" aria-live="polite"></p>
+          </fieldset>
 
-          <label class="field">
-            <span class="field-label">Custom distance</span>
-            <div class="inline-row">
-              <input
-                id="distance-value"
-                class="field-input"
-                type="number"
-                min="0"
-                step="0.01"
-                inputmode="decimal"
-                value="10"
-                aria-label="Custom distance value"
-              />
-              <select
-                id="distance-unit"
-                class="field-select"
-                aria-label="Custom distance unit"
-              >
-                <option value="km">km</option>
-                <option value="mi">mi</option>
-              </select>
+          <fieldset class="field-group">
+            <legend class="field-label">Custom distance</legend>
+            <div class="control-grid control-grid-inline">
+              <label class="control">
+                <span class="control-label">Value</span>
+                <input
+                  id="distance-value"
+                  class="field-input"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputmode="decimal"
+                  value="10"
+                  aria-describedby="distance-hint distance-message"
+                />
+              </label>
+              <label class="control">
+                <span class="control-label">Unit</span>
+                <select
+                  id="distance-unit"
+                  class="field-select"
+                  aria-describedby="distance-hint distance-message"
+                >
+                  <option value="km">km</option>
+                  <option value="mi">mi</option>
+                </select>
+              </label>
             </div>
-          </label>
+            <p id="distance-hint" class="field-hint">
+              Project the finish time for any positive race distance.
+            </p>
+            <p id="distance-message" class="field-message" aria-live="polite"></p>
+          </fieldset>
 
-          <p id="status-line" class="status-line" aria-live="polite"></p>
+          <p id="status-line" class="status-line" role="status" aria-live="polite"></p>
         </form>
 
         <section class="panel panel-highlight" aria-labelledby="projection-title">
