@@ -213,7 +213,7 @@ if [[ -f "$capture_note_path" ]]; then
   preview_archive_sha="$(sha256_file "$preview_archive_path")"
   preview_archive_size="$(file_size "$preview_archive_path")"
   optional_artifact_lines=$'- `PREVIEW-CAPTURE.md`\n- `preview-snapshots.tar`\n- `previews/before/`\n- `previews/after/`'
-  optional_resume_step=$'6. If `PREVIEW-CAPTURE.md` is present, use its serve commands to capture the\n   required before/after screenshots or short recording in a browser-enabled\n   environment.\n'
+  optional_resume_step=$'7. If `PREVIEW-CAPTURE.md` is present, use its serve commands to capture the\n   required before/after screenshots or short recording in a browser-enabled\n   environment.\n'
   optional_manifest_artifact="$(cat <<EOF
     ,
     {
@@ -263,19 +263,22 @@ The paths below use \`<handoff-dir>\` for the directory that contains this
 summary, the manifest, and the exported bundle.
 
 1. Clone or choose a writable checkout of the repo at \`<target-repo-dir>\`.
-2. Import the bundle into that checkout with plain git:
+2. If the checkout already has this repo's helper scripts available, import the
+   handoff in one step:
+   \`./scripts/import_bundle.sh <handoff-dir> <target-repo-dir>\`
+3. Or import the bundle into that checkout with plain git:
    \`git -C <target-repo-dir> fetch <handoff-dir>/${bundle_name} ${branch}:${branch}\`
    \`git -C <target-repo-dir> switch ${branch}\`
-3. Verify the copied handoff manifest from the repo root:
+4. Verify the copied handoff manifest from the repo root:
    \`node scripts/verify-handoff.mjs <handoff-dir>/${manifest_name}\`
-4. Publish the branch and create or update the PR:
+5. Publish the branch and create or update the PR:
    \`npm run pr:publish\`
-5. Attach the resulting PR to \`${issue_identifier}\` and move the issue to
+6. Attach the resulting PR to \`${issue_identifier}\` and move the issue to
    \`Human Review\`.
 $(if [[ -n "$optional_resume_step" ]]; then
     printf '%s' "$optional_resume_step"
   else
-    printf '%s\n' '6. In a browser-enabled environment, use the demo script above to capture the'
+    printf '%s\n' '7. In a browser-enabled environment, use the demo script above to capture the'
     printf '%s\n' '   required before/after screenshot or short recording for the PR and Linear'
     printf '%s\n' '   issue.'
   fi)

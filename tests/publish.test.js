@@ -109,6 +109,7 @@ test("prepare_handoff summary includes preview notes from the PR draft", async (
   assert.match(summary, /## Demo script/);
   assert.match(summary, /Turn on the finish-time lock, set the time to `1:45:00`/);
   assert.match(summary, /Attach the resulting PR to `HEL-16` and move the issue to/);
+  assert.match(summary, /\.\/scripts\/import_bundle\.sh <handoff-dir> <target-repo-dir>/);
   assert.match(summary, /- `SUMMARY.md`/);
   assert.match(summary, /In a browser-enabled environment, use the demo script above/);
   assert.ok(manifestPathMatch, "prepare-handoff should print the manifest path");
