@@ -56,6 +56,7 @@ commits_path="$output_dir/commits.txt"
 manifest_path="$output_dir/$manifest_name"
 capture_note_path="$output_dir/PREVIEW-CAPTURE.md"
 preview_root_dir="$output_dir/previews"
+preview_archive_path="$output_dir/preview-snapshots.tar"
 preview_notes=""
 demo_script=""
 preview_before_ref="${HANDOFF_PREVIEW_BEFORE_REF:-}"
@@ -64,6 +65,8 @@ preview_before_commit=""
 preview_after_commit=""
 capture_note_size=""
 capture_note_sha=""
+preview_archive_size=""
+preview_archive_sha=""
 optional_artifact_lines=""
 optional_resume_step=""
 optional_manifest_artifact=""
@@ -163,6 +166,10 @@ Then capture:
 EOF
 }
 
+package_preview_snapshots() {
+  tar -cf "$preview_archive_path" -C "$preview_root_dir" before after
+}
+
 if [[ -n "$preview_after_ref" && -z "$preview_before_ref" ]]; then
   echo "HANDOFF_PREVIEW_AFTER_REF requires HANDOFF_PREVIEW_BEFORE_REF." >&2
   exit 1
@@ -179,12 +186,13 @@ cp docs/pull-request-draft.md "$pr_draft_path"
 npm run pr:dry-run >"$dry_run_path"
 git log --oneline -n 20 >"$commits_path"
 
-rm -rf "$preview_root_dir" "$capture_note_path"
+rm -rf "$preview_root_dir" "$capture_note_path" "$preview_archive_path"
 
 if [[ -n "$preview_before_commit" ]]; then
   build_preview_snapshot "$preview_before_commit" "$preview_root_dir/before"
   build_preview_snapshot "$preview_after_commit" "$preview_root_dir/after"
   write_capture_note
+  package_preview_snapshots
 fi
 
 preview_notes="$(extract_markdown_section "Preview notes" docs/pull-request-draft.md)"
@@ -202,7 +210,9 @@ commits_size="$(file_size "$commits_path")"
 if [[ -f "$capture_note_path" ]]; then
   capture_note_sha="$(sha256_file "$capture_note_path")"
   capture_note_size="$(file_size "$capture_note_path")"
-  optional_artifact_lines=$'- `PREVIEW-CAPTURE.md`\n- `previews/before/`\n- `previews/after/`'
+  preview_archive_sha="$(sha256_file "$preview_archive_path")"
+  preview_archive_size="$(file_size "$preview_archive_path")"
+  optional_artifact_lines=$'- `PREVIEW-CAPTURE.md`\n- `preview-snapshots.tar`\n- `previews/before/`\n- `previews/after/`'
   optional_resume_step=$'6. If `PREVIEW-CAPTURE.md` is present, use its serve commands to capture the\n   required before/after screenshots or short recording in a browser-enabled\n   environment.\n'
   optional_manifest_artifact="$(cat <<EOF
     ,
@@ -211,6 +221,12 @@ if [[ -f "$capture_note_path" ]]; then
       "path": "PREVIEW-CAPTURE.md",
       "sha256": "${capture_note_sha}",
       "size": ${capture_note_size}
+    },
+    {
+      "name": "preview_snapshots",
+      "path": "preview-snapshots.tar",
+      "sha256": "${preview_archive_sha}",
+      "size": ${preview_archive_size}
     }
 EOF
 )"

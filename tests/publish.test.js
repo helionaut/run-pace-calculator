@@ -130,17 +130,23 @@ test("prepare_handoff can package optional preview capture artifacts", async () 
   });
   const summary = await readFile(path.join(outputDir, "SUMMARY.md"), "utf8");
   const captureNote = await readFile(path.join(outputDir, "PREVIEW-CAPTURE.md"), "utf8");
+  const previewArchivePath = path.join(outputDir, "preview-snapshots.tar");
   const manifestPathMatch = output.match(/^Manifest: (.+)$/m);
+  const previewArchiveEntries = run("tar", ["-tf", previewArchivePath], cloneDir);
 
   assert.match(captureNote, new RegExp(beforeRef));
   assert.match(captureNote, new RegExp(afterRef));
   assert.match(captureNote, /python3 -m http\.server 4301/);
   assert.match(captureNote, /python3 -m http\.server 4302/);
   assert.match(summary, /- `PREVIEW-CAPTURE\.md`/);
+  assert.match(summary, /- `preview-snapshots\.tar`/);
   assert.match(summary, /- `previews\/before\/`/);
   assert.match(summary, /- `previews\/after\/`/);
   await stat(path.join(outputDir, "previews", "before", "index.html"));
   await stat(path.join(outputDir, "previews", "after", "index.html"));
+  await stat(previewArchivePath);
+  assert.match(previewArchiveEntries, /^before\/index\.html$/m);
+  assert.match(previewArchiveEntries, /^after\/index\.html$/m);
   assert.ok(manifestPathMatch, "prepare-handoff should print the manifest path");
 
   run("node", ["scripts/verify-handoff.mjs", manifestPathMatch[1]], cloneDir);
