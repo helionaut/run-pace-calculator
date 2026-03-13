@@ -1,14 +1,20 @@
 {
   "name": "run-pace-calculator",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "bash scripts/build-dist.sh",
+    "build": "node scripts/build.mjs",
+    "bundle:export": "./scripts/export_bundle.sh",
+    "check": "npm test && npm run build && npm run pr:dry-run",
+    "dev": "node scripts/serve.mjs src 4173",
+    "handoff:prepare": "./scripts/prepare-handoff.sh",
+    "handoff:verify": "node scripts/verify-handoff.mjs",
+    "pr:dry-run": "./scripts/create_pr.sh --dry-run",
+    "pr:publish": "./scripts/create_pr.sh",
+    "preview": "node scripts/serve.mjs dist 4173",
     "test": "node --test",
-    "check": "node --check script.js && node --check calculator.js",
-    "check:shell": "bash -n scripts/build-dist.sh && bash -n scripts/verify-pages-content.sh",
-    "verify:pages": "bash scripts/verify-pages-content.sh",
-    "validate": "npm test && npm run check && npm run check:shell && npm run build"
+    "validate": "npm test && npm run build && node --check scripts/verify-pages-content.mjs",
+    "verify:pages": "node scripts/verify-pages-content.mjs"
   }
 }
