@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta
+      name="description"
+      content="Convert running pace, treadmill speed, and projected finish times for common race distances."
+    />
+    <title>Run Pace Calculator</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <div class="backdrop backdrop--top"></div>
+      <div class="backdrop backdrop--bottom"></div>
+
+      <header class="panel hero">
+        <div class="hero__copy">
+          <p class="eyebrow">Run Pace Calculator</p>
+          <h1>Translate pace, speed, and race goals into a clean race-day plan.</h1>
+          <p class="hero__lede">
+            Pick the number you know. The calculator projects the rest across
+            common distances, with metric and imperial views always on hand.
+          </p>
+          <div class="hero__chips" id="hero-chips" aria-label="Supported distances"></div>
+        </div>
+
+        <aside class="hero__aside">
+          <p class="hero__aside-label">First working slice</p>
+          <h2>Static, tested, and GitHub Pages ready.</h2>
+          <ul class="hero__list">
+            <li>Three conversion modes</li>
+            <li>Common race projections</li>
+            <li>Responsive single-page interface</li>
+          </ul>
+        </aside>
+      </header>
+
+      <main class="layout">
+        <section class="panel calculator">
+          <div class="section-heading">
+            <p class="eyebrow">Input</p>
+            <h2>Choose your starting point</h2>
+            <p>
+              Results update instantly from pace, speed, or a finish-time goal
+              for a selected race distance.
+            </p>
+          </div>
+
+          <form class="calculator__form" novalidate>
+            <div class="segmented" role="tablist" aria-label="Calculation mode">
+              <button
+                type="button"
+                class="segmented__button is-active"
+                id="mode-tab-pace"
+                role="tab"
+                data-mode-button
+                data-mode="pace"
+                aria-controls="input-panel-pace"
+                aria-selected="true"
+                tabindex="0"
+              >
+                Pace
+              </button>
+              <button
+                type="button"
+                class="segmented__button"
+                id="mode-tab-speed"
+                role="tab"
+                data-mode-button
+                data-mode="speed"
+                aria-controls="input-panel-speed"
+                aria-selected="false"
+                tabindex="-1"
+              >
+                Speed
+              </button>
+              <button
+                type="button"
+                class="segmented__button"
+                id="mode-tab-finish"
+                role="tab"
+                data-mode-button
+                data-mode="finish"
+                aria-controls="input-panel-finish"
+                aria-selected="false"
+                tabindex="-1"
+              >
+                Finish Time
+              </button>
+            </div>
+
+            <div class="input-panels">
+              <div
+                class="input-panel"
+                id="input-panel-pace"
+                role="tabpanel"
+                aria-labelledby="mode-tab-pace"
+                data-input-panel="pace"
+              >
+                <div class="field-row">
+                  <label class="field">
+                    <span>Pace minutes</span>
+                    <input
+                      id="pace-minutes"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value="5"
+                      inputmode="numeric"
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Pace seconds</span>
+                    <input
+                      id="pace-seconds"
+                      type="number"
+                      min="0"
+                      max="59"
+                      step="1"
+                      value="0"
+                      inputmode="numeric"
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Unit</span>
+                    <select id="pace-unit">
+                      <option value="km">per kilometer</option>
+                      <option value="mi">per mile</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              <div
+                class="input-panel"
+                id="input-panel-speed"
+                role="tabpanel"
+                aria-labelledby="mode-tab-speed"
+                data-input-panel="speed"
+                hidden
+              >
+                <div class="field-row">
+                  <label class="field field--wide">
+                    <span>Speed</span>
+                    <input
+                      id="speed-value"
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value="12"
+                      inputmode="decimal"
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Unit</span>
+                    <select id="speed-unit">
+                      <option value="kmh">km/h</option>
+                      <option value="mph">mph</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              <div
+                class="input-panel"
+                id="input-panel-finish"
+                role="tabpanel"
+                aria-labelledby="mode-tab-finish"
+                data-input-panel="finish"
+                hidden
+              >
+                <div class="field-row">
+                  <label class="field">
+                    <span>Hours</span>
+                    <input
+                      id="finish-hours"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value="0"
+                      inputmode="numeric"
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Minutes</span>
+                    <input
+                      id="finish-minutes"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value="45"
+                      inputmode="numeric"
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Seconds</span>
+                    <input
+                      id="finish-seconds"
+                      type="number"
+                      min="0"
+                      max="59"
+                      step="1"
+                      value="0"
+                      inputmode="numeric"
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <label class="field field--wide">
+              <span>Race distance</span>
+              <select id="distance-select" aria-label="Race distance"></select>
+            </label>
+
+            <p class="status-message" id="status-message" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section class="panel summary">
+          <div class="section-heading">
+            <p class="eyebrow">Output</p>
+            <h2>Performance snapshot</h2>
+            <p>
+              Keep one steady effort in view while the calculator expands it
+              into race projections and split cues.
+            </p>
+          </div>
+
+          <div class="summary-grid">
+            <article class="stat-card stat-card--accent">
+              <p class="stat-card__label">Projected finish</p>
+              <p class="stat-card__value" id="finish-value">--</p>
+              <p class="stat-card__meta" id="finish-caption">Select a distance to begin.</p>
+            </article>
+
+            <article class="stat-card">
+              <p class="stat-card__label">Equivalent pace</p>
+              <dl class="stat-pairs">
+                <div>
+                  <dt>/km</dt>
+                  <dd id="pace-km-value">--</dd>
+                </div>
+                <div>
+                  <dt>/mi</dt>
+                  <dd id="pace-mi-value">--</dd>
+                </div>
+              </dl>
+            </article>
+
+            <article class="stat-card">
+              <p class="stat-card__label">Equivalent speed</p>
+              <dl class="stat-pairs">
+                <div>
+                  <dt>km/h</dt>
+                  <dd id="speed-kmh-value">--</dd>
+                </div>
+                <div>
+                  <dt>mph</dt>
+                  <dd id="speed-mph-value">--</dd>
+                </div>
+              </dl>
+            </article>
+
+            <article class="stat-card">
+              <p class="stat-card__label">Split guide</p>
+              <div class="split-grid" id="split-grid"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel projections">
+          <div class="section-heading">
+            <p class="eyebrow">Projection table</p>
+            <h2>Common race distances</h2>
+            <p>
+              These estimates assume the same sustainable effort across every
+              listed event.
+            </p>
+          </div>
+
+          <div class="table-shell">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Distance</th>
+                  <th scope="col">Projected finish</th>
+                </tr>
+              </thead>
+              <tbody id="projection-rows"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

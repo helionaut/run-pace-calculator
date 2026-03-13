@@ -5,7 +5,14 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "preview": "node scripts/preview.mjs",
+    "bundle:export": "./scripts/export_bundle.sh",
+    "check": "npm test && npm run build && npm run pr:dry-run",
+    "dev": "node scripts/serve.mjs src 4173",
+    "handoff:prepare": "./scripts/prepare-handoff.sh",
+    "handoff:verify": "node scripts/verify-handoff.mjs",
+    "pr:dry-run": "./scripts/create_pr.sh --dry-run",
+    "pr:publish": "./scripts/create_pr.sh",
+    "preview": "node scripts/serve.mjs dist 4173",
     "test": "node --test"
   }
 }
