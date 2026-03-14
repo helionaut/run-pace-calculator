@@ -136,6 +136,11 @@ class FakeElement {
 
 function createElements() {
   const documentRef = new FakeDocument();
+  const distanceIncrementButtons = [
+    new FakeElement({ dataset: { incrementKm: "0.1" }, ownerDocument: documentRef }),
+    new FakeElement({ dataset: { incrementKm: "0.2" }, ownerDocument: documentRef }),
+    new FakeElement({ dataset: { incrementKm: "0.5" }, ownerDocument: documentRef })
+  ];
   const unitButtons = [
     new FakeElement({ dataset: { unit: "km" }, ownerDocument: documentRef }),
     new FakeElement({ dataset: { unit: "mi" }, ownerDocument: documentRef })
@@ -153,6 +158,7 @@ function createElements() {
   return {
     distanceCard: new FakeElement({ ownerDocument: documentRef }),
     distanceError: new FakeElement({ ownerDocument: documentRef }),
+    distanceIncrementButtons,
     distanceInput: new FakeElement({ ownerDocument: documentRef, value: "10" }),
     distanceLabel: new FakeElement({ ownerDocument: documentRef }),
     distanceSlider: new FakeElement({ ownerDocument: documentRef, value: "10" }),
@@ -192,6 +198,12 @@ function createElements() {
 
 function getPresetButton(elements, presetId) {
   return elements.presetButtons.find((button) => button.dataset.preset === presetId);
+}
+
+function getDistanceIncrementButton(elements, incrementKm) {
+  return elements.distanceIncrementButtons.find(
+    (button) => button.dataset.incrementKm === incrementKm
+  );
 }
 
 function enterPace(elements, minutes, seconds) {
@@ -446,6 +458,35 @@ test("mile short-distance preset buttons update the selected distance", () => {
   assert.equal(getPresetButton(elements, "0.5mi").getAttribute("aria-pressed"), "true");
 });
 
+test("distance increment buttons add to the current distance and keep the solve live", () => {
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+  enterPace(elements, "5", "0");
+  getDistanceIncrementButton(elements, "0.2").dispatch("click");
+
+  assert.equal(elements.distanceInput.value, "10.2");
+  assert.equal(elements.selectedDistance.textContent, "10.2 km");
+  assert.equal(elements.timeHours.value, "0");
+  assert.equal(elements.timeMinutes.value, "51");
+  assert.equal(elements.timeSeconds.value, "00");
+  assert.equal(
+    elements.statusMessage.textContent,
+    "Solving time from distance + movement rate."
+  );
+});
+
+test("distance increment buttons preserve the selected unit while adding meters", () => {
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+  elements.unitButtons[1].dispatch("click");
+  getDistanceIncrementButton(elements, "0.5").dispatch("click");
+
+  assert.equal(elements.distanceInput.value, "6.5244");
+  assert.equal(elements.selectedDistance.textContent, "6.5244 mi");
+});
+
 test("slider input rounds mile distances to at most two decimals", () => {
   const elements = createElements();
 
@@ -470,8 +511,8 @@ test("add split captures the current calculator values into a compact row", () =
   assert.equal(elements.splitList.children.length, 1);
   assert.equal(elements.splitEmptyState.hidden, true);
   assert.equal(getSplitMetricValue(elements.splitList.children[0], 0), "10 km");
-  assert.equal(getSplitMetricValue(elements.splitList.children[0], 1), "5:00/km");
-  assert.equal(getSplitMetricValue(elements.splitList.children[0], 2), "50:00");
+  assert.equal(getSplitMetricValue(elements.splitList.children[0], 1), "5:00 min/km");
+  assert.equal(getSplitMetricValue(elements.splitList.children[0], 2), "50m00s");
   assert.equal(elements.splitActionButton.textContent, "Add split");
 });
 
@@ -505,7 +546,7 @@ test("selecting a split loads it into the editor and dirty edits switch the acti
   elements.splitActionButton.dispatch("click");
 
   assert.equal(getSplitMetricValue(elements.splitList.children[0], 0), "12 km");
-  assert.equal(getSplitMetricValue(elements.splitList.children[0], 2), "1:00:00");
+  assert.equal(getSplitMetricValue(elements.splitList.children[0], 2), "1h00m00s");
   assert.equal(elements.splitActionButton.textContent, "Add split");
   assert.equal(
     elements.splitActionButton.classList.contains("split-action-button--save"),
@@ -578,4 +619,15 @@ test("split rows trim leading zero groups when the duration only needs seconds",
   elements.splitActionButton.dispatch("click");
 
   assert.equal(getSplitMetricValue(elements.splitList.children[0], 2), "45s");
+});
+
+test("split rows render pace with the selected unit suffix", () => {
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+  elements.unitButtons[1].dispatch("click");
+  enterTime(elements, "0", "50", "0");
+  elements.splitActionButton.dispatch("click");
+
+  assert.equal(getSplitMetricValue(elements.splitList.children[0], 1), "8:03 min/mi");
 });

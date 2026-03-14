@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  applyDistanceIncrement,
   DISTANCE_PRESETS,
   applyPresetSelection,
   applyUnitChange,
@@ -258,6 +259,23 @@ test("short mile quick-distance chips select native mile values", () => {
   assert.equal(view.distance.inputValue, "1");
   assert.equal(view.selectedDistanceLabel, "1 mi");
   assert.equal(view.distance.presetId, "1mi");
+});
+
+test("distance increments add metric distances in either unit mode", () => {
+  const kilometerView = deriveCalculatorView(
+    applyDistanceIncrement(createFormState(), 0.2)
+  );
+  const mileView = deriveCalculatorView(
+    applyDistanceIncrement(applyUnitChange(createFormState(), "mi"), 0.5)
+  );
+
+  assert.equal(kilometerView.distance.inputValue, "10.2");
+  assert.equal(kilometerView.selectedDistanceLabel, "10.2 km");
+  assert.equal(kilometerView.distance.presetId, "custom");
+
+  assert.equal(mileView.distance.inputValue, "6.5244");
+  assert.equal(mileView.selectedDistanceLabel, "6.5244 mi");
+  assert.equal(mileView.distance.presetId, "custom");
 });
 
 test("mile half and marathon presets keep compact labels while selecting mile distances", () => {

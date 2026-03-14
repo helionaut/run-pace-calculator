@@ -235,6 +235,13 @@ body {
   gap: 3px;
 }
 
+.distance-adjustments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
 .distance-card__body {
   display: grid;
   gap: 5px;
@@ -413,6 +420,14 @@ input[aria-invalid="true"] {
 .segmented__button,
 .chip-button {
   background: rgba(255, 255, 255, 0.9);
+}
+
+.chip-button--increment {
+  min-height: 28px;
+  padding-inline: 9px;
+  border-color: rgba(187, 93, 42, 0.18);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 236, 221, 0.94));
 }
 
 .ghost-button {

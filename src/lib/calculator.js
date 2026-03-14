@@ -1216,6 +1216,29 @@ export function updateDistanceInput(state, distance) {
   });
 }
 
+export function applyDistanceIncrement(state, incrementKm) {
+  if (!Number.isFinite(incrementKm) || incrementKm <= 0) {
+    return state;
+  }
+
+  const calculation = deriveCalculation(state);
+  const baseDistanceKm =
+    Number.isFinite(calculation.displayDistanceKm) && calculation.displayDistanceKm > 0
+      ? calculation.displayDistanceKm
+      : state.canonicalDistanceKm;
+
+  if (!Number.isFinite(baseDistanceKm) || baseDistanceKm <= 0) {
+    return state;
+  }
+
+  const nextDistanceKm = Math.min(baseDistanceKm + incrementKm, MAX_DISTANCE);
+
+  return updateDistanceInput(
+    state,
+    formatDistanceInputValue(nextDistanceKm, state.unit)
+  );
+}
+
 export function updateDistanceSlider(state, distance) {
   const parsed = parseDistanceInput(distance, {
     showRequiredError: false

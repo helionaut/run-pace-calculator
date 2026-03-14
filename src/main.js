@@ -1,4 +1,5 @@
 import {
+  applyDistanceIncrement,
   applyPresetSelection,
   applyUnitChange,
   createFormState,
@@ -176,7 +177,7 @@ function formatSplitPaceLabel(paceInputValues, unit) {
   const minuteLabel = minutes === null ? "--" : String(minutes);
   const secondLabel = seconds === null ? "--" : String(seconds).padStart(2, "0");
 
-  return `${minuteLabel}:${secondLabel}/${unit}`;
+  return `${minuteLabel}:${secondLabel} min/${unit}`;
 }
 
 function formatSplitTimeLabel(timeInputValues) {
@@ -189,11 +190,11 @@ function formatSplitTimeLabel(timeInputValues) {
   }
 
   if (hours > 0) {
-    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    return `${hours}h${String(minutes).padStart(2, "0")}m${String(seconds).padStart(2, "0")}s`;
   }
 
   if (minutes > 0) {
-    return `${minutes}:${String(seconds).padStart(2, "0")}`;
+    return `${minutes}m${String(seconds).padStart(2, "0")}s`;
   }
 
   return `${seconds}s`;
@@ -616,6 +617,7 @@ export function getElements(root) {
   return {
     distanceCard: root.querySelector("#distance-card"),
     distanceError: root.querySelector("#distance-error"),
+    distanceIncrementButtons: root.querySelectorAll("[data-distance-increment-button]"),
     distanceInput,
     distanceLabel: root.querySelector("#distance-label"),
     distanceSlider: root.querySelector("#distance-slider"),
@@ -812,6 +814,18 @@ export function createCalculatorApp(elements) {
   for (const button of elements.presetButtons) {
     button.addEventListener("click", () => {
       setStateAndRender(applyPresetSelection(getState(), button.dataset.preset));
+    });
+  }
+
+  for (const button of elements.distanceIncrementButtons ?? []) {
+    button.addEventListener("click", () => {
+      const incrementKm = Number(button.dataset.incrementKm);
+
+      if (!Number.isFinite(incrementKm) || incrementKm <= 0) {
+        return;
+      }
+
+      setStateAndRender(applyDistanceIncrement(getState(), incrementKm));
     });
   }
 
