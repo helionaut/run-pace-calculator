@@ -1,29 +1,25 @@
-<!-- PR_TITLE: Match pace first-entry autofill to time input -->
+<!-- PR_TITLE: Add short-distance quick presets for km and mile modes -->
 
 ## Summary
 
-- make the pace minutes/seconds inputs auto-fill untouched zero values on the
-  first edit, matching the existing finish-time input behavior
-- keep the change in the UI event layer so calculator parsing, validation, URL
-  state, and last-valid blur normalization keep their current behavior
-- add a regression for the new pace autofill behavior and update the
-  incomplete-pace blur test to cover a manually cleared seconds field
+- add quick distance chips for `100m`, `500m`, and `1 km` in kilometer mode
+- add quick distance chips for `0.1 mi`, `0.5 mi`, and `1 mi` in mile mode
+- expand the preset strip tests and tighten the mobile chip spacing so the
+  larger button set stays compact on small screens
 
 ## Testing
 
 - [x] `npm test`
 - [x] `npm run build`
 - [x] `npm run check`
-- [x] `node --test tests/calculator.test.js tests/main.test.js`
+- [x] `node --test tests/calculator.test.js tests/main.test.js tests/url-state.test.js`
 
 ## Risks
 
-- Low: the shared first-entry autofill helper now drives both pace and time
-  groups, so any future grouped-input changes should keep their default zero
-  values aligned with the field names
-- Low: first-entry edits to pace seconds now auto-fill pace minutes with `0`,
-  matching the existing time-group behavior even though the issue example
-  focused on pace minutes first
+- Low: the new mile presets intentionally use native mile distances, so they
+  remain separate from the existing converted-kilometer defaults
+- Low: the preset strip now wraps into an extra row on narrow screens, so
+  future label length increases could require another responsive pass
 
 ## Checklist
 
@@ -33,10 +29,11 @@
 
 Preview notes:
 
-- Desktop built-preview screenshot reviewed after typing `5` into pace minutes;
-  pace seconds auto-filled to `00`, derived finish time showed `0:50:00`, and
-  the calculator still fit the one-screen desktop layout with no overflow.
-- Mobile built-preview screenshot reviewed after the same interaction; pace
-  seconds auto-filled to `00`, derived finish time showed `0:50:00`, and the
-  card stack still fit the intended one-screen mobile presentation with no
-  horizontal overflow.
+- Desktop km-mode screenshot reviewed against the built app with the new
+  `100m`, `500m`, `1 km`, `5K`, `10K`, `Half`, and `Marathon` chips.
+- Desktop mile-mode screenshot reviewed against the built app with the new
+  `0.1 mi`, `0.5 mi`, `1 mi`, `5 mi`, `10 mi`, `Half Marathon`, and
+  `Marathon` chips.
+- Mobile km-mode and mile-mode screenshots reviewed at a `390px` viewport.
+- The mobile viewport check confirmed `scrollWidth === innerWidth`, and the
+  preset row plus projection strip stayed within the viewport.

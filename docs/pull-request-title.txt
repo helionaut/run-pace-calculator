@@ -1,1 +1,1 @@
-Match pace first-entry autofill to time input
+Add short-distance quick presets for km and mile modes

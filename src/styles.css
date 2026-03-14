@@ -516,4 +516,14 @@ input[aria-invalid="true"] {
   .tool-bar__heading {
     padding-top: 3px;
   }
+
+  .preset-row {
+    gap: 3px;
+  }
+
+  .preset-row .chip-button {
+    padding: 6px 9px;
+    font-size: 0.58rem;
+    letter-spacing: 0.12em;
+  }
 }
