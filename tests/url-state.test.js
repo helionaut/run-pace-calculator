@@ -141,51 +141,31 @@ class FakeDocument {
 function createEnvironment(search = "") {
   const document = new FakeDocument();
   const ids = [
+    "distance-card",
     "distance-error",
     "distance-input",
     "distance-label",
     "distance-slider",
-    "pace-card",
-    "pace-driver-button",
     "pace-error",
     "pace-label",
-    "pace-lock-button",
     "pace-minutes",
-    "pace-secondary",
     "pace-seconds",
-    "pace-state",
-    "pace-editor",
-    "pace-value",
     "projection-5k",
     "projection-10k",
     "projection-half",
     "projection-marathon",
+    "rate-card",
     "reset-button",
     "selected-distance",
-    "split-copy",
-    "split-heading",
-    "split-rows",
-    "speed-card",
-    "speed-driver-button",
     "speed-error",
     "speed-input",
     "speed-label",
-    "speed-secondary",
-    "speed-state",
-    "speed-editor",
-    "speed-value",
     "status-message",
     "time-card",
-    "time-driver-button",
     "time-error",
     "time-hours",
-    "time-lock-button",
     "time-minutes",
-    "time-secondary",
-    "time-seconds",
-    "time-state",
-    "time-editor",
-    "time-value"
+    "time-seconds"
   ];
 
   for (const id of ids) {
@@ -249,7 +229,6 @@ function enterPace(elements, minutes, seconds) {
 }
 
 function enterTime(elements, hours, minutes, seconds) {
-  elements["time-driver-button"].emit("click");
   elements["time-hours"].value = hours;
   elements["time-hours"].emit("input");
   elements["time-minutes"].value = minutes;
@@ -290,7 +269,7 @@ async function loadApp(t, search = "") {
 test("main restores a valid calculator scenario from the query string on load", async (t) => {
   const app = await loadApp(
     t,
-    "?metric=pace&preset=custom&unit=mi&distance=6.5&pm=8&ps=15"
+    "?solve=distance-rate&preset=custom&unit=mi&distance=6.5&rate=pace&pm=8&ps=15"
   );
 
   assert.equal(app.elements["distance-input"].value, "6.5");
@@ -302,7 +281,7 @@ test("main restores a valid calculator scenario from the query string on load", 
   assert.equal(app.elements["time-seconds"].value, "38");
   assert.equal(
     app.window.location.search,
-    "?metric=pace&preset=custom&unit=mi&distance=6.5&pm=8&ps=15"
+    "?solve=distance-rate&preset=custom&unit=mi&distance=6.5&rate=pace&pm=8&ps=15"
   );
   assert.equal(app.window.history.calls.length, 0);
 });
@@ -314,24 +293,23 @@ test("main updates the URL after valid edits without reloading the page", async 
 
   assert.equal(
     app.window.location.search,
-    "?metric=pace&preset=10k&unit=km&pm=5&ps=0"
+    "?solve=distance-rate&preset=10k&unit=km&rate=pace&pm=5&ps=0"
   );
   assert.match(
     app.window.history.calls.at(-1),
-    /\?metric=pace&preset=10k&unit=km&pm=5&ps=0$/
+    /\?solve=distance-rate&preset=10k&unit=km&rate=pace&pm=5&ps=0$/
   );
   assert.equal(app.window.reloadCount, 0);
 });
 
-test("main keeps lock state in the URL as distance changes", async (t) => {
+test("main keeps the latest source pair in the URL as distance changes", async (t) => {
   const app = await loadApp(t);
 
   enterTime(app.elements, "0", "50", "0");
-  app.elements["time-lock-button"].emit("click");
 
   assert.equal(
     app.window.location.search,
-    "?metric=time&preset=10k&unit=km&th=0&tm=50&ts=0&lock=time"
+    "?solve=distance-time&preset=10k&unit=km&th=0&tm=50&ts=0"
   );
 
   app.elements["distance-slider"].value = "5";
@@ -339,7 +317,7 @@ test("main keeps lock state in the URL as distance changes", async (t) => {
 
   assert.equal(
     app.window.location.search,
-    "?metric=time&preset=5k&unit=km&th=0&tm=50&ts=0&lock=time"
+    "?solve=time-distance&preset=5k&unit=km&th=0&tm=50&ts=0"
   );
   assert.equal(app.window.reloadCount, 0);
 });
@@ -347,7 +325,7 @@ test("main keeps lock state in the URL as distance changes", async (t) => {
 test("main clears malformed query state back to the default calculator", async (t) => {
   const app = await loadApp(
     t,
-    "?metric=speed&preset=10k&unit=km&speed=12&lock=time"
+    "?solve=distance-rate&unit=km&speed=12&rate=pace"
   );
 
   assert.equal(app.window.location.search, "");
@@ -358,7 +336,10 @@ test("main clears malformed query state back to the default calculator", async (
 });
 
 test("main reset clears a valid deep link back to a clean URL", async (t) => {
-  const app = await loadApp(t, "?metric=pace&preset=10k&unit=km&pm=5&ps=0");
+  const app = await loadApp(
+    t,
+    "?solve=distance-rate&preset=10k&unit=km&rate=pace&pm=5&ps=0"
+  );
 
   app.elements["reset-button"].emit("click");
 
