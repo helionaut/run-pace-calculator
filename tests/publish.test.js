@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const publishScript = path.join(repoRoot, "scripts", "create_pr.sh");
+const simpleDraftBody = "## Summary\n\n- fixture\n";
 
 function run(command, args) {
   const result = spawnSync(command, args, {
@@ -54,10 +55,10 @@ function deriveExpectedTitle(branch) {
   return slug.charAt(0).toUpperCase() + slug.slice(1);
 }
 
-test("create_pr.sh dry run uses a title derived from the current branch", () => {
+test("create_pr.sh dry run uses the repo draft title metadata when present", () => {
   const branch = resolveCurrentBranch();
   const output = run(publishScript, ["--dry-run"]);
-  const expectedTitle = deriveExpectedTitle(branch);
+  const expectedTitle = "Add confidence-focused result presentation and input provenance styling";
 
   assert.match(output, new RegExp(`Would create a PR with: gh pr create --head ${branch} --title "${expectedTitle}"`));
   assert.doesNotMatch(output, /Build the first Run Pace Calculator slice/);
@@ -85,7 +86,7 @@ test("create_pr.sh dry run uses GITHUB_HEAD_REF when the checkout is detached", 
   await writeFile(path.join(repoDir, "README.md"), "# fixture repo\n");
   await writeFile(
     path.join(docsDir, "pull-request-draft.md"),
-    await readFile(path.join(repoRoot, "docs", "pull-request-draft.md"), "utf8")
+    simpleDraftBody
   );
   await writeFile(
     path.join(bootstrapDir, "project.json"),
@@ -154,7 +155,7 @@ test("create_pr.sh records combined blocker details in the fallback handoff summ
   await writeFile(path.join(repoDir, "README.md"), "# fixture repo\n");
   await writeFile(
     path.join(docsDir, "pull-request-draft.md"),
-    await readFile(path.join(repoRoot, "docs", "pull-request-draft.md"), "utf8")
+    simpleDraftBody
   );
   await writeFile(
     path.join(bootstrapDir, "project.json"),

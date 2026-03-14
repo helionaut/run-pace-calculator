@@ -31,6 +31,10 @@ function buildState(overrides = {}, inputOverrides = {}) {
   };
 }
 
+function getBadgeLabels(item) {
+  return item.badges.map((badge) => badge.label);
+}
+
 test("blank state stays empty without showing required-field errors", () => {
   const view = deriveCalculatorView(createFormState());
 
@@ -38,6 +42,10 @@ test("blank state stays empty without showing required-field errors", () => {
   assert.equal(view.display, null);
   assert.equal(view.errors.distance, null);
   assert.equal(view.errors.finish, null);
+  assert.deepEqual(view.inputProvenance.distance.badges, []);
+  assert.deepEqual(view.inputProvenance.finish.badges, []);
+  assert.deepEqual(view.inputProvenance.pace.badges, []);
+  assert.deepEqual(view.inputProvenance.speed.badges, []);
 });
 
 test("pace mode calculates pace and speed from distance plus finish time", () => {
@@ -71,6 +79,51 @@ test("pace mode calculates pace and speed from distance plus finish time", () =>
   assert.equal(view.display.splitRows.at(-1).isPartial, false);
   assert.equal(view.errors.distance, null);
   assert.equal(view.errors.finish, null);
+});
+
+test("pace mode exposes derived results and the locked finish time", () => {
+  const view = deriveCalculatorView(
+    buildState(
+      { mode: MODES.PACE },
+      {
+        distance: "10",
+        finishHours: "0",
+        finishMinutes: "50",
+        finishSeconds: "0"
+      }
+    )
+  );
+
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.primary),
+    ["Derived"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.selectedPace),
+    ["Derived"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.selectedSpeed),
+    ["Derived"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.distance),
+    ["Entered"]
+  );
+  assert.equal(view.display.lockedSummary.label, "Locked finish time");
+  assert.equal(view.display.lockedSummary.value, "00:50:00");
+  assert.deepEqual(
+    getBadgeLabels(view.display.lockedSummary.provenance),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.inputProvenance.finish),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.inputProvenance.distance),
+    ["Entered"]
+  );
 });
 
 test("finish mode calculates finish time from distance plus pace", () => {
@@ -256,6 +309,215 @@ test("split rows update immediately when finish time, pace, speed, and distance 
   assert.equal(updatedDistanceView.display.splitRows.at(-1).finishLabel, "01:00:00");
 });
 
+test("convert speed mode exposes entered speed and derived pace without distance", () => {
+  const view = deriveCalculatorView(
+    buildState(
+      {
+        mode: MODES.CONVERT,
+        convertSource: CONVERT_SOURCES.SPEED
+      },
+      {
+        speed: "12"
+      }
+    )
+  );
+
+  assert.equal(view.resultState, "current");
+  assert.equal(view.display.primaryLabel, "Pace");
+  assert.equal(view.display.primaryValue, "05:00 /km");
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.primary),
+    ["Derived"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.selectedPace),
+    ["Derived"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.selectedSpeed),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.distance),
+    ["Not used"]
+  );
+  assert.equal(view.display.lockedSummary.label, "Locked speed");
+  assert.equal(view.display.lockedSummary.value, "12.00 km/h");
+  assert.deepEqual(
+    getBadgeLabels(view.display.lockedSummary.provenance),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.inputProvenance.speed),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(view.inputProvenance.distance.badges, []);
+});
+
+test("convert pace mode exposes entered pace and derived speed without distance", () => {
+  const view = deriveCalculatorView(
+    buildState(
+      {
+        mode: MODES.CONVERT,
+        convertSource: CONVERT_SOURCES.PACE
+      },
+      {
+        paceMinutes: "5",
+        paceSeconds: "0"
+      }
+    )
+  );
+
+  assert.equal(view.resultState, "current");
+  assert.equal(view.display.primaryLabel, "Speed");
+  assert.equal(view.display.primaryValue, "12.00 km/h");
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.primary),
+    ["Derived"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.selectedPace),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.selectedSpeed),
+    ["Derived"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.distance),
+    ["Not used"]
+  );
+  assert.equal(view.display.lockedSummary.label, "Locked pace");
+  assert.equal(view.display.lockedSummary.value, "05:00 /km");
+  assert.deepEqual(
+    getBadgeLabels(view.display.lockedSummary.provenance),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.inputProvenance.pace),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(view.inputProvenance.distance.badges, []);
+});
+
+test("finish mode exposes entered versus derived provenance and the locked pace", () => {
+  const view = deriveCalculatorView(
+    buildState(
+      { mode: MODES.FINISH },
+      {
+        distance: "10",
+        paceMinutes: "5",
+        paceSeconds: "0"
+      }
+    )
+  );
+
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.primary),
+    ["Derived"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.selectedPace),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.selectedSpeed),
+    ["Derived"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.distance),
+    ["Entered"]
+  );
+  assert.equal(view.display.lockedSummary.label, "Locked pace");
+  assert.equal(view.display.lockedSummary.value, "05:00 /km");
+  assert.deepEqual(
+    getBadgeLabels(view.display.lockedSummary.provenance),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.inputProvenance.pace),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.inputProvenance.distance),
+    ["Entered"]
+  );
+});
+
+test("finish mode allows long pace minutes without dropping current provenance", () => {
+  const view = deriveCalculatorView(
+    buildState(
+      { mode: MODES.FINISH },
+      {
+        distance: "5",
+        paceMinutes: "75",
+        paceSeconds: "0"
+      }
+    )
+  );
+
+  assert.equal(view.resultState, "current");
+  assert.equal(view.errors.pace, null);
+  assert.equal(view.display.primaryLabel, "Finish time");
+  assert.equal(view.display.primaryValue, "06:15:00");
+  assert.equal(view.display.selectedPace, "75:00 /km");
+  assert.equal(view.display.selectedSpeed, "0.80 km/h");
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.primary),
+    ["Derived"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.selectedPace),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.lockedSummary.provenance),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.inputProvenance.pace),
+    ["Entered", "Locked"]
+  );
+});
+
+test("convert pace mode allows long pace minutes without falling stale", () => {
+  const view = deriveCalculatorView(
+    buildState(
+      {
+        mode: MODES.CONVERT,
+        convertSource: CONVERT_SOURCES.PACE
+      },
+      {
+        paceMinutes: "75",
+        paceSeconds: "0"
+      }
+    )
+  );
+
+  assert.equal(view.resultState, "current");
+  assert.equal(view.errors.pace, null);
+  assert.equal(view.display.primaryLabel, "Speed");
+  assert.equal(view.display.primaryValue, "0.80 km/h");
+  assert.equal(view.display.selectedPace, "75:00 /km");
+  assert.equal(view.display.selectedSpeed, "0.80 km/h");
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.primary),
+    ["Derived"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.selectedPace),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.lockedSummary.provenance),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.inputProvenance.pace),
+    ["Entered", "Locked"]
+  );
+});
+
 test("incomplete structured finish time blocks a fresh calculation", () => {
   const view = deriveCalculatorView(
     buildState(
@@ -337,6 +599,23 @@ test("stale mode preserves the last valid result when a required field becomes i
 
   assert.equal(staleView.resultState, "stale");
   assert.equal(staleView.display.primaryValue, validView.display.primaryValue);
+  assert.match(
+    staleView.display.primaryMeta,
+    /Last valid result derived from locked finish time/
+  );
+  assert.deepEqual(
+    getBadgeLabels(staleView.display.provenance.primary),
+    ["Derived", "Last valid"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(staleView.display.lockedSummary.provenance),
+    ["Entered", "Locked", "Last valid"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(staleView.inputProvenance.distance),
+    ["Entered"]
+  );
+  assert.deepEqual(staleView.inputProvenance.finish.badges, []);
   assert.equal(
     staleView.errors.finish,
     "Finish seconds must stay between 0 and 59."
@@ -366,6 +645,83 @@ test("convert mode can mark the last answer stale after source changes", () => {
   assert.equal(staleView.resultState, "stale");
   assert.equal(staleView.display.primaryLabel, "Speed");
   assert.equal(staleView.errors.speed, "Enter a speed.");
+});
+
+test("stale input provenance does not relabel blank current fields as entered", () => {
+  const finishState = buildState(
+    {
+      mode: MODES.FINISH
+    },
+    {
+      distance: "10",
+      paceMinutes: "5",
+      paceSeconds: "0"
+    }
+  );
+  const validView = deriveCalculatorView(finishState);
+  const stalePaceModeView = deriveCalculatorView(
+    buildState(
+      {
+        mode: MODES.PACE
+      },
+      {
+        distance: "10",
+        finishHours: "",
+        finishMinutes: "",
+        finishSeconds: ""
+      }
+    ),
+    validView.currentResult
+  );
+  const speedSourceState = applyConvertSourceChange(
+    buildState(
+      {
+        mode: MODES.CONVERT,
+        convertSource: CONVERT_SOURCES.PACE
+      },
+      {
+        paceMinutes: "5",
+        paceSeconds: "0"
+      }
+    ),
+    CONVERT_SOURCES.SPEED
+  );
+  const staleConvertView = deriveCalculatorView(
+    speedSourceState,
+    deriveCalculatorView(
+      buildState(
+        {
+          mode: MODES.CONVERT,
+          convertSource: CONVERT_SOURCES.PACE
+        },
+        {
+          paceMinutes: "5",
+          paceSeconds: "0"
+        }
+      )
+    ).currentResult
+  );
+
+  assert.equal(stalePaceModeView.resultState, "stale");
+  assert.equal(stalePaceModeView.display.lockedSummary.label, "Locked pace");
+  assert.deepEqual(
+    getBadgeLabels(stalePaceModeView.display.lockedSummary.provenance),
+    ["Entered", "Locked", "Last valid"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(stalePaceModeView.inputProvenance.finish),
+    []
+  );
+  assert.deepEqual(stalePaceModeView.inputProvenance.pace.badges, []);
+
+  assert.equal(staleConvertView.resultState, "stale");
+  assert.equal(staleConvertView.display.lockedSummary.label, "Locked pace");
+  assert.deepEqual(
+    getBadgeLabels(staleConvertView.display.lockedSummary.provenance),
+    ["Entered", "Locked", "Last valid"]
+  );
+  assert.deepEqual(staleConvertView.inputProvenance.speed.badges, []);
+  assert.deepEqual(staleConvertView.inputProvenance.pace.badges, []);
 });
 
 test("reset clears editable fields and results while preserving mode, unit, and convert source", () => {

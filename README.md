@@ -181,8 +181,14 @@ git -C /path/to/repo fetch .handoff/<issue-key>/<bundle-name>.bundle <branch>:<b
 git -C /path/to/repo switch <branch>
 ```
 
-If you already have a checkout of this feature branch with the helper scripts
-available, you can also use
+Every generated handoff package also includes a shortcut helper:
+
+```sh
+.handoff/<issue-key>/resume-on-another-machine.sh /path/to/repo
+```
+
+If you already have a checkout of this feature branch with the tracked helper
+scripts available, you can also use
 `./scripts/import_bundle.sh <bundle-path> <target-repo-dir>`.
 
 If you only want the raw branch bundle without the full manifest package:

@@ -40,6 +40,8 @@ async function writeExecutable(filePath, content) {
   await chmod(filePath, 0o755);
 }
 
+const simpleDraftBody = "## Summary\n\n- fixture\n";
+
 function deriveExpectedTitle(branch) {
   const branchName = branch.split("/").at(-1) ?? branch;
   const issueMatch = /^[A-Za-z]+-\d+-(.+)$/.exec(branchName);
@@ -113,7 +115,7 @@ test("imported bundle can run pr:dry-run from a fresh main clone", async () => {
   );
   await writeFile(
     path.join(docsDir, "pull-request-draft.md"),
-    await readFile(path.join(repoRoot, "docs", "pull-request-draft.md"), "utf8")
+    simpleDraftBody
   );
   await writeFile(
     path.join(bootstrapDir, "project.json"),

@@ -58,16 +58,103 @@ test("validation text and 320 px layout safeguards are present in the shipped fi
     html,
     /id="status-message"[\s\S]*role="status"[\s\S]*aria-live="polite"[\s\S]*aria-atomic="true"/
   );
+  assert.match(html, /id="distance-cluster-provenance"/);
+  assert.match(html, /id="finish-cluster-provenance"/);
+  assert.match(html, /id="pace-cluster-provenance"/);
+  assert.match(html, /id="speed-cluster-provenance"/);
+  assert.match(html, /id="primary-provenance"/);
+  assert.match(html, /id="selected-pace-provenance"/);
+  assert.match(html, /id="selected-speed-provenance"/);
+  assert.match(html, /id="alternate-pace-provenance"/);
+  assert.match(html, /id="alternate-speed-provenance"/);
+  assert.match(html, /id="locked-value"/);
+  assert.match(html, /id="locked-provenance"/);
+  assert.match(html, /id="distance-provenance"/);
   assert.match(html, /<h3 id="split-heading">Selected-distance splits<\/h3>/);
   assert.match(html, /id="split-copy"/);
   assert.match(html, /<tbody id="split-rows">[\s\S]*?Enter valid values to calculate\./);
   assert.match(html, /<table class="split-table" aria-describedby="split-copy">/);
   assert.match(css, /input\[aria-invalid="true"\],\s*select\[aria-invalid="true"\]/);
+  assert.match(css, /\.cluster-badges/);
+  assert.match(css, /\.provenance-badges/);
+  assert.match(css, /\.provenance-badge--locked/);
+  assert.match(css, /\.provenance-badge--stale/);
+  assert.match(css, /\.sr-only/);
   assert.match(css, /table\s*{\s*width: 100%;\s*table-layout: fixed;/);
   assert.match(css, /\.table-shell--compact\s*{\s*max-height: 320px;\s*overflow: auto;/);
   assert.match(css, /overflow-wrap: anywhere;/);
   assert.match(
     css,
     /@media \(max-width: 420px\)[\s\S]*?\.page-shell\s*{\s*padding: 14px 12px 24px;/
+  );
+});
+
+test("interactive inputs reference provenance text for screen readers", async () => {
+  const html = await readFixture(htmlPath);
+
+  assert.match(
+    html,
+    /id="distance-input"[\s\S]*?aria-describedby="distance-cluster-provenance distance-hint distance-error"/
+  );
+  assert.match(
+    html,
+    /id="finish-hours"[\s\S]*?aria-describedby="finish-cluster-provenance finish-error"/
+  );
+  assert.match(
+    html,
+    /id="finish-minutes"[\s\S]*?aria-describedby="finish-cluster-provenance finish-error"/
+  );
+  assert.match(
+    html,
+    /id="finish-seconds"[\s\S]*?aria-describedby="finish-cluster-provenance finish-error"/
+  );
+  assert.match(
+    html,
+    /id="pace-minutes"[\s\S]*?aria-describedby="pace-cluster-provenance pace-copy pace-error"/
+  );
+  assert.match(
+    html,
+    /id="pace-seconds"[\s\S]*?aria-describedby="pace-cluster-provenance pace-copy pace-error"/
+  );
+  assert.match(
+    html,
+    /id="speed-input"[\s\S]*?aria-describedby="speed-cluster-provenance speed-hint speed-error"/
+  );
+});
+
+test("result summary values reference provenance and supporting copy for screen readers", async () => {
+  const html = await readFixture(htmlPath);
+
+  assert.match(
+    html,
+    /id="primary-value"[\s\S]*?aria-labelledby="primary-label"[\s\S]*?aria-describedby="primary-provenance primary-meta"/
+  );
+  assert.match(
+    html,
+    /id="selected-pace-value"[\s\S]*?aria-describedby="selected-pace-provenance"/
+  );
+  assert.match(
+    html,
+    /id="selected-speed-value"[\s\S]*?aria-describedby="selected-speed-provenance"/
+  );
+  assert.match(
+    html,
+    /id="alternate-pace-value"[\s\S]*?aria-describedby="alternate-pace-provenance"/
+  );
+  assert.match(
+    html,
+    /id="alternate-speed-value"[\s\S]*?aria-describedby="alternate-speed-provenance"/
+  );
+  assert.match(
+    html,
+    /id="locked-value"[\s\S]*?aria-labelledby="locked-label"[\s\S]*?aria-describedby="locked-provenance locked-meta"/
+  );
+  assert.match(
+    html,
+    /id="distance-context-label">Distance context<\/p>/
+  );
+  assert.match(
+    html,
+    /id="selected-distance"[\s\S]*?aria-labelledby="distance-context-label"[\s\S]*?aria-describedby="distance-provenance result-note"/
   );
 });
