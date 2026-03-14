@@ -21,8 +21,7 @@
           <div class="tool-bar__top">
             <div class="tool-bar__heading">
               <div class="title-block">
-                <p class="eyebrow">Run Pace</p>
-                <h1 id="app-title">Run Pace</h1>
+                <h1 id="app-title">Run Pace Calculator</h1>
               </div>
 
               <p
@@ -170,7 +169,7 @@
             <div class="metric-card__head">
               <div class="metric-card__title">
                 <p class="eyebrow">Movement Rate</p>
-                <h2>Pace and Speed</h2>
+                <h2>Pace + Speed</h2>
               </div>
             </div>
 
@@ -220,7 +219,7 @@
             <div class="metric-card__head">
               <div class="metric-card__title">
                 <p class="eyebrow">Time</p>
-                <h2>Finish Time</h2>
+                <h2>Time</h2>
               </div>
             </div>
 
@@ -286,6 +285,29 @@
             <span>Mar</span>
             <strong id="projection-marathon">--:--:--</strong>
           </div>
+        </section>
+
+        <section class="split-builder" aria-labelledby="split-builder-title">
+          <div class="split-builder__head">
+            <div class="split-builder__title">
+              <h2 id="split-builder-title">Workout splits</h2>
+              <p class="split-builder__summary" id="split-summary">No splits yet</p>
+            </div>
+
+            <button
+              class="split-action-button"
+              id="split-action-button"
+              type="button"
+            >
+              Add split
+            </button>
+          </div>
+
+          <p class="split-empty-state" id="split-empty-state">
+            Add the current calculator values to build a workout.
+          </p>
+
+          <ol class="split-list" id="split-list" aria-live="polite"></ol>
         </section>
       </section>
     </main>

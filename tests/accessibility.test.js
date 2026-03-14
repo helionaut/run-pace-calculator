@@ -42,6 +42,10 @@ test("calculator markup keeps the compact three-value flow in DOM order", async 
   assert.match(html, /id="rate-card"/);
   assert.match(html, /id="time-card"/);
   assert.match(html, /class="projection-strip"/);
+  assert.match(html, /id="split-builder-title"/);
+  assert.match(html, /id="split-action-button"/);
+  assert.match(html, /id="split-summary"/);
+  assert.match(html, /id="split-list"/);
   assert.match(html, /id="distance-slider"[\s\S]*type="range"/);
   assert.match(html, /<span id="pace-label">Pace \(min\/km\)<\/span>/);
   assert.match(html, /<span id="speed-label">Speed \(km\/h\)<\/span>/);
@@ -79,6 +83,9 @@ test("status messaging, error affordances, and responsive safeguards are present
   assert.match(css, /\.rate-grid\s*{/);
   assert.match(css, /\.time-grid\s*{/);
   assert.match(css, /\.projection-strip\s*{/);
+  assert.match(css, /\.split-builder\s*{/);
+  assert.match(css, /\.split-card\s*{[\s\S]*display:\s*flex;/);
+  assert.match(css, /\.split-card__actions\s*{[\s\S]*display:\s*flex;/);
   assert.match(css, /\.status-message:empty\s*{/);
   assert.match(css, /min-height:\s*100dvh/);
   assert.match(css, /@media \(max-width: 540px\)/);

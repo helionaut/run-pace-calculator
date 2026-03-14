@@ -1,39 +1,45 @@
-<!-- PR_TITLE: Add short-distance quick presets for km and mile modes -->
+<!-- PR_TITLE: Add a compact workout split builder below the calculator -->
 
 ## Summary
 
-- add quick distance chips for `100m`, `500m`, and `1 km` in kilometer mode
-- add quick distance chips for `0.1 mi`, `0.5 mi`, and `1 mi` in mile mode
-- expand the preset strip tests and tighten the mobile chip spacing so the
-  larger button set stays compact on small screens
+- add a workout split builder below the calculator with dense single-line split
+  rows that show distance, pace, and time together
+- support adding the current calculator state as a split, then selecting,
+  copying, deleting, and saving edits back into an existing split
+- tighten headings, padding, and spacing so the extra planning UI fits cleanly
+  on mobile and desktop without horizontal overflow
 
 ## Testing
 
 - [x] `npm test`
 - [x] `npm run build`
 - [x] `npm run check`
-- [x] `node --test tests/calculator.test.js tests/main.test.js tests/url-state.test.js`
+- [x] Built-preview desktop/mobile verification via a temporary Puppeteer run
+  against `dist`
 
 ## Risks
 
-- Low: the new mile presets intentionally use native mile distances, so they
-  remain separate from the existing converted-kilometer defaults
-- Low: the preset strip now wraps into an extra row on narrow screens, so
-  future label length increases could require another responsive pass
+- Low: split plans are intentionally in-memory only for now, so refreshing the
+  page still resets the lower split list even though the main calculator state
+  remains shareable via the URL
+- Low: split rows are rendered from saved calculator snapshots, so future
+  calculator-state shape changes need to preserve that snapshot compatibility
 
 ## Checklist
 
 - [x] Scope matches the linked Linear issue
-- [ ] Docs updated if behavior or workflow changed
+- [x] Docs updated if behavior or workflow changed
 - [x] Screenshots or preview notes added when UI changed
 
 Preview notes:
 
-- Desktop km-mode screenshot reviewed against the built app with the new
-  `100m`, `500m`, `1 km`, `5K`, `10K`, `Half`, and `Marathon` chips.
-- Desktop mile-mode screenshot reviewed against the built app with the new
-  `0.1 mi`, `0.5 mi`, `1 mi`, `5 mi`, `10 mi`, `Half Marathon`, and
-  `Marathon` chips.
-- Mobile km-mode and mile-mode screenshots reviewed at a `390px` viewport.
-- The mobile viewport check confirmed `scrollWidth === innerWidth`, and the
-  preset row plus projection strip stayed within the viewport.
+- Desktop built-preview screenshot reviewed with two saved workout splits; both
+  split rows rendered as dense single-line rows with inline actions, while
+  distance, pace, and time all stayed visible without horizontal overflow.
+- Mobile built-preview screenshot reviewed in the selected-split edit state;
+  the bottom action switched to `Save split` with the save styling, and both
+  saved split rows still rendered as dense single-line rows with inline actions
+  and no horizontal overflow at 390px width.
+- The screenshots matched the issue request: the calculator stayed compact
+  while the new split-builder flow supported add/save/edit semantics below the
+  main calculator.

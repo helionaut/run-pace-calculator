@@ -1,1 +1,1 @@
-Add short-distance quick presets for km and mile modes
+Add a compact workout split builder below the calculator
