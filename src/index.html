@@ -334,7 +334,14 @@
                 <p class="stat-card__label" id="primary-label">Result</p>
                 <div class="provenance-badges" id="primary-provenance"></div>
               </div>
-              <p class="stat-card__value" id="primary-value">--</p>
+              <p
+                class="stat-card__value"
+                id="primary-value"
+                aria-labelledby="primary-label"
+                aria-describedby="primary-provenance primary-meta"
+              >
+                --
+              </p>
               <p class="stat-card__meta" id="primary-meta">
                 Enter valid values to calculate.
               </p>
@@ -348,14 +355,14 @@
                     <dt id="selected-pace-label">Pace /km</dt>
                     <div class="provenance-badges provenance-badges--inline" id="selected-pace-provenance"></div>
                   </div>
-                  <dd id="selected-pace-value">--</dd>
+                  <dd id="selected-pace-value" aria-describedby="selected-pace-provenance">--</dd>
                 </div>
                 <div>
                   <div class="stat-pair__heading">
                     <dt id="selected-speed-label">Speed km/h</dt>
                     <div class="provenance-badges provenance-badges--inline" id="selected-speed-provenance"></div>
                   </div>
-                  <dd id="selected-speed-value">--</dd>
+                  <dd id="selected-speed-value" aria-describedby="selected-speed-provenance">--</dd>
                 </div>
               </dl>
             </article>
@@ -368,14 +375,14 @@
                     <dt id="alternate-pace-label">Pace /mi</dt>
                     <div class="provenance-badges provenance-badges--inline" id="alternate-pace-provenance"></div>
                   </div>
-                  <dd id="alternate-pace-value">--</dd>
+                  <dd id="alternate-pace-value" aria-describedby="alternate-pace-provenance">--</dd>
                 </div>
                 <div>
                   <div class="stat-pair__heading">
                     <dt id="alternate-speed-label">Speed mph</dt>
                     <div class="provenance-badges provenance-badges--inline" id="alternate-speed-provenance"></div>
                   </div>
-                  <dd id="alternate-speed-value">--</dd>
+                  <dd id="alternate-speed-value" aria-describedby="alternate-speed-provenance">--</dd>
                 </div>
               </dl>
             </article>
@@ -385,7 +392,14 @@
               <div class="context-stack">
                 <div class="context-block">
                   <p class="stat-card__subheading" id="locked-label">Locked input</p>
-                  <p class="stat-card__value stat-card__value--compact" id="locked-value">--</p>
+                  <p
+                    class="stat-card__value stat-card__value--compact"
+                    id="locked-value"
+                    aria-labelledby="locked-label"
+                    aria-describedby="locked-provenance locked-meta"
+                  >
+                    --
+                  </p>
                   <div class="provenance-badges" id="locked-provenance"></div>
                   <p class="stat-card__meta" id="locked-meta">
                     The active driving value appears here after the first valid result.
@@ -393,8 +407,13 @@
                 </div>
 
                 <div class="context-block">
-                  <p class="stat-card__subheading">Distance context</p>
-                  <p class="stat-card__value stat-card__value--compact" id="selected-distance">
+                  <p class="stat-card__subheading" id="distance-context-label">Distance context</p>
+                  <p
+                    class="stat-card__value stat-card__value--compact"
+                    id="selected-distance"
+                    aria-labelledby="distance-context-label"
+                    aria-describedby="distance-provenance result-note"
+                  >
                     --
                   </p>
                   <div class="provenance-badges" id="distance-provenance"></div>

@@ -116,3 +116,40 @@ test("interactive inputs reference provenance text for screen readers", async ()
     /id="speed-input"[\s\S]*?aria-describedby="speed-cluster-provenance speed-hint speed-error"/
   );
 });
+
+test("result summary values reference provenance and supporting copy for screen readers", async () => {
+  const html = await readFixture(htmlPath);
+
+  assert.match(
+    html,
+    /id="primary-value"[\s\S]*?aria-labelledby="primary-label"[\s\S]*?aria-describedby="primary-provenance primary-meta"/
+  );
+  assert.match(
+    html,
+    /id="selected-pace-value"[\s\S]*?aria-describedby="selected-pace-provenance"/
+  );
+  assert.match(
+    html,
+    /id="selected-speed-value"[\s\S]*?aria-describedby="selected-speed-provenance"/
+  );
+  assert.match(
+    html,
+    /id="alternate-pace-value"[\s\S]*?aria-describedby="alternate-pace-provenance"/
+  );
+  assert.match(
+    html,
+    /id="alternate-speed-value"[\s\S]*?aria-describedby="alternate-speed-provenance"/
+  );
+  assert.match(
+    html,
+    /id="locked-value"[\s\S]*?aria-labelledby="locked-label"[\s\S]*?aria-describedby="locked-provenance locked-meta"/
+  );
+  assert.match(
+    html,
+    /id="distance-context-label">Distance context<\/p>/
+  );
+  assert.match(
+    html,
+    /id="selected-distance"[\s\S]*?aria-labelledby="distance-context-label"[\s\S]*?aria-describedby="distance-provenance result-note"/
+  );
+});
