@@ -104,6 +104,8 @@ body {
 .metric-card__title {
   display: grid;
   gap: 1px;
+  min-width: 0;
+  padding-inline-start: 0.55rem;
 }
 
 .metric-card__title--solo {
@@ -235,11 +237,19 @@ body {
   gap: 3px;
 }
 
+.distance-card .metric-card__head {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: start;
+}
+
 .distance-adjustments {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  flex-wrap: nowrap;
+  gap: 3px;
   align-items: center;
+  justify-content: flex-end;
+  justify-self: end;
 }
 
 .distance-card__body {
@@ -423,11 +433,13 @@ input[aria-invalid="true"] {
 }
 
 .chip-button--increment {
-  min-height: 28px;
-  padding-inline: 9px;
+  min-height: 27px;
+  padding-inline: 7px;
   border-color: rgba(187, 93, 42, 0.18);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 236, 221, 0.94));
+  font-size: 0.52rem;
+  letter-spacing: 0.08em;
 }
 
 .ghost-button {
@@ -639,7 +651,8 @@ input[aria-invalid="true"] {
 }
 
 .split-card {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   min-width: 0;
   align-items: center;
   gap: 5px;
@@ -684,6 +697,7 @@ input[aria-invalid="true"] {
   min-width: 0;
   flex: 1 1 auto;
   align-items: center;
+  justify-items: stretch;
   gap: 4px;
   overflow: hidden;
 }
@@ -692,6 +706,7 @@ input[aria-invalid="true"] {
   display: flex;
   align-items: center;
   gap: 3px;
+  justify-content: center;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
@@ -719,6 +734,7 @@ input[aria-invalid="true"] {
   font-size: 0.7rem;
   letter-spacing: -0.03em;
   line-height: 1;
+  text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -782,6 +798,12 @@ input[aria-invalid="true"] {
     padding: 4px 2px;
     font-size: 0.48rem;
     letter-spacing: 0.04em;
+  }
+
+  .chip-button--increment {
+    padding-inline: 6px;
+    font-size: 0.48rem;
+    letter-spacing: 0.06em;
   }
 
   .split-builder__head {

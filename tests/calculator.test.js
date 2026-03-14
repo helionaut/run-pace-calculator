@@ -261,20 +261,20 @@ test("short mile quick-distance chips select native mile values", () => {
   assert.equal(view.distance.presetId, "1mi");
 });
 
-test("distance increments add metric distances in either unit mode", () => {
+test("distance increments can add or subtract metric distances in either unit mode", () => {
   const kilometerView = deriveCalculatorView(
-    applyDistanceIncrement(createFormState(), 0.2)
+    applyDistanceIncrement(createFormState(), -0.2)
   );
   const mileView = deriveCalculatorView(
-    applyDistanceIncrement(applyUnitChange(createFormState(), "mi"), 0.5)
+    applyDistanceIncrement(applyUnitChange(createFormState(), "mi"), 0.2)
   );
 
-  assert.equal(kilometerView.distance.inputValue, "10.2");
-  assert.equal(kilometerView.selectedDistanceLabel, "10.2 km");
+  assert.equal(kilometerView.distance.inputValue, "9.8");
+  assert.equal(kilometerView.selectedDistanceLabel, "9.8 km");
   assert.equal(kilometerView.distance.presetId, "custom");
 
-  assert.equal(mileView.distance.inputValue, "6.5244");
-  assert.equal(mileView.selectedDistanceLabel, "6.5244 mi");
+  assert.equal(mileView.distance.inputValue, "6.33798");
+  assert.equal(mileView.selectedDistanceLabel, "6.33798 mi");
   assert.equal(mileView.distance.presetId, "custom");
 });
 

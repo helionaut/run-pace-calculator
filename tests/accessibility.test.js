@@ -48,6 +48,11 @@ test("calculator markup keeps the compact three-value flow in DOM order", async 
   assert.match(html, /id="split-list"/);
   assert.match(
     html,
+    /<div class="metric-card__head">[\s\S]*<div[\s\S]*class="distance-adjustments"[\s\S]*data-increment-km="-0\.1"[\s\S]*-100m[\s\S]*data-increment-km="-0\.2"[\s\S]*-200m[\s\S]*data-increment-km="0\.1"[\s\S]*\+100m[\s\S]*data-increment-km="0\.2"[\s\S]*\+200m[\s\S]*<\/div>/
+  );
+  assert.doesNotMatch(html, /data-increment-km="0\.5"[\s\S]*\+500m/);
+  assert.match(
+    html,
     /<div class="metric-card__title metric-card__title--solo">[\s\S]*<h2>Time<\/h2>/
   );
   assert.match(html, /id="distance-slider"[\s\S]*type="range"/);
@@ -85,6 +90,14 @@ test("status messaging, error affordances, and responsive safeguards are present
   assert.match(css, /\.metric-card\s*{/);
   assert.match(css, /\.metric-card--source\s*{/);
   assert.match(css, /\.metric-card--derived\s*{/);
+  assert.match(
+    css,
+    /\.distance-card\s+\.metric-card__head\s*{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+auto;/
+  );
+  assert.match(
+    css,
+    /\.metric-card__title\s*{[\s\S]*padding-inline-start:\s*[0-9.]+rem;/
+  );
   assert.match(css, /\.rate-grid\s*{/);
   assert.match(css, /\.time-grid\s*{/);
   assert.match(css, /\.projection-strip\s*{/);
@@ -94,6 +107,14 @@ test("status messaging, error affordances, and responsive safeguards are present
   assert.match(
     css,
     /\.split-card__metrics\s*{[\s\S]*display:\s*grid;[\s\S]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\);/
+  );
+  assert.match(
+    css,
+    /\.split-card__metric\s*{[\s\S]*justify-content:\s*center;/
+  );
+  assert.match(
+    css,
+    /\.split-card__metric-value\s*{[\s\S]*text-align:\s*center;/
   );
   assert.match(css, /\.split-card__actions\s*{[\s\S]*display:\s*flex;/);
   assert.match(css, /\.split-card__action\s*{[\s\S]*inline-size:\s*[0-9.]+rem;/);
