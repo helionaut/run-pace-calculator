@@ -1,13 +1,13 @@
-<!-- PR_TITLE: Tighten top row and normalize unit-specific distance controls -->
+<!-- PR_TITLE: Match pace first-entry autofill to time input -->
 
 ## Summary
 
-- tighten the calculator header so the helper/status copy sits inline with
-  the unit toggle and reset controls instead of taking its own row
-- swap the quick distance chips to unit-aware labels and values in miles
-  mode, while preserving the existing kilometer-side presets
-- round slider-driven distance selections to at most two decimals in the
-  active unit and add calculator/DOM tests for the new behavior
+- make the pace minutes/seconds inputs auto-fill untouched zero values on the
+  first edit, matching the existing finish-time input behavior
+- keep the change in the UI event layer so calculator parsing, validation, URL
+  state, and last-valid blur normalization keep their current behavior
+- add a regression for the new pace autofill behavior and update the
+  incomplete-pace blur test to cover a manually cleared seconds field
 
 ## Testing
 
@@ -17,13 +17,12 @@
 
 ## Risks
 
-- Low: the inline status copy now truncates on narrow widths to keep the top
-  row compact, so future helper text should stay short
-- Low: mile-mode quick chips intentionally use native mile distances, so a
-  converted kilometer default remains a custom selection after a unit switch
-- Low: slider interaction now snaps to two-decimal precision in the active
-  unit, which trades a small amount of fine-grained range control for cleaner
-  displayed values
+- Low: the shared first-entry autofill helper now drives both pace and time
+  groups, so any future grouped-input changes should keep their default zero
+  values aligned with the field names
+- Low: first-entry edits to pace seconds now auto-fill pace minutes with `0`,
+  matching the existing time-group behavior even though the issue example
+  focused on pace minutes first
 
 ## Checklist
 
@@ -33,12 +32,10 @@
 
 Preview notes:
 
-- Desktop screenshot reviewed at
-  `/home/helionaut/workspaces/HEL-26/screenshots/hel-26-desktop-default.png`.
-- Desktop miles-state screenshot reviewed at
-  `/home/helionaut/workspaces/HEL-26/screenshots/hel-26-desktop-mi.png`.
-- Mobile miles-state screenshot reviewed at
-  `/home/helionaut/workspaces/HEL-26/screenshots/hel-26-mobile-mi.png`.
-- The screenshots matched the issue request: thinner top row, inline helper
-  copy, unit-aware mile chips, and two-decimal distance display after the
-  slider-driven selection.
+- Desktop built-preview screenshot reviewed after typing `5` into pace minutes;
+  pace seconds auto-filled to `00`, derived finish time showed `0:50:00`, and
+  the calculator still fit the one-screen desktop layout with no overflow.
+- Mobile built-preview screenshot reviewed after the same interaction; pace
+  seconds auto-filled to `00`, derived finish time showed `0:50:00`, and the
+  card stack still fit the intended one-screen mobile presentation with no
+  horizontal overflow.

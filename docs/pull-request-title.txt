@@ -1,1 +1,1 @@
-Tighten top row and normalize unit-specific distance controls
+Match pace first-entry autofill to time input
