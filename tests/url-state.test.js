@@ -173,6 +173,9 @@ function createEnvironment(search = "") {
   }
 
   const presetButtons = {
+    "100m": new FakeElement({ dataset: { preset: "100m" } }),
+    "500m": new FakeElement({ dataset: { preset: "500m" } }),
+    "1k": new FakeElement({ dataset: { preset: "1k" } }),
     "5k": new FakeElement({ dataset: { preset: "5k" } }),
     "10k": new FakeElement({ dataset: { preset: "10k" } }),
     half: new FakeElement({ dataset: { preset: "half" } }),

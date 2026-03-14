@@ -11,7 +11,15 @@ import {
   updateInputValue
 } from "./lib/calculator.js";
 
+const PACE_FIELDS = Object.freeze(["paceMinutes", "paceSeconds"]);
 const TIME_FIELDS = Object.freeze(["timeHours", "timeMinutes", "timeSeconds"]);
+const GROUP_AUTO_FILL_DEFAULTS = Object.freeze({
+  paceMinutes: "0",
+  paceSeconds: "00",
+  timeHours: "0",
+  timeMinutes: "00",
+  timeSeconds: "00"
+});
 
 function setTextContent(element, value) {
   if (!element) {
@@ -67,9 +75,17 @@ function renderPresetButtons(elements, distanceView) {
     const preset = distanceView.presets[index];
 
     if (!preset) {
+      button.dataset.preset = "";
+      setTextContent(button, "");
+      button.hidden = true;
+      button.disabled = true;
+      button.classList.remove("is-active");
+      button.setAttribute("aria-pressed", "false");
       continue;
     }
 
+    button.hidden = false;
+    button.disabled = false;
     button.dataset.preset = preset.id;
     setTextContent(button, preset.label);
 
@@ -473,10 +489,10 @@ function syncUrlState(state) {
 }
 
 function bindMetricInputs(elements, getState, setStateAndRender) {
-  function updateTimeField(field, value) {
+  function updateGroupedField(field, value, groupFields) {
     const shouldAutoFill =
       hasValue(value) &&
-      TIME_FIELDS
+      groupFields
         .filter((name) => name !== field)
         .every((name) => !hasValue(getState().inputs[name]));
 
@@ -487,7 +503,7 @@ function bindMetricInputs(elements, getState, setStateAndRender) {
       return;
     }
 
-    for (const name of TIME_FIELDS) {
+    for (const name of groupFields) {
       if (name === field || hasValue(nextState.inputs[name])) {
         continue;
       }
@@ -495,7 +511,7 @@ function bindMetricInputs(elements, getState, setStateAndRender) {
       nextState = updateInputValue(
         nextState,
         name,
-        name === "timeHours" ? "0" : "00"
+        GROUP_AUTO_FILL_DEFAULTS[name]
       );
     }
 
@@ -503,15 +519,11 @@ function bindMetricInputs(elements, getState, setStateAndRender) {
   }
 
   elements.paceMinutes.addEventListener("input", () => {
-    setStateAndRender(
-      updateInputValue(getState(), "paceMinutes", elements.paceMinutes.value)
-    );
+    updateGroupedField("paceMinutes", elements.paceMinutes.value, PACE_FIELDS);
   });
 
   elements.paceSeconds.addEventListener("input", () => {
-    setStateAndRender(
-      updateInputValue(getState(), "paceSeconds", elements.paceSeconds.value)
-    );
+    updateGroupedField("paceSeconds", elements.paceSeconds.value, PACE_FIELDS);
   });
 
   elements.speedInput.addEventListener("input", () => {
@@ -519,15 +531,15 @@ function bindMetricInputs(elements, getState, setStateAndRender) {
   });
 
   elements.timeHours.addEventListener("input", () => {
-    updateTimeField("timeHours", elements.timeHours.value);
+    updateGroupedField("timeHours", elements.timeHours.value, TIME_FIELDS);
   });
 
   elements.timeMinutes.addEventListener("input", () => {
-    updateTimeField("timeMinutes", elements.timeMinutes.value);
+    updateGroupedField("timeMinutes", elements.timeMinutes.value, TIME_FIELDS);
   });
 
   elements.timeSeconds.addEventListener("input", () => {
-    updateTimeField("timeSeconds", elements.timeSeconds.value);
+    updateGroupedField("timeSeconds", elements.timeSeconds.value, TIME_FIELDS);
   });
 }
 

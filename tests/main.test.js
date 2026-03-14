@@ -137,6 +137,9 @@ function createElements() {
     new FakeElement({ dataset: { unit: "mi" }, ownerDocument: documentRef })
   ];
   const presetButtons = [
+    new FakeElement({ dataset: { preset: "100m" }, ownerDocument: documentRef }),
+    new FakeElement({ dataset: { preset: "500m" }, ownerDocument: documentRef }),
+    new FakeElement({ dataset: { preset: "1k" }, ownerDocument: documentRef }),
     new FakeElement({ dataset: { preset: "5k" }, ownerDocument: documentRef }),
     new FakeElement({ dataset: { preset: "10k" }, ownerDocument: documentRef }),
     new FakeElement({ dataset: { preset: "half" }, ownerDocument: documentRef }),
@@ -181,6 +184,10 @@ function createElements() {
     timeSeconds: new FakeElement({ ownerDocument: documentRef }),
     unitButtons
   };
+}
+
+function getPresetButton(elements, presetId) {
+  return elements.presetButtons.find((button) => button.dataset.preset === presetId);
 }
 
 function enterPace(elements, minutes, seconds) {
@@ -298,13 +305,34 @@ test("moving between pace subfields does not snap back the unfinished group", ()
 
   createCalculatorApp(elements);
   elements.paceMinutes.value = "5";
+  elements.paceMinutes.dispatch("focus");
   elements.paceMinutes.dispatch("input");
-  elements.paceMinutes.dispatch("blur", {
-    relatedTarget: elements.paceSeconds
+  elements.paceSeconds.dispatch("focus");
+  elements.paceSeconds.value = "";
+  elements.paceSeconds.dispatch("input");
+  elements.paceSeconds.dispatch("blur", {
+    relatedTarget: elements.paceMinutes
   });
 
   assert.equal(elements.paceMinutes.value, "5");
+  assert.equal(elements.paceSeconds.value, "");
   assert.equal(elements.paceError.textContent, "Complete pace minutes and seconds.");
+});
+
+test("first pace edit auto-fills the untouched seconds field with zeros", () => {
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+  elements.paceMinutes.value = "5";
+  elements.paceMinutes.dispatch("focus");
+  elements.paceMinutes.dispatch("input");
+
+  assert.equal(elements.paceMinutes.value, "5");
+  assert.equal(elements.paceSeconds.value, "00");
+  assert.equal(elements.timeHours.value, "0");
+  assert.equal(elements.timeMinutes.value, "50");
+  assert.equal(elements.timeSeconds.value, "00");
+  assert.equal(elements.speedInput.value, "12");
 });
 
 test("first time edit auto-fills untouched fields with zeros", () => {
@@ -345,12 +373,31 @@ test("invalid time blur restores the last valid view instead of leaving hidden s
   assert.equal(elements.statusMessage.textContent, "Solving time from distance + movement rate.");
 });
 
+test("default quick-distance chips include the new short kilometer presets", () => {
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+
+  assert.deepEqual(
+    elements.presetButtons.map(({ dataset, textContent }) => [dataset.preset, textContent]),
+    [
+      ["100m", "100m"],
+      ["500m", "500m"],
+      ["1k", "1 km"],
+      ["5k", "5K"],
+      ["10k", "10K"],
+      ["half", "Half"],
+      ["marathon", "Marathon"]
+    ]
+  );
+});
+
 test("preset buttons work with a time-driven solve and recalculate movement rate", () => {
   const elements = createElements();
 
   createCalculatorApp(elements);
   enterTime(elements, "0", "50", "0");
-  elements.presetButtons[0].dispatch("click");
+  getPresetButton(elements, "5k").dispatch("click");
 
   assert.equal(elements.distanceInput.value, "5");
   assert.equal(elements.selectedDistance.textContent, "5 km");
@@ -369,14 +416,30 @@ test("unit switch updates quick-distance chip labels for the selected unit", () 
   createCalculatorApp(elements);
   elements.unitButtons[1].dispatch("click");
 
-  assert.equal(elements.presetButtons[0].dataset.preset, "5mi");
-  assert.equal(elements.presetButtons[0].textContent, "5 mi");
-  assert.equal(elements.presetButtons[1].dataset.preset, "10mi");
-  assert.equal(elements.presetButtons[1].textContent, "10 mi");
-  assert.equal(elements.presetButtons[2].dataset.preset, "half");
-  assert.equal(elements.presetButtons[2].textContent, "Half Marathon");
-  assert.equal(elements.presetButtons[3].dataset.preset, "marathon");
-  assert.equal(elements.presetButtons[3].textContent, "Marathon");
+  assert.deepEqual(
+    elements.presetButtons.map(({ dataset, textContent }) => [dataset.preset, textContent]),
+    [
+      ["0.1mi", "0.1 mi"],
+      ["0.5mi", "0.5 mi"],
+      ["1mi", "1 mi"],
+      ["5mi", "5 mi"],
+      ["10mi", "10 mi"],
+      ["half", "Half Marathon"],
+      ["marathon", "Marathon"]
+    ]
+  );
+});
+
+test("mile short-distance preset buttons update the selected distance", () => {
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+  elements.unitButtons[1].dispatch("click");
+  getPresetButton(elements, "0.5mi").dispatch("click");
+
+  assert.equal(elements.distanceInput.value, "0.5");
+  assert.equal(elements.selectedDistance.textContent, "0.5 mi");
+  assert.equal(getPresetButton(elements, "0.5mi").getAttribute("aria-pressed"), "true");
 });
 
 test("slider input rounds mile distances to at most two decimals", () => {
