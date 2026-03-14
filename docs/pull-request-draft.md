@@ -7,8 +7,9 @@
 - add matching provenance cues to the active input clusters and a dedicated
   locked-value summary in the compact context card
 - preserve stale-result clarity and accessibility with explicit text labels,
-  screen-reader-friendly provenance regions, and tests for entered-vs-derived,
-  blank-state, and stale-state rendering paths
+  input `aria-describedby` links to provenance regions, badge `aria-label`
+  text, and tests for entered-vs-derived, blank-state, and stale-state
+  rendering paths
 
 ## Testing
 
@@ -28,6 +29,9 @@
 - Input panels now show compact provenance badges so the active entered source
   reads differently from calculator-derived fields, without labeling blank or
   invalid edits as entered data.
+- Inputs and provenance badges now expose the same entered, derived, locked,
+  and last-valid cues to screen readers instead of keeping that distinction
+  visual-only.
 - The summary area adds provenance badges beside result values and a dedicated
   locked-input block that stays readable when the result is stale.
 - Stale results continue to show the last valid answer, now explicitly marked
