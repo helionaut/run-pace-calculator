@@ -7,6 +7,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const FIXTURE_ISSUE_IDENTIFIER = "HEL-9999";
+const FIXTURE_BRANCH = `codex/${FIXTURE_ISSUE_IDENTIFIER.toLowerCase()}-publish-test-fixture`;
 
 function run(command, args, cwd, options = {}) {
   const result = spawnSync(command, args, {
@@ -35,7 +37,7 @@ function deriveExpectedTitle(branch) {
 }
 
 async function cloneRepo() {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "hel-16-publish-test."));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "publish-test."));
   const cloneDir = path.join(tempRoot, "repo");
 
   run("git", ["clone", repoRoot, cloneDir], tempRoot);
@@ -82,14 +84,7 @@ function hasParentCommit(cloneDir) {
 function normalizeFixtureRepo(cloneDir) {
   run("git", ["config", "user.name", "Codex Test"], cloneDir);
   run("git", ["config", "user.email", "codex-test@example.com"], cloneDir);
-
-  if (run("git", ["branch", "--show-current"], cloneDir) === "") {
-    run(
-      "git",
-      ["switch", "-c", "codex/hel-16-publish-test-fixture"],
-      cloneDir
-    );
-  }
+  run("git", ["switch", "-C", FIXTURE_BRANCH], cloneDir);
 
   const hasChanges =
     spawnSync("git", ["diff", "--quiet"], { cwd: cloneDir }).status !== 0 ||
@@ -132,7 +127,12 @@ test("prepare_handoff summary includes preview notes from the PR draft", async (
   assert.doesNotMatch(summary, /## Preview notes\n\n\n-/);
   assert.match(summary, /## Demo script/);
   assert.match(summary, /Turn on the finish-time lock, set the time to `1:45:00`/);
-  assert.match(summary, /Attach the resulting PR to `HEL-16` and move the issue to/);
+  assert.match(
+    summary,
+    new RegExp(
+      `Attach the resulting PR to \`${FIXTURE_ISSUE_IDENTIFIER}\` and move the issue to`
+    )
+  );
   assert.match(summary, /\.\/resume-from-handoff\.sh <target-repo-dir>/);
   assert.match(summary, /- `SUMMARY.md`/);
   assert.match(summary, /- `verify-handoff\.mjs`/);
@@ -185,7 +185,7 @@ test("prepare_handoff exports a self-contained resume script", async () => {
   const output = run("./scripts/prepare-handoff.sh", [outputDir], cloneDir);
   const summary = await readFile(path.join(outputDir, "SUMMARY.md"), "utf8");
   const resumeScriptPath = path.join(outputDir, "resume-from-handoff.sh");
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "hel-16-resume-test."));
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "resume-test."));
   const targetRepo = path.join(tempRoot, "target");
 
   run("git", ["clone", cloneDir, targetRepo], tempRoot);
