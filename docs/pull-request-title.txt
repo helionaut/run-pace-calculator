@@ -1,1 +1,1 @@
-Tighten top row and normalize unit-specific distance controls
+Keep half-marathon and marathon labels stable across unit switch
