@@ -7,6 +7,7 @@ import {
   restoreCalculatorState,
   serializeCalculatorState,
   updateDistanceInput,
+  updateDistanceSlider,
   updateInputValue
 } from "./lib/calculator.js";
 
@@ -60,9 +61,19 @@ function renderUnitButtons(elements, unit) {
   }
 }
 
-function renderPresetButtons(elements, presetId) {
-  for (const button of elements.presetButtons) {
-    const isActive = button.dataset.preset === presetId;
+function renderPresetButtons(elements, distanceView) {
+  for (let index = 0; index < elements.presetButtons.length; index += 1) {
+    const button = elements.presetButtons[index];
+    const preset = distanceView.presets[index];
+
+    if (!preset) {
+      continue;
+    }
+
+    button.dataset.preset = preset.id;
+    setTextContent(button, preset.label);
+
+    const isActive = preset.id === distanceView.presetId;
 
     button.classList.toggle("is-active", isActive);
     button.setAttribute("aria-pressed", String(isActive));
@@ -193,7 +204,7 @@ function render(elements, state) {
   );
 
   renderUnitButtons(elements, view.unit);
-  renderPresetButtons(elements, view.distance.presetId);
+  renderPresetButtons(elements, view.distance);
 
   renderMetricTone(elements.distanceCard, view.distance.tone);
   renderMetricTone(elements.rateCard, view.rate.tone);
@@ -439,7 +450,7 @@ export function createCalculatorApp(elements) {
   });
 
   elements.distanceSlider.addEventListener("input", () => {
-    setStateAndRender(updateDistanceInput(getState(), elements.distanceSlider.value));
+    setStateAndRender(updateDistanceSlider(getState(), elements.distanceSlider.value));
   });
 
   elements.resetButton.addEventListener("click", () => {

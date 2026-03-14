@@ -3,6 +3,7 @@ export const MAX_DISTANCE = 1000;
 export const MAX_DISTANCE_DECIMALS = 5;
 export const MAX_SPEED = 60;
 export const RESULT_PLACEHOLDER = "Enter any two values to solve the third.";
+const SLIDER_DISTANCE_DECIMALS = 2;
 
 export const DRIVER_METRICS = Object.freeze({
   PACE: "pace",
@@ -28,6 +29,20 @@ export const DISTANCE_PRESETS = Object.freeze([
   { id: "half", label: "Half Marathon", distanceKm: 21.0975 },
   { id: "marathon", label: "Marathon", distanceKm: 42.195 }
 ]);
+const QUICK_DISTANCE_PRESETS = Object.freeze({
+  km: Object.freeze([
+    { id: "5k", label: "5K", distanceKm: 5 },
+    { id: "10k", label: "10K", distanceKm: 10 },
+    { id: "half", label: "Half", distanceKm: 21.0975 },
+    { id: "marathon", label: "Marathon", distanceKm: 42.195 }
+  ]),
+  mi: Object.freeze([
+    { id: "5mi", label: "5 mi", distanceKm: 5 * KM_PER_MILE },
+    { id: "10mi", label: "10 mi", distanceKm: 10 * KM_PER_MILE },
+    { id: "half", label: "13.1 mi", distanceKm: 13.1 * KM_PER_MILE },
+    { id: "marathon", label: "26.2 mi", distanceKm: 26.2 * KM_PER_MILE }
+  ])
+});
 
 const DEFAULT_EDIT_ORDER = Object.freeze([
   SOLVE_METRICS.TIME,
@@ -35,6 +50,13 @@ const DEFAULT_EDIT_ORDER = Object.freeze([
   SOLVE_METRICS.DISTANCE
 ]);
 const DEFAULT_PRESET_ID = "10k";
+const ALL_QUICK_DISTANCE_PRESETS = Object.freeze(
+  Object.values(QUICK_DISTANCE_PRESETS).flat()
+);
+const SUPPORTED_PRESET_IDS = new Set([
+  "custom",
+  ...ALL_QUICK_DISTANCE_PRESETS.map((preset) => preset.id)
+]);
 const DISPLAY_METRIC_ORDER = Object.freeze({
   [SOLVE_METRICS.DISTANCE]: 0,
   [SOLVE_METRICS.RATE]: 1,
@@ -43,7 +65,7 @@ const DISPLAY_METRIC_ORDER = Object.freeze({
 const PRESET_MATCH_TOLERANCE = 1e-5;
 const SLIDER_BASE_MAX = 60;
 const SLIDER_MIN = 0.5;
-const SLIDER_STEP = "0.00001";
+const SLIDER_STEP = "0.01";
 const URL_STATE_KEYS = Object.freeze({
   DISTANCE: "distance",
   PACE_MINUTES: "pm",
@@ -257,7 +279,11 @@ function formatTimeFields(totalSeconds) {
 }
 
 export function getPresetById(id) {
-  return DISTANCE_PRESETS.find((preset) => preset.id === id) ?? DISTANCE_PRESETS[0];
+  return (
+    getQuickDistancePresets("km").find((preset) => preset.id === id) ??
+    ALL_QUICK_DISTANCE_PRESETS.find((preset) => preset.id === id) ??
+    DISTANCE_PRESETS[0]
+  );
 }
 
 function getDefaultPreset() {
@@ -265,7 +291,7 @@ function getDefaultPreset() {
 }
 
 function isSupportedPresetId(presetId) {
-  return DISTANCE_PRESETS.some((preset) => preset.id === presetId);
+  return SUPPORTED_PRESET_IDS.has(presetId);
 }
 
 function isSupportedRateInputMode(mode) {
@@ -276,9 +302,13 @@ function isSupportedUnit(unit) {
   return VALID_UNITS.includes(unit);
 }
 
-function getPresetIdForDistanceKm(distanceKm) {
+function getQuickDistancePresets(unit = "km") {
+  return QUICK_DISTANCE_PRESETS[unit] ?? QUICK_DISTANCE_PRESETS.km;
+}
+
+function getPresetIdForDistanceKm(distanceKm, unit = "km") {
   return (
-    DISTANCE_PRESETS.find(
+    getQuickDistancePresets(unit).find(
       (preset) =>
         preset.distanceKm !== null && almostEqual(preset.distanceKm, distanceKm)
     )?.id ?? "custom"
@@ -343,8 +373,12 @@ export function formatEditableNumber(value, maxDecimals) {
   return trimTrailingZeroes(value.toFixed(maxDecimals));
 }
 
-export function formatDistanceInputValue(distanceKm, unit = "km") {
-  return formatEditableNumber(distanceFromKilometers(distanceKm, unit), 5);
+export function formatDistanceInputValue(
+  distanceKm,
+  unit = "km",
+  maxDecimals = MAX_DISTANCE_DECIMALS
+) {
+  return formatEditableNumber(distanceFromKilometers(distanceKm, unit), maxDecimals);
 }
 
 export function formatSpeedInputValue(speedInUnit) {
@@ -652,7 +686,7 @@ function getSliderMaximum(distanceKm, unit) {
 
   return formatEditableNumber(
     Math.max(SLIDER_BASE_MAX, distanceFromKilometers(safeDistanceKm, unit)),
-    MAX_DISTANCE_DECIMALS
+    SLIDER_DISTANCE_DECIMALS
   );
 }
 
@@ -847,11 +881,19 @@ function createDistanceView(state, calculation, errors) {
     error: errors.distance,
     inputValue,
     label: `Distance (${state.unit})`,
-    presetId: getPresetIdForDistanceKm(displayDistanceKm),
+    presetId: getPresetIdForDistanceKm(displayDistanceKm, state.unit),
+    presets: getQuickDistancePresets(state.unit).map(({ id, label }) => ({
+      id,
+      label
+    })),
     sliderMaximum: getSliderMaximum(displayDistanceKm, state.unit),
-    sliderMinimum: formatEditableNumber(SLIDER_MIN, MAX_DISTANCE_DECIMALS),
+    sliderMinimum: formatEditableNumber(SLIDER_MIN, SLIDER_DISTANCE_DECIMALS),
     sliderStep: SLIDER_STEP,
-    sliderValue: formatDistanceInputValue(sliderDistanceKm, state.unit),
+    sliderValue: formatDistanceInputValue(
+      sliderDistanceKm,
+      state.unit,
+      SLIDER_DISTANCE_DECIMALS
+    ),
     summary: formatDistance(displayDistanceKm, state.unit),
     tone: getMetricTone(calculation, SOLVE_METRICS.DISTANCE)
   };
@@ -938,7 +980,7 @@ function buildUrlStateParams(state) {
     const presetId =
       Number.isFinite(calculation.displayDistanceKm) &&
       calculation.displayDistanceKm > 0
-        ? getPresetIdForDistanceKm(calculation.displayDistanceKm)
+        ? getPresetIdForDistanceKm(calculation.displayDistanceKm, state.unit)
         : state.presetId;
 
     params.set(URL_STATE_KEYS.PRESET, presetId);
@@ -1118,7 +1160,9 @@ export function resetFormState(state) {
 }
 
 export function applyPresetSelection(state, presetId) {
-  const preset = getPresetById(presetId);
+  const preset =
+    getQuickDistancePresets(state.unit).find((item) => item.id === presetId) ??
+    getPresetById(presetId);
 
   if (preset.distanceKm === null) {
     return syncCanonicalSpeed({
@@ -1158,9 +1202,27 @@ export function updateDistanceInput(state, distance) {
     },
     presetId:
       !parsed.error && parsed.value !== null
-        ? getPresetIdForDistanceKm(distanceToKilometers(parsed.value, state.unit))
+        ? getPresetIdForDistanceKm(
+            distanceToKilometers(parsed.value, state.unit),
+            state.unit
+          )
         : "custom"
   });
+}
+
+export function updateDistanceSlider(state, distance) {
+  const parsed = parseDistanceInput(distance, {
+    showRequiredError: false
+  });
+
+  if (parsed.error || parsed.value === null) {
+    return updateDistanceInput(state, distance);
+  }
+
+  return updateDistanceInput(
+    state,
+    formatEditableNumber(parsed.value, SLIDER_DISTANCE_DECIMALS)
+  );
 }
 
 export function updateInputValue(state, field, value) {

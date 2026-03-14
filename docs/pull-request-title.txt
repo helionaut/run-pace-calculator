@@ -1,1 +1,1 @@
-Replace lock-based calculator with implicit last-two-input solving
+Tighten top row and normalize unit-specific distance controls

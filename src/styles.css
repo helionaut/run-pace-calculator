@@ -77,19 +77,29 @@ body {
 }
 
 .tool-bar {
-  display: grid;
-  gap: 6px;
-  padding: 8px;
+  padding: 6px 8px;
 }
 
 .tool-bar__top {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
 
-.title-block,
+.tool-bar__heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-block {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
 .metric-card__title {
   display: grid;
   gap: 2px;
@@ -110,8 +120,8 @@ body {
 }
 
 .title-block h1 {
-  font-size: 1.12rem;
-  line-height: 0.95;
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .metric-card__title h2 {
@@ -140,6 +150,7 @@ body {
 .eyebrow {
   margin: 0;
   color: var(--accent);
+  white-space: nowrap;
 }
 
 .status-message,
@@ -150,7 +161,13 @@ body {
 }
 
 .status-message {
+  min-width: 0;
   color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .status-message:empty {
@@ -338,22 +355,35 @@ input[aria-invalid="true"] {
 .tool-bar__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 3px;
   align-items: center;
   justify-content: flex-end;
 }
 
 .segmented {
   display: inline-flex;
-  gap: 4px;
-  padding: 3px;
+  gap: 3px;
+  padding: 2px;
   border-radius: 999px;
   background: rgba(49, 41, 28, 0.05);
 }
 
 .segmented__button,
-.chip-button,
 .ghost-button {
+  min-height: 30px;
+  padding: 6px 10px;
+  border: 1px solid rgba(49, 41, 28, 0.12);
+  border-radius: 999px;
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.chip-button {
   min-height: 34px;
   padding: 7px 11px;
   border: 1px solid rgba(49, 41, 28, 0.12);
@@ -477,5 +507,13 @@ input[aria-invalid="true"] {
 
   .calculator-panel {
     border-radius: 22px;
+  }
+
+  .tool-bar__top {
+    align-items: flex-start;
+  }
+
+  .tool-bar__heading {
+    padding-top: 3px;
   }
 }
