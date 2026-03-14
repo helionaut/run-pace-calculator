@@ -14,7 +14,8 @@ import {
   restoreCalculatorState,
   resetFormState,
   serializeCalculatorState,
-  updateDistanceInput
+  updateDistanceInput,
+  updateInputValue
 } from "../src/lib/calculator.js";
 
 function buildState(overrides = {}, inputOverrides = {}) {
@@ -64,6 +65,18 @@ test("pace mode calculates pace and speed from distance plus finish time", () =>
   assert.equal(view.display.primaryLabel, "Pace");
   assert.equal(view.display.primaryValue, "05:00 /km");
   assert.equal(view.display.selectedSpeed, "12.00 km/h");
+  assert.equal(view.display.splitTitle, "Kilometer splits");
+  assert.equal(view.display.splitRows.length, 10);
+  assert.deepEqual(
+    view.display.splitRows.slice(0, 2).map((row) => [row.label, row.finishLabel]),
+    [
+      ["1 km", "00:05:00"],
+      ["2 km", "00:10:00"]
+    ]
+  );
+  assert.equal(view.display.splitRows.at(-1).label, "10 km");
+  assert.equal(view.display.splitRows.at(-1).finishLabel, "00:50:00");
+  assert.equal(view.display.splitRows.at(-1).isPartial, false);
   assert.equal(view.errors.distance, null);
   assert.equal(view.errors.finish, null);
 });
@@ -129,6 +142,171 @@ test("finish mode calculates finish time from distance plus pace", () => {
   assert.equal(view.display.primaryLabel, "Finish time");
   assert.equal(view.display.primaryValue, "00:50:00");
   assert.equal(view.display.selectedSpeed, "12.00 km/h");
+  assert.equal(view.display.splitTitle, "Kilometer splits");
+  assert.equal(view.display.splitRows.length, 10);
+  assert.equal(view.display.splitRows.at(-1).label, "10 km");
+  assert.equal(view.display.splitRows.at(-1).finishLabel, "00:50:00");
+});
+
+test("convert mode uses the stored selected distance to render mile-based splits from speed", () => {
+  const view = deriveCalculatorView(
+    buildState(
+      {
+        mode: MODES.CONVERT,
+        convertSource: CONVERT_SOURCES.SPEED,
+        unit: "mi"
+      },
+      {
+        distance: "3",
+        speed: "7.5"
+      }
+    )
+  );
+
+  assert.equal(view.resultState, "current");
+  assert.equal(view.display.primaryLabel, "Pace");
+  assert.equal(view.display.primaryValue, "08:00 /mi");
+  assert.equal(view.display.splitTitle, "Mile splits");
+  assert.deepEqual(
+    view.display.splitRows.map((row) => [row.label, row.finishLabel]),
+    [
+      ["1 mi", "00:08:00"],
+      ["2 mi", "00:16:00"],
+      ["3 mi", "00:24:00"]
+    ]
+  );
+});
+
+test("half marathon includes a final partial split in metric mode", () => {
+  const presetState = applyPresetSelection(createFormState(), "half");
+  const view = deriveCalculatorView({
+    ...presetState,
+    mode: MODES.FINISH,
+    inputs: {
+      ...presetState.inputs,
+      paceMinutes: "5",
+      paceSeconds: "0"
+    }
+  });
+
+  assert.equal(view.resultState, "current");
+  assert.equal(view.display.splitTitle, "Kilometer splits");
+  assert.match(view.display.splitMeta, /final partial split/i);
+  assert.equal(view.display.splitRows.length, 22);
+  assert.deepEqual(
+    view.display.splitRows.slice(-2).map((row) => [
+      row.label,
+      row.finishLabel,
+      row.isPartial
+    ]),
+    [
+      ["21 km", "01:45:00", false],
+      ["Finish (21.0975 km)", "01:45:29", true]
+    ]
+  );
+});
+
+test("marathon includes a final partial split in imperial mode", () => {
+  const presetState = applyPresetSelection(createFormState(), "marathon");
+  const milePresetState = applyUnitChange(presetState, "mi");
+  const mileState = {
+    ...milePresetState,
+    mode: MODES.FINISH,
+    inputs: {
+      ...milePresetState.inputs,
+      paceMinutes: "8",
+      paceSeconds: "0"
+    }
+  };
+  const view = deriveCalculatorView(mileState);
+
+  assert.equal(view.resultState, "current");
+  assert.equal(view.display.splitTitle, "Mile splits");
+  assert.match(view.display.splitMeta, /final partial split/i);
+  assert.equal(view.display.splitRows.length, 27);
+  assert.deepEqual(
+    view.display.splitRows.slice(-2).map((row) => [
+      row.label,
+      row.finishLabel,
+      row.isPartial
+    ]),
+    [
+      ["26 mi", "03:28:00", false],
+      ["Finish (26.21876 mi)", "03:29:45", true]
+    ]
+  );
+});
+
+test("split rows update immediately when finish time, pace, speed, and distance change", () => {
+  const paceModeState = buildState(
+    { mode: MODES.PACE },
+    {
+      distance: "10",
+      finishHours: "0",
+      finishMinutes: "50",
+      finishSeconds: "0"
+    }
+  );
+  const initialPaceView = deriveCalculatorView(paceModeState);
+  const updatedFinishView = deriveCalculatorView(
+    updateInputValue(paceModeState, "finishMinutes", "45")
+  );
+
+  assert.equal(initialPaceView.resultState, "current");
+  assert.equal(updatedFinishView.resultState, "current");
+  assert.equal(initialPaceView.display.splitRows.at(0).finishLabel, "00:05:00");
+  assert.equal(updatedFinishView.display.splitRows.at(0).finishLabel, "00:04:30");
+  assert.equal(updatedFinishView.display.splitRows.at(-1).finishLabel, "00:45:00");
+
+  const finishModeState = buildState(
+    { mode: MODES.FINISH },
+    {
+      distance: "10",
+      paceMinutes: "5",
+      paceSeconds: "0"
+    }
+  );
+  const initialFinishView = deriveCalculatorView(finishModeState);
+  const updatedPaceView = deriveCalculatorView(
+    updateInputValue(finishModeState, "paceMinutes", "4")
+  );
+
+  assert.equal(initialFinishView.resultState, "current");
+  assert.equal(updatedPaceView.resultState, "current");
+  assert.equal(initialFinishView.display.splitRows.at(0).finishLabel, "00:05:00");
+  assert.equal(updatedPaceView.display.splitRows.at(0).finishLabel, "00:04:00");
+  assert.equal(updatedPaceView.display.splitRows.at(-1).finishLabel, "00:40:00");
+
+  const convertSpeedState = buildState(
+    {
+      mode: MODES.CONVERT,
+      convertSource: CONVERT_SOURCES.SPEED,
+      unit: "mi"
+    },
+    {
+      distance: "3",
+      speed: "7.5"
+    }
+  );
+  const initialSpeedView = deriveCalculatorView(convertSpeedState);
+  const updatedSpeedView = deriveCalculatorView(
+    updateInputValue(convertSpeedState, "speed", "6")
+  );
+
+  assert.equal(initialSpeedView.resultState, "current");
+  assert.equal(updatedSpeedView.resultState, "current");
+  assert.equal(initialSpeedView.display.splitRows.at(0).finishLabel, "00:08:00");
+  assert.equal(updatedSpeedView.display.splitRows.at(0).finishLabel, "00:10:00");
+  assert.equal(updatedSpeedView.display.splitRows.at(-1).finishLabel, "00:30:00");
+
+  const updatedDistanceView = deriveCalculatorView(
+    updateDistanceInput(finishModeState, "12")
+  );
+
+  assert.equal(updatedDistanceView.resultState, "current");
+  assert.equal(updatedDistanceView.display.splitRows.length, 12);
+  assert.equal(updatedDistanceView.display.splitRows.at(-1).label, "12 km");
+  assert.equal(updatedDistanceView.display.splitRows.at(-1).finishLabel, "01:00:00");
 });
 
 test("convert speed mode exposes entered speed and derived pace without distance", () => {

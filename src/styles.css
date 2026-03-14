@@ -518,6 +518,31 @@ select[aria-invalid="true"] {
   gap: 16px;
 }
 
+.split-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 20px;
+  border: 1px solid rgba(19, 38, 31, 0.1);
+  border-radius: 22px;
+  background: var(--surface-soft);
+}
+
+.split-panel__copy {
+  display: grid;
+  gap: 6px;
+}
+
+.split-panel__copy h3,
+.split-panel__copy p {
+  margin: 0;
+}
+
+.split-panel__copy h3 {
+  font-family: var(--display-font);
+  font-size: clamp(1.4rem, 1.2vw + 1rem, 1.9rem);
+}
+
 .stat-card {
   display: grid;
   gap: 14px;
@@ -609,6 +634,23 @@ select[aria-invalid="true"] {
 
 .table-shell {
   overflow-x: auto;
+}
+
+.table-shell--compact {
+  max-height: 320px;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+.split-table tbody th,
+.split-table tbody td {
+  padding: 12px 0;
+  font-size: 0.96rem;
+}
+
+.split-table tbody tr.is-final-partial th,
+.split-table tbody tr.is-final-partial td {
+  color: var(--accent-deep);
 }
 
 table {

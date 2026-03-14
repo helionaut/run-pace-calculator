@@ -15,16 +15,23 @@
 
 ## Testing
 
+- [x] `node --test tests/handoff.test.js`
+- [x] `npm test -- tests/calculator.test.js`
+- [x] `node --test tests/main.test.js`
 - [x] `npm test`
 - [x] `npm run build`
 - [x] `npm run check`
 - [x] `npm run handoff:verify -- .handoff/HEL-19/HEL-19-handoff-manifest.json`
 - [x] `npm test -- tests/url-state.test.js`
+- [x] `npm run pr:dry-run`
 
 ## Risks
 
 - The UI change was validated through automated tests and static asset checks,
   but not through an interactive browser session in this sandbox.
+- The branch also carries current mainline workflow and handoff updates from
+  merge refreshes, so this draft needs to remain the source of truth for the
+  eventual PR body.
 
 ## Preview Notes
 

@@ -70,6 +70,10 @@ test("validation text and 320 px layout safeguards are present in the shipped fi
   assert.match(html, /id="locked-value"/);
   assert.match(html, /id="locked-provenance"/);
   assert.match(html, /id="distance-provenance"/);
+  assert.match(html, /<h3 id="split-heading">Selected-distance splits<\/h3>/);
+  assert.match(html, /id="split-copy"/);
+  assert.match(html, /<tbody id="split-rows">[\s\S]*?Enter valid values to calculate\./);
+  assert.match(html, /<table class="split-table" aria-describedby="split-copy">/);
   assert.match(css, /input\[aria-invalid="true"\],\s*select\[aria-invalid="true"\]/);
   assert.match(css, /\.cluster-badges/);
   assert.match(css, /\.provenance-badges/);
@@ -77,6 +81,7 @@ test("validation text and 320 px layout safeguards are present in the shipped fi
   assert.match(css, /\.provenance-badge--stale/);
   assert.match(css, /\.sr-only/);
   assert.match(css, /table\s*{\s*width: 100%;\s*table-layout: fixed;/);
+  assert.match(css, /\.table-shell--compact\s*{\s*max-height: 320px;\s*overflow: auto;/);
   assert.match(css, /overflow-wrap: anywhere;/);
   assert.match(
     css,

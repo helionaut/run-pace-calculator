@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFile, stat } from "node:fs/promises";
+import { access, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -63,6 +63,39 @@ async function verifyBundle(bundlePath, branch, head) {
   }
 }
 
+async function verifyChecksumsFile(checksumsPath, baseDir) {
+  const content = await readFile(checksumsPath, "utf8");
+  const entries = content
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const match = /^([a-f0-9]{64})\s{2,}(.+)$/.exec(line);
+
+      if (!match) {
+        throw new Error(`Malformed SHA256SUMS entry: ${line}`);
+      }
+
+      return {
+        digest: match[1],
+        relativePath: match[2]
+      };
+    });
+
+  for (const entry of entries) {
+    const artifactPath = path.resolve(baseDir, entry.relativePath);
+    const digest = await sha256(artifactPath);
+
+    if (digest !== entry.digest) {
+      throw new Error(
+        `SHA256SUMS mismatch for ${entry.relativePath}: expected ${entry.digest}, got ${digest}`
+      );
+    }
+  }
+
+  return entries.length;
+}
+
 export async function verifyManifest(manifestArg) {
   if (!manifestArg) {
     throw new Error("Usage: node scripts/verify-handoff.mjs <manifest-path>");
@@ -107,9 +140,23 @@ export async function verifyManifest(manifestArg) {
     await verifyBundle(bundlePath, manifest.branch, manifest.head);
   }
 
+  let checksumCount = 0;
+  const checksumsPath = path.resolve(manifestDir, "SHA256SUMS");
+  try {
+    await access(checksumsPath);
+    checksumCount = await verifyChecksumsFile(checksumsPath, manifestDir);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      checksumCount = 0;
+    } else {
+      throw error;
+    }
+  }
+
   return {
     artifactCount: manifest.artifacts.length,
     branch: manifest.branch,
+    checksumCount,
     head: manifest.head,
     manifestPath
   };
@@ -122,6 +169,9 @@ if (isMain) {
     const result = await verifyManifest(process.argv[2]);
     console.log(`Verified handoff manifest: ${result.manifestPath}`);
     console.log(`Artifacts: ${result.artifactCount}`);
+    if (result.checksumCount > 0) {
+      console.log(`Checksums: ${result.checksumCount}`);
+    }
     if (result.branch) {
       console.log(`Branch: ${result.branch}`);
     }

@@ -3,6 +3,7 @@ export const MAX_DISTANCE = 1000;
 export const MAX_DISTANCE_DECIMALS = 5;
 export const MAX_SPEED = 60;
 export const RESULT_PLACEHOLDER = "Enter valid values to calculate.";
+const SPLIT_EPSILON = 1e-9;
 
 export const MODES = Object.freeze({
   PACE: "pace",
@@ -672,6 +673,52 @@ export function formatDistance(distanceKm, unit = "km") {
   return `${formatDistanceInputValue(distanceKm, unit)} ${unit}`;
 }
 
+function formatSplitDistance(distanceInUnit, unit) {
+  return `${formatEditableNumber(distanceInUnit, MAX_DISTANCE_DECIMALS)} ${unit}`;
+}
+
+function formatSplitLabel(distanceInUnit, unit, { isPartial = false } = {}) {
+  const distanceLabel = formatSplitDistance(distanceInUnit, unit);
+
+  return isPartial ? `Finish (${distanceLabel})` : distanceLabel;
+}
+
+export function buildSplitRows(distanceKm, unit, speedKmh) {
+  if (
+    !Number.isFinite(distanceKm) ||
+    distanceKm <= 0 ||
+    !Number.isFinite(speedKmh) ||
+    speedKmh <= 0
+  ) {
+    return [];
+  }
+
+  const totalDistanceInUnit = distanceFromKilometers(distanceKm, unit);
+  const paceSecondsPerUnit = speedToPaceSeconds(speedKmh, unit);
+  const wholeUnits = Math.floor(totalDistanceInUnit + SPLIT_EPSILON);
+  const rows = [];
+
+  for (let splitNumber = 1; splitNumber <= wholeUnits; splitNumber += 1) {
+    rows.push({
+      id: `split-${splitNumber}`,
+      label: formatSplitLabel(splitNumber, unit),
+      finishSeconds: splitNumber * paceSecondsPerUnit,
+      isPartial: false
+    });
+  }
+
+  if ((totalDistanceInUnit - wholeUnits) > SPLIT_EPSILON) {
+    rows.push({
+      id: "split-finish",
+      label: formatSplitLabel(totalDistanceInUnit, unit, { isPartial: true }),
+      finishSeconds: totalDistanceInUnit * paceSecondsPerUnit,
+      isPartial: true
+    });
+  }
+
+  return rows;
+}
+
 export function applyPresetSelection(state, presetId) {
   const preset = getPresetById(presetId);
   const canonical = getCanonicalValues(state);
@@ -1025,7 +1072,19 @@ function buildProjectionRows(speedKmh, unit, distanceKm, presetId) {
   return rows;
 }
 
-function createResult(state, speedKmh, distanceKm) {
+function createOptionalDistanceKm(state, canonical) {
+  const distance = parseDistanceInput(state.inputs.distance, {
+    showRequiredError: false
+  });
+
+  if (distance.error || distance.value === null || !Number.isFinite(canonical.distanceKm)) {
+    return null;
+  }
+
+  return canonical.distanceKm;
+}
+
+function createResult(state, speedKmh, distanceKm, splitDistanceKm = distanceKm) {
   return {
     distanceKm,
     finishSeconds: Number.isFinite(distanceKm)
@@ -1039,6 +1098,7 @@ function createResult(state, speedKmh, distanceKm) {
       distanceKm,
       state.presetId
     ),
+    splitDistanceKm,
     sourceConvertSource: state.convertSource,
     sourceMode: state.mode,
     speedKmh
@@ -1169,6 +1229,13 @@ function createDisplaySummary(state, result, resultState) {
   const selectedDistanceLabel = Number.isFinite(result.distanceKm)
     ? formatDistance(result.distanceKm, selectedUnit)
     : null;
+  const splitDistanceKm = Number.isFinite(result.splitDistanceKm)
+    ? result.splitDistanceKm
+    : result.distanceKm;
+  const splitRows = buildSplitRows(splitDistanceKm, selectedUnit, result.speedKmh);
+  const splitDistanceLabel = Number.isFinite(splitDistanceKm)
+    ? formatDistance(splitDistanceKm, selectedUnit)
+    : null;
   let primaryLabel = "Result";
   let primaryValue = RESULT_PLACEHOLDER;
   const lockedSummary = createLockedSummary(state, result, stale);
@@ -1179,6 +1246,7 @@ function createDisplaySummary(state, result, resultState) {
     stale
   );
   let primaryMeta = "Enter valid values to calculate.";
+  let splitMeta = "Select a distance in Pace or Finish Time mode to see cumulative split targets.";
 
   if (displayMode === MODES.PACE) {
     primaryLabel = "Pace";
@@ -1201,6 +1269,11 @@ function createDisplaySummary(state, result, resultState) {
     selectedDistanceLabel,
     stale
   });
+  if (splitRows.length > 0 && splitDistanceLabel) {
+    splitMeta = splitRows.some((row) => row.isPartial)
+      ? `Cumulative targets for ${splitDistanceLabel}, including the final partial split.`
+      : `Cumulative targets for ${splitDistanceLabel}.`;
+  }
 
   return {
     alternatePace,
@@ -1239,6 +1312,13 @@ function createDisplaySummary(state, result, resultState) {
       ...row,
       finishLabel: formatDuration(row.finishSeconds)
     })),
+    splitMeta,
+    splitPlaceholder: "Select a distance in Pace or Finish Time mode to see cumulative split targets.",
+    splitRows: splitRows.map((row) => ({
+      ...row,
+      finishLabel: formatDuration(row.finishSeconds)
+    })),
+    splitTitle: selectedUnit === "mi" ? "Mile splits" : "Kilometer splits",
     selectedDistanceLabel,
     selectedPace,
     selectedSpeed
@@ -1248,6 +1328,7 @@ function createDisplaySummary(state, result, resultState) {
 export function deriveCalculatorView(state, previousResult = null) {
   const showRequiredErrors = shouldShowRequiredErrors(state, previousResult);
   const canonical = getCanonicalValues(state);
+  const splitDistanceKm = createOptionalDistanceKm(state, canonical);
   const errors = {
     distance: null,
     finish: null,
@@ -1280,7 +1361,7 @@ export function deriveCalculatorView(state, previousResult = null) {
       const speedKmh = speedFromFinishTime(finish.value, distanceKm);
 
       if (Number.isFinite(speedKmh) && speedKmh > 0) {
-        currentResult = createResult(state, speedKmh, distanceKm);
+        currentResult = createResult(state, speedKmh, distanceKm, splitDistanceKm);
       }
     }
   } else if (state.mode === MODES.FINISH) {
@@ -1298,7 +1379,7 @@ export function deriveCalculatorView(state, previousResult = null) {
       canonical.paceSpeedKmh > 0
     ) {
       const speedKmh = canonical.paceSpeedKmh;
-      currentResult = createResult(state, speedKmh, distanceKm);
+      currentResult = createResult(state, speedKmh, distanceKm, splitDistanceKm);
     }
   } else if (state.convertSource === CONVERT_SOURCES.PACE) {
     const pace = parsePaceInput(state.inputs, {
@@ -1313,7 +1394,7 @@ export function deriveCalculatorView(state, previousResult = null) {
       canonical.paceSpeedKmh > 0
     ) {
       const speedKmh = canonical.paceSpeedKmh;
-      currentResult = createResult(state, speedKmh, null);
+      currentResult = createResult(state, speedKmh, null, splitDistanceKm);
     }
   } else {
     const speed = parseSpeedInput(state.inputs.speed, {
@@ -1327,7 +1408,7 @@ export function deriveCalculatorView(state, previousResult = null) {
       Number.isFinite(canonical.speedKmh) &&
       canonical.speedKmh > 0
     ) {
-      currentResult = createResult(state, canonical.speedKmh, null);
+      currentResult = createResult(state, canonical.speedKmh, null, splitDistanceKm);
     }
   }
 
