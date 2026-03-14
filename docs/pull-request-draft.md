@@ -1,13 +1,11 @@
-<!-- PR_TITLE: Tighten top row and normalize unit-specific distance controls -->
+<!-- PR_TITLE: Add short-distance quick presets for km and mile modes -->
 
 ## Summary
 
-- tighten the calculator header so the helper/status copy sits inline with
-  the unit toggle and reset controls instead of taking its own row
-- swap the quick distance chips to unit-aware labels and values in miles
-  mode, while preserving the existing kilometer-side presets
-- round slider-driven distance selections to at most two decimals in the
-  active unit and add calculator/DOM tests for the new behavior
+- add quick distance chips for `100m`, `500m`, and `1 km` in kilometer mode
+- add quick distance chips for `0.1 mi`, `0.5 mi`, and `1 mi` in mile mode
+- expand the preset strip tests and tighten the mobile chip spacing so the
+  larger button set stays compact on small screens
 
 ## Testing
 
@@ -17,13 +15,10 @@
 
 ## Risks
 
-- Low: the inline status copy now truncates on narrow widths to keep the top
-  row compact, so future helper text should stay short
-- Low: mile-mode quick chips intentionally use native mile distances, so a
-  converted kilometer default remains a custom selection after a unit switch
-- Low: slider interaction now snaps to two-decimal precision in the active
-  unit, which trades a small amount of fine-grained range control for cleaner
-  displayed values
+- Low: the new mile presets intentionally use native mile distances, so they
+  remain separate from the existing converted-kilometer defaults
+- Low: the preset strip now wraps into an extra row on narrow screens, so
+  future label length increases could require another responsive pass
 
 ## Checklist
 
@@ -33,12 +28,11 @@
 
 Preview notes:
 
-- Desktop screenshot reviewed at
-  `/home/helionaut/workspaces/HEL-26/screenshots/hel-26-desktop-default.png`.
-- Desktop miles-state screenshot reviewed at
-  `/home/helionaut/workspaces/HEL-26/screenshots/hel-26-desktop-mi.png`.
-- Mobile miles-state screenshot reviewed at
-  `/home/helionaut/workspaces/HEL-26/screenshots/hel-26-mobile-mi.png`.
-- The screenshots matched the issue request: thinner top row, inline helper
-  copy, unit-aware mile chips, and two-decimal distance display after the
-  slider-driven selection.
+- Desktop km-mode screenshot reviewed against the built app with the new
+  `100m`, `500m`, `1 km`, `5K`, `10K`, `Half`, and `Marathon` chips.
+- Desktop mile-mode screenshot reviewed against the built app with the new
+  `0.1 mi`, `0.5 mi`, `1 mi`, `5 mi`, `10 mi`, `13.1 mi`, and `26.2 mi`
+  chips.
+- Mobile km-mode and mile-mode screenshots reviewed at a `390px` viewport.
+- The mobile viewport check confirmed `scrollWidth === innerWidth`, and the
+  preset row plus projection strip stayed within the viewport.

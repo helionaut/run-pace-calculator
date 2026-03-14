@@ -1,1 +1,1 @@
-Tighten top row and normalize unit-specific distance controls
+Add short-distance quick presets for km and mile modes
