@@ -20,6 +20,8 @@ workspace:
 hooks:
   after_create: |
     git clone --depth 1 --branch main https://github.com/helionaut/run-pace-calculator .
+    git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+    git fetch origin --prune
   before_remove: |
     true
 agent:
@@ -60,12 +62,18 @@ No description provided.
 Instructions:
 
 1. This is an unattended orchestration session. Work autonomously end-to-end unless blocked by missing auth, missing secrets, or missing required infrastructure.
-2. Keep a single persistent workpad comment on the issue and update it as you go.
+2. Keep an append-only execution journal in Linear comments:
+   - create a new top-level comment for every meaningful pass instead of editing an older comment in place
+   - use a clear heading such as `## Codex Update`, `## Rework Update`, `## Handoff Update`, or `## Completion Update`
+   - each new comment should briefly capture what changed in this pass, what evidence was checked, and what next action remains
+   - if an older workpad or update comment already exists, treat it as immutable history and leave it untouched
+   - when continuing an issue, reference the latest prior comment in prose if useful, but do not overwrite it
+   - do not rewrite or overwrite prior progress comments unless there is a truly accidental duplicate created in the same turn
 3. Use repo-local skills from `.codex/skills`.
 4. Work test-first by default for behavior changes:
    - add or update tests before, or at least in the same change as, the implementation
    - do not hand off behavior changes without explicit test evidence
-   - if the task is too ambiguous to write meaningful tests, clarify the acceptance criteria in the workpad before coding
+   - if the task is too ambiguous to write meaningful tests, clarify the acceptance criteria in a new Linear update comment before coding
 5. Validate meaningful behavior before handoff.
 6. Treat local validation and remote validation separately:
    - local `npm test` / `npm run build` / `npm run check` prove the workspace head is healthy
@@ -76,26 +84,42 @@ Instructions:
    - if those checks pass, push the current branch head, refresh or create the PR, and wait for remote checks instead of producing another offline handoff
    - only fall back to offline handoff if the current turn re-verifies that GitHub auth/network/push is still unavailable
    - do not keep repeating the same blocked note across turns without a fresh publish-path recheck
-8. Move the issue to `Human Review` only after all of the following are true:
+8. If the issue already has a linked branch or PR, treat the published remote branch head as the source of truth before doing more local work:
+   - explicitly fetch the issue branch from origin, not just `main`
+   - compare the local workspace head to the latest published branch head
+   - if the local branch has diverged from the published branch or push is non-fast-forward, repair that divergence first by restacking local work onto the current remote branch before adding more changes
+   - do not keep coding on a stale local branch that no longer matches the review artifact
+9. Move the issue to `Human Review` only after all of the following are true:
    - implementation is complete
    - local validation and test evidence are complete
    - the linked PR exists and targets the correct branch
    - the linked PR reflects the current head that you want reviewed
    - required GitHub checks on that PR are green
-9. If local validation passes but the linked PR is still red, stale, or unpublished:
+   - add a fresh `## Handoff Update` comment immediately before the state transition that names the branch, PR, validation evidence, and what the reviewer should look at next
+10. If local validation passes but the linked PR is still red, stale, or unpublished:
    - keep the issue in `Rework`
-   - state clearly in the workpad that the remaining blocker is remote CI / PR freshness
+   - state clearly in a new Linear update comment that the remaining blocker is remote CI / PR freshness
    - do not describe the issue as ready for review yet
-10. Treat `Rework` as a concrete debugging lane, not just a status:
+11. Treat `Rework` as a concrete debugging lane, not just a status:
    - at the start of every `Rework` turn, fetch the latest issue comments/workpad plus linked PR/check state before changing code
+   - explicitly fetch the linked remote branch head as part of that refresh; a default `git fetch origin` that only updates `main` is not sufficient
    - identify the current blocker in explicit terms: failing check, stale PR head, merge conflict, missing validation, or missing publish step
-   - if the issue was moved to `Rework` without a concrete blocker comment, derive that blocker from the PR/check facts and write it into the workpad before proceeding
+   - if the issue was moved to `Rework` without a concrete blocker comment, derive that blocker from the PR/check facts and write it into a new Linear update comment before proceeding
    - do not rely on the state name alone as your instruction
-11. Leave a useful trace in Linear on every meaningful `Rework` pass:
+12. Leave a useful trace in Linear on every meaningful `Rework` pass:
    - say what blocker you addressed
    - say what next action remains
    - say whether the branch was published and whether remote CI changed
+   - if the workspace diverged from the published branch, say that explicitly and record how you repaired it
    - if nothing changed, say that explicitly instead of only bumping status
+13. Prefer additive history over mutable history:
+   - when in doubt, create a new concise comment rather than editing an older one
+   - progress visibility in Linear should make the sequence of passes obvious to a human reader
+   - historical workpad comments are immutable; never patch them in place during a later turn
+14. When a ticket is actually closing:
+   - before moving an issue to `Done`, add a fresh `## Completion Update` comment
+   - that completion comment must include the merged PR number when available, the relevant `main` commit SHA when available, deploy result, and the live URL when available
+   - do not let a status flip to `Done` be the only visible sign that the work finished
 
 Repo metadata:
 
