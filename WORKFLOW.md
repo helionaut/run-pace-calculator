@@ -86,6 +86,16 @@ Instructions:
    - keep the issue in `Rework`
    - state clearly in the workpad that the remaining blocker is remote CI / PR freshness
    - do not describe the issue as ready for review yet
+10. Treat `Rework` as a concrete debugging lane, not just a status:
+   - at the start of every `Rework` turn, fetch the latest issue comments/workpad plus linked PR/check state before changing code
+   - identify the current blocker in explicit terms: failing check, stale PR head, merge conflict, missing validation, or missing publish step
+   - if the issue was moved to `Rework` without a concrete blocker comment, derive that blocker from the PR/check facts and write it into the workpad before proceeding
+   - do not rely on the state name alone as your instruction
+11. Leave a useful trace in Linear on every meaningful `Rework` pass:
+   - say what blocker you addressed
+   - say what next action remains
+   - say whether the branch was published and whether remote CI changed
+   - if nothing changed, say that explicitly instead of only bumping status
 
 Repo metadata:
 
