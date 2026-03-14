@@ -19,26 +19,18 @@ workspace:
   root: /home/helionaut/workspaces
 hooks:
   after_create: |
-    local_repo=/home/helionaut/src/projects/run-pace-calculator
-    remote_repo=https://github.com/helionaut/run-pace-calculator.git
-
-    if [ -d "$local_repo/.git" ]; then
-      git clone --depth 1 "file://$local_repo" .
-      git remote set-url origin "$remote_repo"
-    else
-      git clone --depth 1 "$remote_repo" .
-    fi
+    git clone --depth 1 --branch main https://github.com/helionaut/run-pace-calculator .
   before_remove: |
     true
 agent:
-  max_concurrent_agents: 4
+  max_concurrent_agents: 3
   max_turns: 20
 codex:
   command: codex --config shell_environment_policy.inherit=all --config model_reasoning_effort=xhigh --model gpt-5.3-codex app-server
   approval_policy: never
-  thread_sandbox: workspace-write
+  thread_sandbox: danger-full-access
   turn_sandbox_policy:
-    type: workspaceWrite
+    type: dangerFullAccess
 ---
 
 You are working on a Linear ticket `{{ issue.identifier }}` for repository `run-pace-calculator`.
@@ -75,7 +67,35 @@ Instructions:
    - do not hand off behavior changes without explicit test evidence
    - if the task is too ambiguous to write meaningful tests, clarify the acceptance criteria in the workpad before coding
 5. Validate meaningful behavior before handoff.
-6. Move the issue to `Human Review` only after the implementation, validation, test evidence, and PR linkage are complete.
+6. Treat local validation and remote validation separately:
+   - local `npm test` / `npm run build` / `npm run check` prove the workspace head is healthy
+   - GitHub PR checks prove the published review artifact is healthy
+   - do not treat local green results as sufficient if the linked GitHub PR is still red, stale, or missing the latest head
+7. When the workspace head is newer than the linked PR, treat publishing that head as the next required action:
+   - re-check `gh auth status`, GitHub DNS, and GitHub HTTPS from the current environment before reusing any earlier blocker note
+   - if those checks pass, push the current branch head, refresh or create the PR, and wait for remote checks instead of producing another offline handoff
+   - only fall back to offline handoff if the current turn re-verifies that GitHub auth/network/push is still unavailable
+   - do not keep repeating the same blocked note across turns without a fresh publish-path recheck
+8. Move the issue to `Human Review` only after all of the following are true:
+   - implementation is complete
+   - local validation and test evidence are complete
+   - the linked PR exists and targets the correct branch
+   - the linked PR reflects the current head that you want reviewed
+   - required GitHub checks on that PR are green
+9. If local validation passes but the linked PR is still red, stale, or unpublished:
+   - keep the issue in `Rework`
+   - state clearly in the workpad that the remaining blocker is remote CI / PR freshness
+   - do not describe the issue as ready for review yet
+10. Treat `Rework` as a concrete debugging lane, not just a status:
+   - at the start of every `Rework` turn, fetch the latest issue comments/workpad plus linked PR/check state before changing code
+   - identify the current blocker in explicit terms: failing check, stale PR head, merge conflict, missing validation, or missing publish step
+   - if the issue was moved to `Rework` without a concrete blocker comment, derive that blocker from the PR/check facts and write it into the workpad before proceeding
+   - do not rely on the state name alone as your instruction
+11. Leave a useful trace in Linear on every meaningful `Rework` pass:
+   - say what blocker you addressed
+   - say what next action remains
+   - say whether the branch was published and whether remote CI changed
+   - if nothing changed, say that explicitly instead of only bumping status
 
 Repo metadata:
 

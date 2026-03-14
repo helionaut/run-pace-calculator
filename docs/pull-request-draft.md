@@ -19,14 +19,14 @@
 - [x] `npm run build`
 - [x] `npm run check`
 - [x] `npm run handoff:verify -- .handoff/HEL-19/HEL-19-handoff-manifest.json`
-- [ ] Other:
+- [x] `npm test -- tests/url-state.test.js`
 
 ## Risks
 
 - The UI change was validated through automated tests and static asset checks,
   but not through an interactive browser session in this sandbox.
 
-## Preview notes
+## Preview Notes
 
 - Input panels now show compact provenance badges so the active entered source
   reads differently from calculator-derived fields, without labeling blank or
@@ -50,11 +50,12 @@
 
 ## Checklist
 
-- [x] Scope matches the linked Linear issue
+- [x] Scope matches the linked Linear issue as far as this checkout's current
+  state model allows
 - [x] Docs updated if behavior or workflow changed
 - [x] Screenshots or preview notes added when UI changed
 
-## Publish notes
+## Publish Notes
 
 If GitHub access is still blocked in the current checkout:
 
