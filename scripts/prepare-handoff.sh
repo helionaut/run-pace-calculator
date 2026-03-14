@@ -54,6 +54,7 @@ dry_run_path="$output_dir/publish-dry-run.txt"
 summary_path="$output_dir/SUMMARY.md"
 commits_path="$output_dir/commits.txt"
 manifest_path="$output_dir/$manifest_name"
+helper_path="$output_dir/resume-on-another-machine.sh"
 
 sha256_file() {
   if command -v sha256sum >/dev/null 2>&1; then
@@ -78,6 +79,57 @@ cp docs/pull-request-draft.md "$pr_draft_path"
 npm run pr:dry-run >"$dry_run_path"
 git log --oneline -n 20 >"$commits_path"
 
+cat >"$helper_path" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+branch="${branch}"
+handoff_dir="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+bundle_path="\$handoff_dir/${bundle_name}"
+manifest_path="\$handoff_dir/${manifest_name}"
+head="\$(
+  node -e 'const fs = require("fs"); process.stdout.write(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).head);' \\
+    "\$manifest_path"
+)"
+target_repo_dir="\${1:-}"
+skip_publish="\${2:-}"
+
+if [[ -z "\$target_repo_dir" ]]; then
+  echo "Usage: \$0 <target-repo-dir> [--skip-publish]" >&2
+  exit 1
+fi
+
+if [[ ! -d "\$target_repo_dir/.git" ]]; then
+  echo "Expected a git checkout at: \$target_repo_dir" >&2
+  exit 1
+fi
+
+echo "Importing bundle into \$target_repo_dir"
+git -C "\$target_repo_dir" fetch "\$bundle_path" "\$branch:\$branch"
+git -C "\$target_repo_dir" switch "\$branch"
+
+echo "Verifying handoff manifest"
+(
+  cd "\$target_repo_dir"
+  node scripts/verify-handoff.mjs "\$manifest_path"
+)
+
+if [[ "\$skip_publish" == "--skip-publish" ]]; then
+  echo "Imported and verified. Next run 'npm run pr:publish' in \$target_repo_dir."
+  echo "After publishing, confirm the PR reflects \$head and required checks are green."
+  exit 0
+fi
+
+echo "Publishing branch from \$target_repo_dir"
+(
+  cd "\$target_repo_dir"
+  npm run pr:publish
+)
+
+echo "Publish step finished. Confirm the PR reflects \$head and required checks are green."
+EOF
+chmod +x "$helper_path"
+
 bundle_sha="$(sha256_file "$bundle_path")"
 bundle_size="$(file_size "$bundle_path")"
 pr_draft_sha="$(sha256_file "$pr_draft_path")"
@@ -86,6 +138,8 @@ dry_run_sha="$(sha256_file "$dry_run_path")"
 dry_run_size="$(file_size "$dry_run_path")"
 commits_sha="$(sha256_file "$commits_path")"
 commits_size="$(file_size "$commits_path")"
+helper_sha="$(sha256_file "$helper_path")"
+helper_size="$(file_size "$helper_path")"
 
 cat >"$summary_path" <<EOF
 # ${issue_identifier} Handoff Summary
@@ -103,6 +157,9 @@ cat >"$summary_path" <<EOF
 The paths below use \`<handoff-dir>\` for the directory that contains this
 summary, the manifest, and the exported bundle.
 
+Shortcut:
+\`<handoff-dir>/resume-on-another-machine.sh <target-repo-dir>\`
+
 1. Clone or choose a writable checkout of the repo at \`<target-repo-dir>\`.
 2. Import the bundle into that checkout with plain git:
    \`git -C <target-repo-dir> fetch <handoff-dir>/${bundle_name} ${branch}:${branch}\`
@@ -118,6 +175,7 @@ summary, the manifest, and the exported bundle.
 - \`pull-request-draft.md\`
 - \`publish-dry-run.txt\`
 - \`commits.txt\`
+- \`resume-on-another-machine.sh\`
 - \`${manifest_name}\`
 EOF
 
@@ -158,6 +216,12 @@ cat >"$manifest_path" <<EOF
       "path": "commits.txt",
       "sha256": "${commits_sha}",
       "size": ${commits_size}
+    },
+    {
+      "name": "resume_helper",
+      "path": "resume-on-another-machine.sh",
+      "sha256": "${helper_sha}",
+      "size": ${helper_size}
     },
     {
       "name": "summary",
