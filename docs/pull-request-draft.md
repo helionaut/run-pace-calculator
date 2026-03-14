@@ -10,6 +10,8 @@
   input and summary `aria-describedby` links to provenance regions, badge
   `aria-label` text, and tests for entered-vs-derived, blank-state,
   stale-state, and every current-state calculation mode
+- keep long pace minutes valid so slow entered paces do not fall into an
+  incorrect invalid or stale provenance state
 
 ## Testing
 
@@ -43,6 +45,8 @@
 - Calculator tests now cover the full current-state provenance matrix across
   `pace`, `finish`, `convert`-from-`pace`, and `convert`-from-`speed`, in
   addition to the stale and accessibility checks.
+- Slow paces above `59` minutes now stay valid, which prevents legitimate
+  long-pace entries from being mislabeled as invalid edits or stale output.
 
 ## Checklist
 

@@ -264,6 +264,42 @@ test("finish mode exposes entered versus derived provenance and the locked pace"
   );
 });
 
+test("finish mode allows long pace minutes without dropping current provenance", () => {
+  const view = deriveCalculatorView(
+    buildState(
+      { mode: MODES.FINISH },
+      {
+        distance: "5",
+        paceMinutes: "75",
+        paceSeconds: "0"
+      }
+    )
+  );
+
+  assert.equal(view.resultState, "current");
+  assert.equal(view.errors.pace, null);
+  assert.equal(view.display.primaryLabel, "Finish time");
+  assert.equal(view.display.primaryValue, "06:15:00");
+  assert.equal(view.display.selectedPace, "75:00 /km");
+  assert.equal(view.display.selectedSpeed, "0.80 km/h");
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.primary),
+    ["Derived"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.selectedPace),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.lockedSummary.provenance),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.inputProvenance.pace),
+    ["Entered", "Locked"]
+  );
+});
+
 test("incomplete structured finish time blocks a fresh calculation", () => {
   const view = deriveCalculatorView(
     buildState(

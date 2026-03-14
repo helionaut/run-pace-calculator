@@ -638,13 +638,6 @@ export function parsePaceInput(inputs, { showRequiredError = true } = {}) {
   const minutes = Number(minutesRaw);
   const seconds = Number(secondsRaw);
 
-  if (minutes < 0 || minutes > 59) {
-    return {
-      error: "Pace minutes must stay between 0 and 59.",
-      value: null
-    };
-  }
-
   if (seconds < 0 || seconds > 59) {
     return {
       error: "Pace seconds must stay between 0 and 59.",
