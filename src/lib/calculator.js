@@ -34,6 +34,21 @@ const PRESET_MATCH_TOLERANCE = 1e-5;
 const SLIDER_MIN = 0.5;
 const SLIDER_BASE_MAX = 60;
 const SLIDER_STEP = "0.00001";
+const VALID_UNITS = Object.freeze(["km", "mi"]);
+const URL_STATE_KEYS = Object.freeze({
+  DISTANCE: "distance",
+  LOCK: "lock",
+  METRIC: "metric",
+  PACE_MINUTES: "pm",
+  PACE_SECONDS: "ps",
+  PRESET: "preset",
+  SPEED: "speed",
+  TIME_HOURS: "th",
+  TIME_MINUTES: "tm",
+  TIME_SECONDS: "ts",
+  UNIT: "unit"
+});
+const URL_STATE_KEY_SET = new Set(Object.values(URL_STATE_KEYS));
 
 function trimValue(value) {
   return String(value ?? "").trim();
@@ -69,6 +84,40 @@ function getAlternateUnit(unit) {
 
 function getDefaultPreset() {
   return getPresetById(DEFAULT_PRESET_ID);
+}
+
+function isSupportedUnit(unit) {
+  return VALID_UNITS.includes(unit);
+}
+
+function isSupportedDriverMetric(metric) {
+  return Object.values(DRIVER_METRICS).includes(metric);
+}
+
+function isSupportedPresetId(presetId) {
+  return DISTANCE_PRESETS.some((preset) => preset.id === presetId);
+}
+
+function hasAnyUrlState(params) {
+  return [...URL_STATE_KEY_SET].some((key) => params.has(key));
+}
+
+function hasUnexpectedUrlStateKeys(params, allowedKeys) {
+  for (const key of URL_STATE_KEY_SET) {
+    if (params.has(key) && !allowedKeys.has(key)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function createUrlSearchParams(searchParams) {
+  if (searchParams instanceof URLSearchParams) {
+    return searchParams;
+  }
+
+  return new URLSearchParams(searchParams);
 }
 
 function almostEqual(a, b) {
@@ -569,6 +618,158 @@ export function createFormState() {
     presetId: preset.id,
     unit: "km"
   };
+}
+
+function buildUrlStateParams(state) {
+  const view = deriveCalculatorView(state);
+  const driverMetric = getEffectiveDriverMetric(state);
+
+  if (
+    !view.hasLiveResult ||
+    !isSupportedDriverMetric(driverMetric) ||
+    (state.lockMetric !== null && state.lockMetric !== driverMetric)
+  ) {
+    return null;
+  }
+
+  const params = new URLSearchParams();
+
+  params.set(URL_STATE_KEYS.METRIC, driverMetric);
+  params.set(URL_STATE_KEYS.PRESET, state.presetId);
+  params.set(URL_STATE_KEYS.UNIT, state.unit);
+
+  if (state.presetId === "custom") {
+    params.set(URL_STATE_KEYS.DISTANCE, state.inputs.distance);
+  }
+
+  if (driverMetric === DRIVER_METRICS.PACE) {
+    params.set(URL_STATE_KEYS.PACE_MINUTES, state.inputs.paceMinutes);
+    params.set(URL_STATE_KEYS.PACE_SECONDS, state.inputs.paceSeconds);
+  } else if (driverMetric === DRIVER_METRICS.SPEED) {
+    params.set(URL_STATE_KEYS.SPEED, state.inputs.speed);
+  } else {
+    params.set(URL_STATE_KEYS.TIME_HOURS, state.inputs.timeHours);
+    params.set(URL_STATE_KEYS.TIME_MINUTES, state.inputs.timeMinutes);
+    params.set(URL_STATE_KEYS.TIME_SECONDS, state.inputs.timeSeconds);
+  }
+
+  if (state.lockMetric) {
+    params.set(URL_STATE_KEYS.LOCK, state.lockMetric);
+  }
+
+  return params;
+}
+
+function applyRestoredInputValues(state, inputValues) {
+  return Object.entries(inputValues).reduce(
+    (nextState, [field, value]) => updateInputValue(nextState, field, value),
+    state
+  );
+}
+
+export function serializeCalculatorState(state) {
+  return buildUrlStateParams(state)?.toString() ?? "";
+}
+
+export function restoreCalculatorState(searchParams) {
+  const params = createUrlSearchParams(searchParams);
+  const defaultState = createFormState();
+
+  if (!hasAnyUrlState(params)) {
+    return defaultState;
+  }
+
+  const metric = params.get(URL_STATE_KEYS.METRIC);
+  const unit = params.get(URL_STATE_KEYS.UNIT);
+  const presetId = params.get(URL_STATE_KEYS.PRESET);
+  const lockMetric = params.get(URL_STATE_KEYS.LOCK);
+
+  if (
+    !isSupportedDriverMetric(metric) ||
+    !isSupportedUnit(unit) ||
+    !isSupportedPresetId(presetId) ||
+    (lockMetric !== null &&
+      (!LOCKABLE_METRICS.has(lockMetric) || lockMetric !== metric))
+  ) {
+    return defaultState;
+  }
+
+  const allowedKeys = new Set([
+    URL_STATE_KEYS.METRIC,
+    URL_STATE_KEYS.PRESET,
+    URL_STATE_KEYS.UNIT
+  ]);
+  let state = applyUnitChange(defaultState, unit);
+
+  if (presetId === "custom") {
+    allowedKeys.add(URL_STATE_KEYS.DISTANCE);
+
+    if (!params.has(URL_STATE_KEYS.DISTANCE)) {
+      return defaultState;
+    }
+
+    state = updateDistanceInput(state, params.get(URL_STATE_KEYS.DISTANCE));
+  } else {
+    state = applyPresetSelection(state, presetId);
+  }
+
+  state = setActiveMetric(state, metric);
+
+  if (metric === DRIVER_METRICS.PACE) {
+    allowedKeys.add(URL_STATE_KEYS.PACE_MINUTES);
+    allowedKeys.add(URL_STATE_KEYS.PACE_SECONDS);
+
+    if (
+      !params.has(URL_STATE_KEYS.PACE_MINUTES) ||
+      !params.has(URL_STATE_KEYS.PACE_SECONDS)
+    ) {
+      return defaultState;
+    }
+
+    state = applyRestoredInputValues(state, {
+      paceMinutes: params.get(URL_STATE_KEYS.PACE_MINUTES),
+      paceSeconds: params.get(URL_STATE_KEYS.PACE_SECONDS)
+    });
+  } else if (metric === DRIVER_METRICS.SPEED) {
+    allowedKeys.add(URL_STATE_KEYS.SPEED);
+
+    if (!params.has(URL_STATE_KEYS.SPEED)) {
+      return defaultState;
+    }
+
+    state = applyRestoredInputValues(state, {
+      speed: params.get(URL_STATE_KEYS.SPEED)
+    });
+  } else {
+    allowedKeys.add(URL_STATE_KEYS.TIME_HOURS);
+    allowedKeys.add(URL_STATE_KEYS.TIME_MINUTES);
+    allowedKeys.add(URL_STATE_KEYS.TIME_SECONDS);
+
+    if (
+      !params.has(URL_STATE_KEYS.TIME_HOURS) ||
+      !params.has(URL_STATE_KEYS.TIME_MINUTES) ||
+      !params.has(URL_STATE_KEYS.TIME_SECONDS)
+    ) {
+      return defaultState;
+    }
+
+    state = applyRestoredInputValues(state, {
+      timeHours: params.get(URL_STATE_KEYS.TIME_HOURS),
+      timeMinutes: params.get(URL_STATE_KEYS.TIME_MINUTES),
+      timeSeconds: params.get(URL_STATE_KEYS.TIME_SECONDS)
+    });
+  }
+
+  if (lockMetric !== null) {
+    allowedKeys.add(URL_STATE_KEYS.LOCK);
+    state = toggleMetricLock(state, lockMetric);
+  }
+
+  if (hasUnexpectedUrlStateKeys(params, allowedKeys)) {
+    return defaultState;
+  }
+
+  return deriveCalculatorView(state).hasLiveResult ? state : defaultState;
 }
 
 export function resetFormState(state) {

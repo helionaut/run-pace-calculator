@@ -4,6 +4,8 @@
   slider, active metric card, and live derived outputs visible together
 - replace the old mode-based state model with a unified calculator engine that
   supports live pace, speed, and finish-time derivation plus pace/time locks
+- preserve valid one-screen calculator scenarios in the query string and clear
+  malformed or contradictory URL state back to the default calculator
 - add DOM integration coverage for slider and lock behavior, update layout
   accessibility checks, and refresh repo smoke checks for the new markup
 - refresh product docs and the publish helper so the shipped repo and eventual
@@ -19,6 +21,8 @@
       locked time + distance changes, and locked pace + distance changes
 - [x] Other: added DOM integration coverage for slider-driven recalculation and
       lock interactions
+- [x] Other: added URL-state coverage for restoring valid scenarios, clearing
+      malformed query state, and syncing lock-driven edits without reloads
 
 ## Risks
 

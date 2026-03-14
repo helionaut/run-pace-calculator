@@ -14,6 +14,7 @@ fi
 
 branch="$(git branch --show-current)"
 pr_body_file="docs/pull-request-draft.md"
+pr_title_file="docs/pull-request-title.txt"
 dirty="$(git status --short)"
 
 derive_pr_title() {
@@ -41,7 +42,15 @@ derive_pr_title() {
   printf '%s%s\n' "$first_char" "${sentence:1}"
 }
 
-pr_title="$(derive_pr_title "$branch")"
+pr_title="${PR_TITLE:-}"
+
+if [[ -z "$pr_title" ]]; then
+  pr_title="$(derive_pr_title "$branch")"
+fi
+
+if [[ "$pr_title" == "Update the run pace calculator" && -f "$pr_title_file" ]]; then
+  pr_title="$(head -n 1 "$pr_title_file" | tr -d '\r')"
+fi
 
 repo_url="$(
   sed -n 's/^[[:space:]]*"url":[[:space:]]*"\([^"]*\)".*/\1/p' "$repo_root/.bootstrap/project.json" |

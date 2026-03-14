@@ -5,6 +5,8 @@ import {
   createFormState,
   deriveCalculatorView,
   resetFormState,
+  restoreCalculatorState,
+  serializeCalculatorState,
   setActiveMetric,
   toggleMetricLock,
   updateDistanceInput,
@@ -169,6 +171,28 @@ function render(elements, state) {
   return view;
 }
 
+function syncUrlState(state) {
+  if (
+    typeof window === "undefined" ||
+    !window.location ||
+    !window.history ||
+    typeof window.history.replaceState !== "function"
+  ) {
+    return;
+  }
+
+  const search = serializeCalculatorState(state);
+  const nextUrl = search
+    ? `${window.location.pathname}?${search}${window.location.hash}`
+    : `${window.location.pathname}${window.location.hash}`;
+  const currentUrl =
+    `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+  if (nextUrl !== currentUrl) {
+    window.history.replaceState(null, "", nextUrl);
+  }
+}
+
 function bindMetricInputs(elements, getState, setStateAndRender) {
   elements.paceMinutes.addEventListener("input", () => {
     setStateAndRender(
@@ -283,7 +307,10 @@ export function getElements(root) {
 }
 
 export function createCalculatorApp(elements) {
-  let state = createFormState();
+  let state =
+    typeof window === "undefined"
+      ? createFormState()
+      : restoreCalculatorState(window.location.search);
 
   function getState() {
     return state;
@@ -291,7 +318,10 @@ export function createCalculatorApp(elements) {
 
   function setStateAndRender(nextState) {
     state = nextState;
-    return render(elements, state);
+    const view = render(elements, state);
+
+    syncUrlState(state);
+    return view;
   }
 
   for (const button of elements.unitButtons) {
@@ -341,11 +371,15 @@ export function createCalculatorApp(elements) {
   bindMetricInputs(elements, getState, setStateAndRender);
 
   render(elements, state);
+  syncUrlState(state);
 
   return {
     getState,
     render() {
-      return render(elements, state);
+      const view = render(elements, state);
+
+      syncUrlState(state);
+      return view;
     }
   };
 }

@@ -13,6 +13,8 @@ Production URL: https://helionaut.github.io/run-pace-calculator/
 - A live distance slider with common race preset chips
 - Pace and finish-time locks that keep one driving value fixed while distance moves
 - Metric and imperial conversions
+- Shareable deep links for valid calculator scenarios, with malformed query
+  state falling back to the default one-screen calculator
 - A compact projection disclosure for common race distances
 - Responsive layout with inline validation and keyboard-operable inputs, slider, and lock controls
 - Zero-dependency static build suitable for GitHub Pages
@@ -97,10 +99,12 @@ short explicit error instead of a server traceback.
 
 - `src/index.html` contains the calculator UI shell.
 - `src/styles.css` defines the calculator interface and responsive layout.
-- `src/main.js` wires DOM events and rendering.
-- `src/lib/calculator.js` contains the shared conversion and formatting logic.
+- `src/main.js` wires DOM events, rendering, and URL-state syncing.
+- `src/lib/calculator.js` contains the shared conversion, formatting, and
+  URL serialization logic.
 - `tests/*.test.js` covers calculator logic, DOM interaction behavior,
-  build/serve harness behavior, handoff verification, and import flow.
+  URL-state integration, build/serve harness behavior, handoff verification,
+  and import flow.
 - `scripts/build.mjs` produces the static build output.
 - `scripts/serve.mjs` serves either `src/` or `dist/` locally.
 - `scripts/check-dist.mjs` smoke-checks the built artifact.

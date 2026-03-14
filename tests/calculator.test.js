@@ -10,6 +10,8 @@ import {
   deriveCalculatorView,
   formatDistanceInputValue,
   resetFormState,
+  restoreCalculatorState,
+  serializeCalculatorState,
   setActiveMetric,
   toggleMetricLock,
   updateDistanceInput,
@@ -220,4 +222,77 @@ test("distance presets keep the PRD canonical kilometers", () => {
       ["Marathon", 42.195]
     ]
   );
+});
+
+test("preset distances render exact converted miles from canonical kilometers", () => {
+  assert.equal(formatDistanceInputValue(5, "mi"), "3.10686");
+  assert.equal(formatDistanceInputValue(10, "mi"), "6.21371");
+  assert.equal(formatDistanceInputValue(21.0975, "mi"), "13.10938");
+  assert.equal(formatDistanceInputValue(42.195, "mi"), "26.21876");
+});
+
+test("serialize and restore preserve a valid custom-distance pace scenario", () => {
+  let state = applyUnitChange(createFormState(), "mi");
+
+  state = updateDistanceInput(state, "6.5");
+  state = enterPace(state, "8", "15");
+
+  const search = serializeCalculatorState(state);
+  const restored = restoreCalculatorState(new URLSearchParams(search));
+
+  assert.equal(
+    search,
+    "metric=pace&preset=custom&unit=mi&distance=6.5&pm=8&ps=15"
+  );
+  assert.equal(restored.unit, "mi");
+  assert.equal(restored.presetId, "custom");
+  assert.equal(restored.driverMetric, DRIVER_METRICS.PACE);
+  assert.equal(restored.inputs.distance, "6.5");
+  assert.equal(restored.inputs.paceMinutes, "8");
+  assert.equal(restored.inputs.paceSeconds, "15");
+  assert.equal(deriveCalculatorView(restored).hasLiveResult, true);
+});
+
+test("serialize and restore preserve a locked time scenario", () => {
+  let state = enterTime(createFormState(), "1", "45", "0");
+
+  state = toggleMetricLock(state, DRIVER_METRICS.TIME);
+  state = applyPresetSelection(state, "half");
+
+  const search = serializeCalculatorState(state);
+  const restored = restoreCalculatorState(new URLSearchParams(search));
+
+  assert.equal(
+    search,
+    "metric=time&preset=half&unit=km&th=1&tm=45&ts=0&lock=time"
+  );
+  assert.equal(restored.driverMetric, DRIVER_METRICS.TIME);
+  assert.equal(restored.lockMetric, DRIVER_METRICS.TIME);
+  assert.equal(restored.presetId, "half");
+  assert.equal(restored.inputs.timeHours, "1");
+  assert.equal(restored.inputs.timeMinutes, "45");
+  assert.equal(restored.inputs.timeSeconds, "0");
+  assert.equal(deriveCalculatorView(restored).hasLiveResult, true);
+});
+
+test("malformed URL state falls back to the default calculator", () => {
+  const restored = restoreCalculatorState(
+    new URLSearchParams("metric=speed&preset=10k&unit=km&speed=12&lock=time")
+  );
+
+  assert.deepEqual(restored, createFormState());
+});
+
+test("blank or invalid calculator state serializes to a clean URL", () => {
+  let partialState = createFormState();
+
+  partialState = updateDistanceInput(partialState, "10");
+  partialState = updateInputValue(
+    setActiveMetric(partialState, DRIVER_METRICS.PACE),
+    "paceMinutes",
+    "5"
+  );
+
+  assert.equal(serializeCalculatorState(createFormState()), "");
+  assert.equal(serializeCalculatorState(partialState), "");
 });
