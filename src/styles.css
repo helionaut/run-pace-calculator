@@ -235,6 +235,11 @@ body {
   min-width: 0;
 }
 
+.field span {
+  color: var(--text);
+  transition: color 160ms ease;
+}
+
 .field-pair {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -244,6 +249,32 @@ body {
 .field-error {
   min-height: 1.05em;
   color: transparent;
+}
+
+.rate-field {
+  padding: 5px;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius-sm) + 2px);
+  background: rgba(255, 255, 255, 0.34);
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.rate-field.field--active {
+  border-color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
+}
+
+.rate-field.field--linked {
+  border-color: rgba(49, 41, 28, 0.08);
+  background: rgba(113, 98, 74, 0.06);
+}
+
+.rate-field.field--linked span {
+  color: var(--muted);
 }
 
 input {
@@ -257,6 +288,25 @@ input {
   font: inherit;
   font-size: 0.98rem;
   font-variant-numeric: tabular-nums;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.rate-field.field--active input {
+  background: rgba(255, 255, 255, 0.97);
+}
+
+.rate-field.field--linked input {
+  border-color: rgba(49, 41, 28, 0.09);
+  background: rgba(227, 221, 213, 0.8);
+  color: rgba(49, 41, 28, 0.84);
+}
+
+.rate-field.field--linked input::placeholder {
+  color: rgba(114, 98, 74, 0.72);
 }
 
 #distance-input,

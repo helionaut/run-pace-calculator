@@ -132,6 +132,7 @@ function createElements() {
     distanceLabel: new FakeElement(),
     distanceSlider: new FakeElement({ value: "10" }),
     paceError: new FakeElement(),
+    paceField: new FakeElement(),
     paceLabel: new FakeElement(),
     paceMinutes: new FakeElement(),
     paceSeconds: new FakeElement(),
@@ -146,6 +147,7 @@ function createElements() {
     resetButton: new FakeElement(),
     selectedDistance: new FakeElement(),
     speedError: new FakeElement(),
+    speedField: new FakeElement(),
     speedInput: new FakeElement(),
     speedLabel: new FakeElement(),
     statusMessage: new FakeElement(),
@@ -239,6 +241,77 @@ test("speed input keeps pace and finish time linked in the DOM", () => {
     elements.statusMessage.textContent,
     "Solving time from distance + movement rate."
   );
+});
+
+test("focusing speed makes it the active rate field without changing the linked value", () => {
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+  enterPace(elements, "5", "0");
+
+  elements.speedInput.dispatch("focus");
+
+  assert.equal(elements.speedInput.value, "12");
+  assert.equal(elements.paceMinutes.value, "5");
+  assert.equal(elements.paceSeconds.value, "00");
+  assert.equal(elements.paceField.classList.contains("field--linked"), true);
+  assert.equal(elements.speedField.classList.contains("field--active"), true);
+  assert.equal(
+    elements.statusMessage.textContent,
+    "Solving time from distance + movement rate."
+  );
+});
+
+test("moving between pace subfields does not snap back the unfinished group", () => {
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+  elements.paceMinutes.value = "5";
+  elements.paceMinutes.dispatch("input");
+  elements.paceMinutes.dispatch("blur", {
+    relatedTarget: elements.paceSeconds
+  });
+
+  assert.equal(elements.paceMinutes.value, "5");
+  assert.equal(elements.paceError.textContent, "Complete pace minutes and seconds.");
+});
+
+test("first time edit auto-fills untouched fields with zeros", () => {
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+  elements.timeHours.value = "1";
+  elements.timeHours.dispatch("focus");
+  elements.timeHours.dispatch("input");
+
+  assert.equal(elements.timeHours.value, "1");
+  assert.equal(elements.timeMinutes.value, "00");
+  assert.equal(elements.timeSeconds.value, "00");
+  assert.equal(elements.paceMinutes.value, "6");
+  assert.equal(elements.paceSeconds.value, "00");
+  assert.equal(elements.speedInput.value, "10");
+});
+
+test("invalid time blur restores the last valid view instead of leaving hidden state", () => {
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+  enterPace(elements, "5", "0");
+
+  elements.timeSeconds.dispatch("focus");
+  elements.timeSeconds.value = "999";
+  elements.timeSeconds.dispatch("input");
+
+  assert.equal(elements.timeError.textContent, "Finish seconds must stay between 0 and 59.");
+  assert.equal(elements.statusMessage.textContent, "Fix highlighted fields.");
+
+  elements.timeSeconds.dispatch("blur");
+
+  assert.equal(elements.timeHours.value, "0");
+  assert.equal(elements.timeMinutes.value, "50");
+  assert.equal(elements.timeSeconds.value, "00");
+  assert.equal(elements.timeError.textContent, "");
+  assert.equal(elements.statusMessage.textContent, "Solving time from distance + movement rate.");
 });
 
 test("preset buttons work with a time-driven solve and recalculate movement rate", () => {
