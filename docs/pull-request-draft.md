@@ -18,6 +18,7 @@
 - [x] `npm test`
 - [x] `npm run build`
 - [x] Other: `npm run check`
+- [x] Other: `npm run pr:dry-run`
 - [x] Other: `npm run handoff:prepare`
 - [x] Other: `npm run handoff:verify -- .handoff/HEL-18/HEL-18-handoff-manifest.json`
 - [x] Other: `./.handoff/HEL-18/resume-handoff.sh <fresh-main-clone> --validate --dry-run-publish`
