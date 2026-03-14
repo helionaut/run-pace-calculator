@@ -138,6 +138,46 @@ function renderProjections(elements, projectionRows) {
   }
 }
 
+function createPlaceholderRow(message) {
+  const placeholderRow = document.createElement("tr");
+  const placeholderCell = document.createElement("td");
+
+  placeholderRow.className = "table-placeholder";
+  placeholderCell.colSpan = 2;
+  placeholderCell.textContent = message;
+  placeholderRow.append(placeholderCell);
+  return placeholderRow;
+}
+
+function renderSplitRows(elements, view) {
+  setTextContent(elements.splitHeading, view.heading);
+  setTextContent(elements.splitCopy, view.meta);
+
+  if (view.rows.length === 0) {
+    elements.splitRows.replaceChildren(createPlaceholderRow(view.placeholder));
+    return;
+  }
+
+  elements.splitRows.replaceChildren(
+    ...view.rows.map((row) => {
+      const tableRow = document.createElement("tr");
+      const splitCell = document.createElement("th");
+      const finishCell = document.createElement("td");
+
+      if (row.isPartial) {
+        tableRow.classList.add("is-final-partial");
+      }
+
+      splitCell.scope = "row";
+      splitCell.textContent = row.label;
+      finishCell.textContent = row.finishLabel;
+
+      tableRow.append(splitCell, finishCell);
+      return tableRow;
+    })
+  );
+}
+
 function render(elements, state) {
   const view = deriveCalculatorView(state);
   const hasError = Boolean(
@@ -167,6 +207,7 @@ function render(elements, state) {
   elements.statusMessage.classList.toggle("status-message--error", hasError);
 
   renderProjections(elements, view.projectionRows);
+  renderSplitRows(elements, view.split);
 
   return view;
 }
@@ -285,6 +326,9 @@ export function getElements(root) {
     },
     resetButton: root.querySelector("#reset-button"),
     selectedDistance: root.querySelector("#selected-distance"),
+    splitCopy: root.querySelector("#split-copy"),
+    splitHeading: root.querySelector("#split-heading"),
+    splitRows: root.querySelector("#split-rows"),
     speedCard: root.querySelector("#speed-card"),
     speedDriverButton: root.querySelector("#speed-driver-button"),
     speedError: root.querySelector("#speed-error"),

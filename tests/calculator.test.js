@@ -159,6 +159,33 @@ test("locking pace keeps the effort fixed while distance changes", () => {
   );
 });
 
+test("split rows follow the selected distance and include a final partial segment", () => {
+  const tenKView = deriveCalculatorView(enterPace(createFormState(), "5", "0"));
+  const halfView = deriveCalculatorView(
+    enterPace(applyPresetSelection(createFormState(), "half"), "5", "0")
+  );
+
+  assert.equal(tenKView.split.heading, "Kilometer splits");
+  assert.deepEqual(
+    tenKView.split.rows.slice(0, 2).map((row) => [row.label, row.finishLabel, row.isPartial]),
+    [
+      ["1 km", "00:05:00", false],
+      ["2 km", "00:10:00", false]
+    ]
+  );
+  assert.equal(tenKView.split.rows.at(-1).label, "10 km");
+  assert.equal(tenKView.split.rows.at(-1).finishLabel, "00:50:00");
+
+  assert.match(halfView.split.meta, /final partial split/i);
+  assert.deepEqual(
+    halfView.split.rows.slice(-2).map((row) => [row.label, row.finishLabel, row.isPartial]),
+    [
+      ["21 km", "01:45:00", false],
+      ["21.0975 km", "01:45:29", true]
+    ]
+  );
+});
+
 test("unit changes convert the selected distance and preserve the live result", () => {
   const paceState = enterPace(createFormState(), "5", "0");
   const switched = applyUnitChange(paceState, "mi");

@@ -44,6 +44,10 @@ test("calculator markup keeps the compact control flow in DOM order", async () =
   assert.match(html, /<span>Hours<\/span>[\s\S]*id="time-hours"/);
   assert.match(html, /<span>Minutes<\/span>[\s\S]*id="time-minutes"/);
   assert.match(html, /<span>Seconds<\/span>[\s\S]*id="time-seconds"/);
+  assert.match(html, /<summary>Selected-distance splits<\/summary>/);
+  assert.match(html, /id="split-copy"/);
+  assert.match(html, /id="split-heading"/);
+  assert.match(html, /id="split-rows"/);
 });
 
 test("status messaging, lock affordances, and responsive safeguards are present", async () => {
@@ -65,6 +69,8 @@ test("status messaging, lock affordances, and responsive safeguards are present"
   assert.match(css, /input\[aria-invalid="true"\]/);
   assert.match(css, /input:disabled/);
   assert.match(css, /\.metrics-grid\s*{\s*display: grid;\s*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
+  assert.match(css, /\.projection-copy,\s*caption/);
+  assert.match(css, /\.is-final-partial th,\s*\.is-final-partial td/);
   assert.match(css, /table\s*{\s*width: 100%;[\s\S]*table-layout: fixed;/);
   assert.match(
     css,

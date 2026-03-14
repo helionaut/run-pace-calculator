@@ -4,6 +4,7 @@ export const MAX_DISTANCE_DECIMALS = 5;
 export const MAX_SPEED = 60;
 export const RESULT_PLACEHOLDER =
   "Choose a distance, then edit pace, speed, or time.";
+const SPLIT_EPSILON = 1e-9;
 
 export const DRIVER_METRICS = Object.freeze({
   PACE: "pace",
@@ -347,6 +348,44 @@ function buildProjectionRows(speedKmh, unit) {
   );
 }
 
+function formatSplitLabel(distanceInUnit, unit) {
+  return `${formatEditableNumber(distanceInUnit, MAX_DISTANCE_DECIMALS)} ${unit}`;
+}
+
+function buildSplitRows(distanceKm, unit, speedKmh) {
+  if (
+    !Number.isFinite(distanceKm) ||
+    distanceKm <= 0 ||
+    !Number.isFinite(speedKmh) ||
+    speedKmh <= 0
+  ) {
+    return [];
+  }
+
+  const totalDistanceInUnit = distanceFromKilometers(distanceKm, unit);
+  const paceSecondsPerUnit = speedToPaceSeconds(speedKmh, unit);
+  const wholeUnits = Math.floor(totalDistanceInUnit + SPLIT_EPSILON);
+  const rows = [];
+
+  for (let splitNumber = 1; splitNumber <= wholeUnits; splitNumber += 1) {
+    rows.push({
+      label: formatSplitLabel(splitNumber, unit),
+      finishLabel: formatDuration(splitNumber * paceSecondsPerUnit),
+      isPartial: false
+    });
+  }
+
+  if ((totalDistanceInUnit - wholeUnits) > SPLIT_EPSILON) {
+    rows.push({
+      label: formatSplitLabel(totalDistanceInUnit, unit),
+      finishLabel: formatDuration(totalDistanceInUnit * paceSecondsPerUnit),
+      isPartial: true
+    });
+  }
+
+  return rows;
+}
+
 function deriveCalculation(state) {
   const driverMetric = getEffectiveDriverMetric(state);
   const errors = {
@@ -454,6 +493,25 @@ function createDistanceView(state, calculation) {
     sliderStep: SLIDER_STEP,
     sliderValue: formatDistanceInputValue(state.canonicalDistanceKm, state.unit),
     summary: formatDistance(state.canonicalDistanceKm, state.unit)
+  };
+}
+
+function createSplitView(state, calculation) {
+  const rows = buildSplitRows(calculation.distanceKm, state.unit, calculation.speedKmh);
+  const distanceLabel = calculation.distanceKm !== null
+    ? formatDistance(calculation.distanceKm, state.unit)
+    : null;
+
+  return {
+    heading: state.unit === "mi" ? "Mile splits" : "Kilometer splits",
+    meta:
+      rows.length === 0 || distanceLabel === null
+        ? "Choose a distance and valid metric to see cumulative split targets."
+        : rows.some((row) => row.isPartial)
+          ? `Cumulative targets for ${distanceLabel}, including the final partial split.`
+          : `Cumulative targets for ${distanceLabel}.`,
+    placeholder: RESULT_PLACEHOLDER,
+    rows
   };
 }
 
@@ -1289,6 +1347,7 @@ export function deriveCalculatorView(state) {
       (Number.isFinite(calculation.finishSeconds) && calculation.finishSeconds > 0),
     lockMetric: state.lockMetric,
     projectionRows: buildProjectionRows(calculation.speedKmh, state.unit),
+    split: createSplitView(state, calculation),
     selectedDistanceLabel: calculation.distanceKm !== null
       ? formatDistance(calculation.distanceKm, state.unit)
       : formatDistance(state.canonicalDistanceKm, state.unit),

@@ -6,6 +6,8 @@
   supports live pace, speed, and finish-time derivation plus pace/time locks
 - preserve valid one-screen calculator scenarios in the query string and clear
   malformed or contradictory URL state back to the default calculator
+- add a compact selected-distance split disclosure that updates live with the
+  current pace, speed, time, and distance state
 - add DOM integration coverage for slider and lock behavior, update layout
   accessibility checks, and refresh repo smoke checks for the new markup
 - refresh product docs and the publish helper so the shipped repo and eventual
@@ -23,6 +25,8 @@
       lock interactions
 - [x] Other: added URL-state coverage for restoring valid scenarios, clearing
       malformed query state, and syncing lock-driven edits without reloads
+- [x] Other: added split-row coverage for derived values and the selected
+      distance disclosure in both calculator and DOM tests
 
 ## Risks
 
@@ -35,8 +39,8 @@
   panels that pushed the main interaction below the fold on common laptop
   viewports.
 - After: the primary view is a single compact frame with a live distance
-  slider, preset chips, and three visible metric cards for pace, speed, and
-  finish time.
+  slider, preset chips, three visible metric cards, and compact disclosures
+  for both common race projections and selected-distance splits.
 - Interaction: entering pace immediately reveals speed and finish time for the
   selected distance; locking time or pace keeps that metric fixed while the
   slider recomputes the others.

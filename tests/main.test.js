@@ -43,11 +43,20 @@ class FakeClassList {
   contains(token) {
     return this.tokens.has(token);
   }
+
+  setFromString(value) {
+    this.tokens = new Set(String(value).split(/\s+/).filter(Boolean));
+  }
+
+  toString() {
+    return [...this.tokens].join(" ");
+  }
 }
 
 class FakeElement {
   constructor({ dataset = {}, value = "", textContent = "" } = {}) {
     this.classList = new FakeClassList();
+    this.children = [];
     this.dataset = { ...dataset };
     this.disabled = false;
     this.listeners = new Map();
@@ -84,6 +93,22 @@ class FakeElement {
 
   setAttribute(name, value) {
     this.attributes.set(name, String(value));
+  }
+
+  append(...children) {
+    this.children.push(...children);
+  }
+
+  replaceChildren(...children) {
+    this.children = [...children];
+  }
+
+  get className() {
+    return this.classList.toString();
+  }
+
+  set className(value) {
+    this.classList.setFromString(value);
   }
 }
 
@@ -122,6 +147,9 @@ function createElements() {
     },
     resetButton: new FakeElement(),
     selectedDistance: new FakeElement(),
+    splitCopy: new FakeElement(),
+    splitHeading: new FakeElement(),
+    splitRows: new FakeElement(),
     speedCard: new FakeElement(),
     speedDriverButton: new FakeElement(),
     speedError: new FakeElement(),
@@ -143,6 +171,24 @@ function createElements() {
   };
 }
 
+function installFakeDocument(t) {
+  const previousDocument = globalThis.document;
+
+  globalThis.document = {
+    createElement() {
+      return new FakeElement();
+    }
+  };
+
+  t.after(() => {
+    if (previousDocument === undefined) {
+      delete globalThis.document;
+    } else {
+      globalThis.document = previousDocument;
+    }
+  });
+}
+
 function enterPace(elements, minutes, seconds) {
   elements.paceMinutes.value = minutes;
   elements.paceMinutes.dispatch("input");
@@ -160,7 +206,20 @@ function enterTime(elements, hours, minutes, seconds) {
   elements.timeSeconds.dispatch("input");
 }
 
-test("pace input plus slider movement updates derived speed and finish time live", () => {
+function readSplitRows(splitRows) {
+  return splitRows.children.map((row) => {
+    const [labelCell, finishCell] = row.children;
+
+    return {
+      label: labelCell.textContent,
+      finishLabel: finishCell.textContent,
+      isPartial: row.classList.contains("is-final-partial")
+    };
+  });
+}
+
+test("pace input plus slider movement updates derived speed and finish time live", (t) => {
+  installFakeDocument(t);
   const elements = createElements();
 
   createCalculatorApp(elements);
@@ -186,7 +245,8 @@ test("pace input plus slider movement updates derived speed and finish time live
   assert.equal(elements.speedInput.disabled, true);
 });
 
-test("locking time keeps the target fixed while the slider recalculates pace and speed", () => {
+test("locking time keeps the target fixed while the slider recalculates pace and speed", (t) => {
+  installFakeDocument(t);
   const elements = createElements();
 
   createCalculatorApp(elements);
@@ -213,7 +273,8 @@ test("locking time keeps the target fixed while the slider recalculates pace and
   );
 });
 
-test("locking pace keeps finish time live and blocks switching drivers until unlocked", () => {
+test("locking pace keeps finish time live and blocks switching drivers until unlocked", (t) => {
+  installFakeDocument(t);
   const elements = createElements();
 
   createCalculatorApp(elements);
@@ -237,4 +298,35 @@ test("locking pace keeps finish time live and blocks switching drivers until unl
     elements.statusMessage.textContent,
     "Pace locked. Drag distance to update the finish time."
   );
+});
+
+test("split rows update in the DOM as the selected distance changes", (t) => {
+  installFakeDocument(t);
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+
+  assert.equal(elements.splitHeading.textContent, "Kilometer splits");
+  assert.equal(
+    elements.splitRows.children[0].children[0].textContent,
+    "Choose a distance, then edit pace, speed, or time."
+  );
+
+  enterPace(elements, "5", "0");
+
+  let rows = readSplitRows(elements.splitRows);
+  assert.deepEqual(rows.slice(0, 2), [
+    { label: "1 km", finishLabel: "00:05:00", isPartial: false },
+    { label: "2 km", finishLabel: "00:10:00", isPartial: false }
+  ]);
+  assert.equal(rows.at(-1).label, "10 km");
+  assert.equal(rows.at(-1).finishLabel, "00:50:00");
+
+  elements.distanceSlider.value = "5";
+  elements.distanceSlider.dispatch("input");
+
+  rows = readSplitRows(elements.splitRows);
+  assert.equal(rows.length, 5);
+  assert.equal(rows.at(-1).label, "5 km");
+  assert.equal(rows.at(-1).finishLabel, "00:25:00");
 });

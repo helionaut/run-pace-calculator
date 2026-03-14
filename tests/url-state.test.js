@@ -55,6 +55,7 @@ class FakeElement {
   constructor({ id = "", dataset = {} } = {}) {
     this.attributes = {};
     this.classList = new FakeClassList();
+    this.children = [];
     this.dataset = { ...dataset };
     this.disabled = false;
     this.id = id;
@@ -91,6 +92,14 @@ class FakeElement {
     this.classList.setFromString(value);
   }
 
+  append(...children) {
+    this.children.push(...children);
+  }
+
+  replaceChildren(...children) {
+    this.children = [...children];
+  }
+
   setAttribute(name, value) {
     this.attributes[name] = String(value);
   }
@@ -100,6 +109,10 @@ class FakeDocument {
   constructor() {
     this.byId = new Map();
     this.collections = new Map();
+  }
+
+  createElement() {
+    return new FakeElement();
   }
 
   querySelector(selector) {
@@ -147,6 +160,9 @@ function createEnvironment(search = "") {
     "projection-marathon",
     "reset-button",
     "selected-distance",
+    "split-copy",
+    "split-heading",
+    "split-rows",
     "speed-card",
     "speed-driver-button",
     "speed-error",

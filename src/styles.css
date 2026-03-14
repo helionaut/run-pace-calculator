@@ -464,6 +464,26 @@ button:disabled {
   padding: 0 18px 18px;
 }
 
+.projection-copy,
+caption {
+  color: var(--muted);
+  text-align: left;
+}
+
+.projection-copy {
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+caption {
+  padding: 0 0 10px;
+  font-family: var(--label-font);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -480,6 +500,17 @@ td {
 
 tbody th {
   color: var(--muted);
+}
+
+.table-placeholder td,
+.is-final-partial th,
+.is-final-partial td {
+  color: var(--text);
+}
+
+.is-final-partial th,
+.is-final-partial td {
+  border-bottom-style: dashed;
 }
 
 td {

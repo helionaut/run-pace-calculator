@@ -4,7 +4,32 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
-branch="$(git branch --show-current)"
+resolve_branch() {
+  local branch_name
+
+  branch_name="$(git branch --show-current 2>/dev/null || true)"
+  if [[ -n "$branch_name" ]]; then
+    printf '%s\n' "$branch_name"
+    return 0
+  fi
+
+  for branch_name in "${GITHUB_HEAD_REF:-}" "${GITHUB_REF_NAME:-}" "${BRANCH_NAME:-}"; do
+    if [[ -n "$branch_name" ]]; then
+      printf '%s\n' "$branch_name"
+      return 0
+    fi
+  done
+
+  branch_name="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+  if [[ -n "$branch_name" ]]; then
+    printf '%s\n' "$branch_name"
+    return 0
+  fi
+
+  return 1
+}
+
+branch="$(resolve_branch || true)"
 if [[ -z "$branch" ]]; then
   echo "Could not determine the current git branch." >&2
   exit 1

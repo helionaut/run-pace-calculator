@@ -16,6 +16,7 @@ Production URL: https://helionaut.github.io/run-pace-calculator/
 - Shareable deep links for valid calculator scenarios, with malformed query
   state falling back to the default one-screen calculator
 - A compact projection disclosure for common race distances
+- A compact split-table disclosure for the currently selected distance
 - Responsive layout with inline validation and keyboard-operable inputs, slider, and lock controls
 - Zero-dependency static build suitable for GitHub Pages
 - Product docs for the PRD, requirements, and implementation plan
