@@ -45,8 +45,8 @@ const QUICK_DISTANCE_PRESETS = Object.freeze({
     { id: "1mi", label: "1 mi", distanceKm: 1 * KM_PER_MILE },
     { id: "5mi", label: "5 mi", distanceKm: 5 * KM_PER_MILE },
     { id: "10mi", label: "10 mi", distanceKm: 10 * KM_PER_MILE },
-    { id: "half", label: "13.1 mi", distanceKm: 13.1 * KM_PER_MILE },
-    { id: "marathon", label: "26.2 mi", distanceKm: 26.2 * KM_PER_MILE }
+    { id: "half", label: "Half Marathon", distanceKm: 13.1 * KM_PER_MILE },
+    { id: "marathon", label: "Marathon", distanceKm: 26.2 * KM_PER_MILE }
   ])
 });
 

@@ -274,13 +274,34 @@ test("moving between pace subfields does not snap back the unfinished group", ()
 
   createCalculatorApp(elements);
   elements.paceMinutes.value = "5";
+  elements.paceMinutes.dispatch("focus");
   elements.paceMinutes.dispatch("input");
-  elements.paceMinutes.dispatch("blur", {
-    relatedTarget: elements.paceSeconds
+  elements.paceSeconds.dispatch("focus");
+  elements.paceSeconds.value = "";
+  elements.paceSeconds.dispatch("input");
+  elements.paceSeconds.dispatch("blur", {
+    relatedTarget: elements.paceMinutes
   });
 
   assert.equal(elements.paceMinutes.value, "5");
+  assert.equal(elements.paceSeconds.value, "");
   assert.equal(elements.paceError.textContent, "Complete pace minutes and seconds.");
+});
+
+test("first pace edit auto-fills the untouched seconds field with zeros", () => {
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+  elements.paceMinutes.value = "5";
+  elements.paceMinutes.dispatch("focus");
+  elements.paceMinutes.dispatch("input");
+
+  assert.equal(elements.paceMinutes.value, "5");
+  assert.equal(elements.paceSeconds.value, "00");
+  assert.equal(elements.timeHours.value, "0");
+  assert.equal(elements.timeMinutes.value, "50");
+  assert.equal(elements.timeSeconds.value, "00");
+  assert.equal(elements.speedInput.value, "12");
 });
 
 test("first time edit auto-fills untouched fields with zeros", () => {
@@ -372,8 +393,8 @@ test("unit switch updates quick-distance chip labels for the selected unit", () 
       ["1mi", "1 mi"],
       ["5mi", "5 mi"],
       ["10mi", "10 mi"],
-      ["half", "13.1 mi"],
-      ["marathon", "26.2 mi"]
+      ["half", "Half Marathon"],
+      ["marathon", "Marathon"]
     ]
   );
 });

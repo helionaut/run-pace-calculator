@@ -226,8 +226,8 @@ test("mile mode exposes native mile quick-distance chips", () => {
       ["1mi", "1 mi"],
       ["5mi", "5 mi"],
       ["10mi", "10 mi"],
-      ["half", "13.1 mi"],
-      ["marathon", "26.2 mi"]
+      ["half", "Half Marathon"],
+      ["marathon", "Marathon"]
     ]
   );
   assert.equal(view.distance.presetId, "custom");
@@ -258,6 +258,31 @@ test("short mile quick-distance chips select native mile values", () => {
   assert.equal(view.distance.inputValue, "1");
   assert.equal(view.selectedDistanceLabel, "1 mi");
   assert.equal(view.distance.presetId, "1mi");
+});
+
+test("mile half and marathon presets keep canonical labels while selecting mile distances", () => {
+  const halfView = deriveCalculatorView(
+    applyPresetSelection(applyUnitChange(createFormState(), "mi"), "half")
+  );
+  const marathonView = deriveCalculatorView(
+    applyPresetSelection(applyUnitChange(createFormState(), "mi"), "marathon")
+  );
+
+  assert.equal(
+    halfView.distance.presets.find(({ id }) => id === "half")?.label,
+    "Half Marathon"
+  );
+  assert.equal(halfView.distance.inputValue, "13.1");
+  assert.equal(halfView.selectedDistanceLabel, "13.1 mi");
+  assert.equal(halfView.distance.presetId, "half");
+
+  assert.equal(
+    marathonView.distance.presets.find(({ id }) => id === "marathon")?.label,
+    "Marathon"
+  );
+  assert.equal(marathonView.distance.inputValue, "26.2");
+  assert.equal(marathonView.selectedDistanceLabel, "26.2 mi");
+  assert.equal(marathonView.distance.presetId, "marathon");
 });
 
 test("reset restores the default distance while preserving unit", () => {
