@@ -54,18 +54,14 @@ class FakeClassList {
 class FakeElement {
   constructor({ id = "", dataset = {} } = {}) {
     this.attributes = {};
-    this.children = [];
     this.classList = new FakeClassList();
+    this.children = [];
     this.dataset = { ...dataset };
-    this.hidden = false;
+    this.disabled = false;
     this.id = id;
     this.listeners = new Map();
     this.textContent = "";
     this.value = "";
-  }
-
-  append(...children) {
-    this.children.push(...children);
   }
 
   addEventListener(type, handler) {
@@ -88,8 +84,16 @@ class FakeElement {
     }
   }
 
-  focus() {
-    this.focused = true;
+  get className() {
+    return this.classList.toString();
+  }
+
+  set className(value) {
+    this.classList.setFromString(value);
+  }
+
+  append(...children) {
+    this.children.push(...children);
   }
 
   replaceChildren(...children) {
@@ -98,14 +102,6 @@ class FakeElement {
 
   setAttribute(name, value) {
     this.attributes[name] = String(value);
-  }
-
-  get className() {
-    return this.classList.toString();
-  }
-
-  set className(value) {
-    this.classList.setFromString(value);
   }
 }
 
@@ -145,87 +141,64 @@ class FakeDocument {
 function createEnvironment(search = "") {
   const document = new FakeDocument();
   const ids = [
-    "alternate-pace-label",
-    "alternate-pace-provenance",
-    "alternate-pace-value",
-    "alternate-speed-label",
-    "alternate-speed-provenance",
-    "alternate-speed-value",
-    "convert-source-cluster",
-    "distance-cluster",
-    "distance-cluster-provenance",
     "distance-error",
     "distance-input",
     "distance-label",
-    "distance-provenance",
-    "finish-cluster",
-    "finish-cluster-provenance",
-    "finish-error",
-    "finish-hours",
-    "finish-minutes",
-    "finish-seconds",
-    "hero-chips",
-    "locked-label",
-    "locked-meta",
-    "locked-provenance",
-    "locked-value",
-    "pace-cluster",
-    "pace-cluster-provenance",
-    "pace-copy",
+    "distance-slider",
+    "pace-card",
+    "pace-driver-button",
     "pace-error",
+    "pace-label",
+    "pace-lock-button",
     "pace-minutes",
+    "pace-secondary",
     "pace-seconds",
-    "preset-select",
-    "primary-label",
-    "primary-meta",
-    "primary-provenance",
-    "primary-value",
-    "projection-rows",
+    "pace-state",
+    "projection-5k",
+    "projection-10k",
+    "projection-half",
+    "projection-marathon",
     "reset-button",
-    "result-badge",
-    "result-note",
     "selected-distance",
-    "selected-pace-label",
-    "selected-pace-provenance",
-    "selected-pace-value",
-    "selected-speed-label",
-    "selected-speed-provenance",
-    "selected-speed-value",
     "split-copy",
     "split-heading",
     "split-rows",
-    "speed-cluster",
-    "speed-cluster-provenance",
+    "speed-card",
+    "speed-driver-button",
     "speed-error",
     "speed-input",
     "speed-label",
-    "status-message"
+    "speed-secondary",
+    "speed-state",
+    "status-message",
+    "time-card",
+    "time-driver-button",
+    "time-error",
+    "time-hours",
+    "time-lock-button",
+    "time-minutes",
+    "time-secondary",
+    "time-seconds",
+    "time-state"
   ];
 
   for (const id of ids) {
     document.registerElement(id);
   }
 
-  const modeButtons = {
-    convert: new FakeElement({ dataset: { mode: "convert" }, id: "mode-tab-convert" }),
-    finish: new FakeElement({ dataset: { mode: "finish" }, id: "mode-tab-finish" }),
-    pace: new FakeElement({ dataset: { mode: "pace" }, id: "mode-tab-pace" })
+  const presetButtons = {
+    "5k": new FakeElement({ dataset: { preset: "5k" } }),
+    "10k": new FakeElement({ dataset: { preset: "10k" } }),
+    half: new FakeElement({ dataset: { preset: "half" } }),
+    marathon: new FakeElement({ dataset: { preset: "marathon" } })
   };
   const unitButtons = {
     km: new FakeElement({ dataset: { unit: "km" } }),
     mi: new FakeElement({ dataset: { unit: "mi" } })
   };
-  const convertSourceButtons = {
-    pace: new FakeElement({ dataset: { convertSource: "pace" } }),
-    speed: new FakeElement({ dataset: { convertSource: "speed" } })
-  };
 
-  document.registerCollection("[data-mode-button]", Object.values(modeButtons));
+  document.registerCollection("[data-preset-button]", Object.values(presetButtons));
   document.registerCollection("[data-unit-button]", Object.values(unitButtons));
-  document.registerCollection(
-    "[data-convert-source-button]",
-    Object.values(convertSourceButtons)
-  );
 
   const window = {
     history: {
@@ -253,14 +226,30 @@ function createEnvironment(search = "") {
 
   return {
     controls: {
-      convertSourceButtons,
-      modeButtons,
+      presetButtons,
       unitButtons
     },
     document,
     elements: Object.fromEntries([...document.byId.entries()]),
     window
   };
+}
+
+function enterPace(elements, minutes, seconds) {
+  elements["pace-minutes"].value = minutes;
+  elements["pace-minutes"].emit("input");
+  elements["pace-seconds"].value = seconds;
+  elements["pace-seconds"].emit("input");
+}
+
+function enterTime(elements, hours, minutes, seconds) {
+  elements["time-driver-button"].emit("click");
+  elements["time-hours"].value = hours;
+  elements["time-hours"].emit("input");
+  elements["time-minutes"].value = minutes;
+  elements["time-minutes"].emit("input");
+  elements["time-seconds"].value = seconds;
+  elements["time-seconds"].emit("input");
 }
 
 async function loadApp(t, search = "") {
@@ -295,16 +284,19 @@ async function loadApp(t, search = "") {
 test("main restores a valid calculator scenario from the query string on load", async (t) => {
   const app = await loadApp(
     t,
-    "?mode=finish&unit=mi&preset=custom&distance=6.5&pm=8&ps=15"
+    "?metric=pace&preset=custom&unit=mi&distance=6.5&pm=8&ps=15"
   );
 
   assert.equal(app.elements["distance-input"].value, "6.5");
   assert.equal(app.elements["pace-minutes"].value, "8");
   assert.equal(app.elements["pace-seconds"].value, "15");
-  assert.equal(app.elements["preset-select"].value, "custom");
+  assert.equal(app.elements["speed-input"].value, "7.27");
+  assert.equal(app.elements["time-hours"].value, "0");
+  assert.equal(app.elements["time-minutes"].value, "53");
+  assert.equal(app.elements["time-seconds"].value, "38");
   assert.equal(
     app.window.location.search,
-    "?mode=finish&unit=mi&preset=custom&distance=6.5&pm=8&ps=15"
+    "?metric=pace&preset=custom&unit=mi&distance=6.5&pm=8&ps=15"
   );
   assert.equal(app.window.history.calls.length, 0);
 });
@@ -312,42 +304,60 @@ test("main restores a valid calculator scenario from the query string on load", 
 test("main updates the URL after valid edits without reloading the page", async (t) => {
   const app = await loadApp(t);
 
-  app.controls.modeButtons.finish.emit("click");
-  app.elements["distance-input"].value = "10";
-  app.elements["distance-input"].emit("input");
-  app.elements["pace-minutes"].value = "5";
-  app.elements["pace-minutes"].emit("input");
-  app.elements["pace-seconds"].value = "0";
-  app.elements["pace-seconds"].emit("input");
+  enterPace(app.elements, "5", "0");
 
   assert.equal(
     app.window.location.search,
-    "?mode=finish&unit=km&preset=custom&distance=10&pm=5&ps=0"
+    "?metric=pace&preset=10k&unit=km&pm=5&ps=0"
   );
   assert.match(
     app.window.history.calls.at(-1),
-    /\?mode=finish&unit=km&preset=custom&distance=10&pm=5&ps=0$/
+    /\?metric=pace&preset=10k&unit=km&pm=5&ps=0$/
+  );
+  assert.equal(app.window.reloadCount, 0);
+});
+
+test("main keeps lock state in the URL as distance changes", async (t) => {
+  const app = await loadApp(t);
+
+  enterTime(app.elements, "0", "50", "0");
+  app.elements["time-lock-button"].emit("click");
+
+  assert.equal(
+    app.window.location.search,
+    "?metric=time&preset=10k&unit=km&th=0&tm=50&ts=0&lock=time"
+  );
+
+  app.elements["distance-slider"].value = "5";
+  app.elements["distance-slider"].emit("input");
+
+  assert.equal(
+    app.window.location.search,
+    "?metric=time&preset=5k&unit=km&th=0&tm=50&ts=0&lock=time"
   );
   assert.equal(app.window.reloadCount, 0);
 });
 
 test("main clears malformed query state back to the default calculator", async (t) => {
-  const app = await loadApp(t, "?mode=convert&unit=km&source=speed&speed=12&pm=5");
+  const app = await loadApp(
+    t,
+    "?metric=speed&preset=10k&unit=km&speed=12&lock=time"
+  );
 
   assert.equal(app.window.location.search, "");
-  assert.equal(app.elements["distance-input"].value, "");
+  assert.equal(app.elements["distance-input"].value, "10");
   assert.equal(app.elements["speed-input"].value, "");
   assert.equal(app.window.history.calls.length, 1);
   assert.equal(app.window.history.calls[0], "/index.html");
 });
 
 test("main reset clears a valid deep link back to a clean URL", async (t) => {
-  const app = await loadApp(t, "?mode=finish&unit=km&preset=custom&distance=10&pm=5&ps=0");
+  const app = await loadApp(t, "?metric=pace&preset=10k&unit=km&pm=5&ps=0");
 
   app.elements["reset-button"].emit("click");
 
   assert.equal(app.window.location.search, "");
-  assert.equal(app.elements["distance-input"].value, "");
+  assert.equal(app.elements["distance-input"].value, "10");
   assert.equal(app.elements["pace-minutes"].value, "");
   assert.equal(app.elements["pace-seconds"].value, "");
   assert.equal(app.window.history.calls.at(-1), "/index.html");

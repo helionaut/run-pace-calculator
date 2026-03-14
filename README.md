@@ -9,13 +9,15 @@ Production URL: https://helionaut.github.io/run-pace-calculator/
 
 ## What Ships In The Current Slice
 
-- Pace, speed, finish-time, and conversion modes
+- A compact one-screen calculator with pace, speed, and finish-time cards
+- A live distance slider with common race preset chips
+- Pace and finish-time locks that keep one driving value fixed while distance moves
 - Metric and imperial conversions
-- Projection table from one mile through the marathon
-- Selected-distance split table with kilometer or mile targets
 - Shareable deep links for valid calculator scenarios, with malformed query
-  state falling back to a clean default calculator
-- Responsive layout with inline validation and keyboard-operable mode tabs
+  state falling back to the default one-screen calculator
+- A compact projection disclosure for common race distances
+- A compact split-table disclosure for the currently selected distance
+- Responsive layout with inline validation and keyboard-operable inputs, slider, and lock controls
 - Zero-dependency static build suitable for GitHub Pages
 - Product docs for the PRD, requirements, and implementation plan
 
@@ -101,9 +103,9 @@ short explicit error instead of a server traceback.
 - `src/main.js` wires DOM events, rendering, and URL-state syncing.
 - `src/lib/calculator.js` contains the shared conversion, formatting, and
   URL serialization logic.
-- `src/lib/mode-navigation.js` contains the keyboard tab-navigation helper.
-- `tests/*.test.js` covers calculator logic, build/serve harness behavior,
-  handoff verification, import flow, and mode navigation.
+- `tests/*.test.js` covers calculator logic, DOM interaction behavior,
+  URL-state integration, build/serve harness behavior, handoff verification,
+  and import flow.
 - `scripts/build.mjs` produces the static build output.
 - `scripts/serve.mjs` serves either `src/` or `dist/` locally.
 - `scripts/check-dist.mjs` smoke-checks the built artifact.
@@ -143,19 +145,10 @@ npm run handoff:prepare
 
 By default that writes verified artifacts into `.handoff/<issue-key>`, using
 the issue key parsed from the current branch name. That directory stays in the
-workspace and is ignored by git. The generated handoff now includes:
-
-- `<bundle-name>.bundle` for the branch history itself
-- `<issue-key>-handoff-manifest.json` for manifest-backed verification
-- `SUMMARY.md` with the current blocker snapshot and resume steps
-- `resume-handoff.sh` for restoring into another writable checkout
-- `SHA256SUMS` for artifact integrity checks
-- `<issue-key>-handoff.tar.gz` as a packaged archive of the same files
-
-You can still pass an explicit output path:
+workspace and is ignored by git. You can still pass an explicit output path:
 
 ```sh
-npm run handoff:prepare -- /tmp/hel-8-handoff
+npm run handoff:prepare -- /tmp/hel-16-handoff
 ```
 
 To verify the exported handoff before resuming elsewhere:
@@ -164,17 +157,35 @@ To verify the exported handoff before resuming elsewhere:
 npm run handoff:verify -- .handoff/<issue-key>/<issue-key>-handoff-manifest.json
 ```
 
-To resume from the generated helper in another writable checkout:
+The exported handoff is self-contained. From inside `.handoff/<issue-key>/`,
+you can resume into another checkout with:
 
 ```sh
-.handoff/<issue-key>/resume-handoff.sh /path/to/repo --validate --dry-run-publish
+./resume-from-handoff.sh /path/to/repo
 ```
 
-That verifies the packaged artifacts, imports the bundled branch into the
-target checkout, optionally runs `npm run check`, and optionally rehearses the
-publish flow with `npm run pr:dry-run`.
+That bundled helper verifies the packaged manifest, imports the bundled
+branch, and switches the target checkout onto that branch.
 
-You can still import the included bundle manually and publish it from there:
+The exported `.handoff/<issue-key>/SUMMARY.md` includes the current preview
+notes plus a reusable demo script for the eventual screenshot or short
+recording capture in a browser-enabled environment.
+
+To also package explicit before/after static previews for later screenshot
+capture, provide git refs when preparing the handoff:
+
+```sh
+HANDOFF_PREVIEW_BEFORE_REF=<before-ref> HANDOFF_PREVIEW_AFTER_REF=<after-ref> npm run handoff:prepare
+```
+
+That adds `.handoff/<issue-key>/PREVIEW-CAPTURE.md` plus
+`.handoff/<issue-key>/preview-snapshots.tar`,
+`.handoff/<issue-key>/previews/before/`, and
+`.handoff/<issue-key>/previews/after/` with ready-to-serve static artifacts
+for external screenshot or recording capture.
+
+To import the included bundle into another writable checkout and publish it
+from there:
 
 ```sh
 git -C /path/to/repo fetch .handoff/<issue-key>/<bundle-name>.bundle <branch>:<branch>
@@ -187,9 +198,12 @@ Every generated handoff package also includes a shortcut helper:
 .handoff/<issue-key>/resume-on-another-machine.sh /path/to/repo
 ```
 
-If you already have a checkout of this feature branch with the tracked helper
-scripts available, you can also use
-`./scripts/import_bundle.sh <bundle-path> <target-repo-dir>`.
+If you already have a checkout of this feature branch with the helper scripts
+available, you can also use
+`./scripts/import_bundle.sh <bundle-path|manifest-path|handoff-dir> <target-repo-dir>`.
+When you pass a handoff manifest or the handoff directory itself, the helper
+verifies the manifest first, imports the bundled branch, and switches the
+target checkout onto that branch.
 
 If you only want the raw branch bundle without the full manifest package:
 
@@ -211,11 +225,11 @@ GitHub repository URL if the workspace was bootstrapped from the local mirror,
 then pushes the current branch and creates or updates the PR from
 `docs/pull-request-draft.md`. If GitHub auth or network checks fail first, it
 now writes a full handoff directory to `.handoff/<issue-key>` by default
-instead of only exporting a raw bundle to `/tmp`. The generated handoff now
-includes a packaged archive, a resume helper, and checksum metadata in addition
-to the bundle, manifest, and summary. `.handoff/<issue-key>/SUMMARY.md` also
-records the detected publish blockers so the next environment does not have to
-rediscover the same auth, DNS, or HTTPS failures before resuming.
+instead of only exporting a raw bundle to `/tmp`. Once publish succeeds in a
+browser-enabled environment, use the demo script already packaged in
+`.handoff/<issue-key>/SUMMARY.md` to attach the PR back to the Linear issue,
+move it to `Human Review`, and capture the required media for the PR and Linear
+issue.
 
 To rehearse that flow without network access:
 

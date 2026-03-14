@@ -1,0 +1,1 @@
+Redesign calculator into a compact one screen interactive

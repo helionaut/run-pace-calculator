@@ -11,7 +11,6 @@ export const DIST_FILES = [
   "main.js",
   "favicon.svg",
   "lib/calculator.js",
-  "lib/mode-navigation.js",
 ];
 
 export async function buildStaticSite({

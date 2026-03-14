@@ -8,302 +8,19 @@
     />
     <meta
       name="description"
-      content="Convert running pace, speed, and projected finish times with PRD-aligned validation and stale-result handling."
+      content="A compact running calculator that derives pace, speed, and finish time live as distance changes."
     />
     <title>Run Pace Calculator</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="page-shell">
-      <div class="backdrop backdrop--top"></div>
-      <div class="backdrop backdrop--bottom"></div>
-
-      <header class="panel hero">
-        <div class="hero__copy">
-          <p class="eyebrow">Run Pace Calculator</p>
-          <h1>Switch between pace, finish goals, and conversions without losing your last good answer.</h1>
-          <p class="hero__lede">
-            Pick the unit system once, fill only the fields that matter for the
-            current mode, and keep the previous result in view whenever an edit
-            becomes incomplete or invalid.
-          </p>
-          <div class="hero__chips" id="hero-chips" aria-label="Common race presets"></div>
-        </div>
-
-        <aside class="hero__aside">
-          <p class="hero__aside-label">Behavior polish</p>
-          <h2>Validation, stale results, and reset work the way the PRD says they should.</h2>
-          <ul class="hero__list">
-            <li>Shared kilometer and mile unit toggle</li>
-            <li>Inline guidance for invalid pace, speed, distance, and time</li>
-            <li>Reset clears inputs without kicking you out of the current mode</li>
-          </ul>
-        </aside>
-      </header>
-
-      <main class="layout">
-        <section class="panel calculator">
-          <div class="section-heading">
-            <p class="eyebrow">Input</p>
-            <h2>Pick the question you want answered</h2>
-            <p>
-              The active mode decides which fields are required. Results update
-              automatically whenever those required fields are valid.
-            </p>
-          </div>
-
-          <form class="calculator__form" novalidate>
-            <div class="toolbar">
-              <div class="toolbar__group toolbar__group--fill">
-                <span class="toolbar__label">Mode</span>
-                <div class="segmented" role="tablist" aria-label="Calculation mode">
-                  <button
-                    type="button"
-                    class="segmented__button is-active"
-                    id="mode-tab-pace"
-                    role="tab"
-                    data-mode-button
-                    data-mode="pace"
-                    aria-controls="mode-panel"
-                    aria-selected="true"
-                    tabindex="0"
-                  >
-                    Pace
-                  </button>
-                  <button
-                    type="button"
-                    class="segmented__button"
-                    id="mode-tab-finish"
-                    role="tab"
-                    data-mode-button
-                    data-mode="finish"
-                    aria-controls="mode-panel"
-                    aria-selected="false"
-                    tabindex="-1"
-                  >
-                    Finish Time
-                  </button>
-                  <button
-                    type="button"
-                    class="segmented__button"
-                    id="mode-tab-convert"
-                    role="tab"
-                    data-mode-button
-                    data-mode="convert"
-                    aria-controls="mode-panel"
-                    aria-selected="false"
-                    tabindex="-1"
-                  >
-                    Convert
-                  </button>
-                </div>
-              </div>
-
-              <div class="toolbar__group">
-                <span class="toolbar__label">Unit</span>
-                <div class="segmented segmented--compact" aria-label="Distance unit">
-                  <button
-                    type="button"
-                    class="segmented__button is-active"
-                    data-unit-button
-                    data-unit="km"
-                    aria-pressed="true"
-                  >
-                    km
-                  </button>
-                  <button
-                    type="button"
-                    class="segmented__button"
-                    data-unit-button
-                    data-unit="mi"
-                    aria-pressed="false"
-                  >
-                    mi
-                  </button>
-                </div>
-              </div>
-
-              <button class="ghost-button" id="reset-button" type="button">
-                Reset
-              </button>
-            </div>
-
-            <div class="input-panels" id="mode-panel">
-              <section class="field-cluster" id="distance-cluster">
-                <div class="cluster-heading">
-                  <p class="eyebrow">Distance</p>
-                  <h3>Choose a preset or enter your own route</h3>
-                  <div class="cluster-badges provenance-badges" id="distance-cluster-provenance"></div>
-                </div>
-
-                <div class="field-row field-row--two">
-                  <label class="field">
-                    <span>Preset</span>
-                    <select id="preset-select" aria-label="Distance preset"></select>
-                  </label>
-
-                  <label class="field">
-                    <span id="distance-label">Distance (km)</span>
-                    <input
-                      id="distance-input"
-                      type="text"
-                      inputmode="decimal"
-                      autocomplete="off"
-                      spellcheck="false"
-                      aria-describedby="distance-cluster-provenance distance-hint distance-error"
-                    />
-                    <span class="field-hint" id="distance-hint">
-                      Use digits and one decimal point. Editing a preset makes
-                      it custom.
-                    </span>
-                    <span class="field-error" id="distance-error" aria-live="polite"></span>
-                  </label>
-                </div>
-              </section>
-
-              <section class="field-cluster" id="convert-source-cluster" hidden>
-                <div class="cluster-heading">
-                  <p class="eyebrow">Source</p>
-                  <h3>Pick the value you already know</h3>
-                </div>
-
-                <div class="segmented segmented--compact" aria-label="Convert source type">
-                  <button
-                    type="button"
-                    class="segmented__button is-active"
-                    data-convert-source-button
-                    data-convert-source="pace"
-                    aria-pressed="true"
-                  >
-                    Pace
-                  </button>
-                  <button
-                    type="button"
-                    class="segmented__button"
-                    data-convert-source-button
-                    data-convert-source="speed"
-                    aria-pressed="false"
-                  >
-                    Speed
-                  </button>
-                </div>
-              </section>
-
-              <section class="field-cluster" id="finish-cluster">
-                <div class="cluster-heading">
-                  <p class="eyebrow">Finish Time</p>
-                  <h3>Enter a completed or goal race clock</h3>
-                  <div class="cluster-badges provenance-badges" id="finish-cluster-provenance"></div>
-                  <p>Hours, minutes, and seconds all stay visible so incomplete edits can be validated inline.</p>
-                </div>
-
-                <div class="field-row field-row--three">
-                  <label class="field">
-                    <span>Hours</span>
-                    <input
-                      id="finish-hours"
-                      type="text"
-                      inputmode="numeric"
-                      autocomplete="off"
-                      spellcheck="false"
-                      aria-describedby="finish-cluster-provenance finish-error"
-                    />
-                  </label>
-
-                  <label class="field">
-                    <span>Minutes</span>
-                    <input
-                      id="finish-minutes"
-                      type="text"
-                      inputmode="numeric"
-                      autocomplete="off"
-                      spellcheck="false"
-                      aria-describedby="finish-cluster-provenance finish-error"
-                    />
-                  </label>
-
-                  <label class="field">
-                    <span>Seconds</span>
-                    <input
-                      id="finish-seconds"
-                      type="text"
-                      inputmode="numeric"
-                      autocomplete="off"
-                      spellcheck="false"
-                      aria-describedby="finish-cluster-provenance finish-error"
-                    />
-                  </label>
-                </div>
-
-                <p class="field-error field-error--group" id="finish-error" aria-live="polite"></p>
-              </section>
-
-              <section class="field-cluster" id="pace-cluster" hidden>
-                <div class="cluster-heading">
-                  <p class="eyebrow">Pace</p>
-                  <h3>Enter the effort you want to hold</h3>
-                  <div class="cluster-badges provenance-badges" id="pace-cluster-provenance"></div>
-                  <p id="pace-copy">
-                    Pace is always entered in the selected unit, then converted
-                    into the alternate unit automatically.
-                  </p>
-                </div>
-
-                <div class="field-row field-row--two">
-                  <label class="field">
-                    <span>Pace minutes</span>
-                    <input
-                      id="pace-minutes"
-                      type="text"
-                      inputmode="numeric"
-                      autocomplete="off"
-                      spellcheck="false"
-                      aria-describedby="pace-cluster-provenance pace-copy pace-error"
-                    />
-                  </label>
-
-                  <label class="field">
-                    <span>Pace seconds</span>
-                    <input
-                      id="pace-seconds"
-                      type="text"
-                      inputmode="numeric"
-                      autocomplete="off"
-                      spellcheck="false"
-                      aria-describedby="pace-cluster-provenance pace-copy pace-error"
-                    />
-                  </label>
-                </div>
-
-                <p class="field-error field-error--group" id="pace-error" aria-live="polite"></p>
-              </section>
-
-              <section class="field-cluster" id="speed-cluster" hidden>
-                <div class="cluster-heading">
-                  <p class="eyebrow">Speed</p>
-                  <h3>Enter a treadmill or target speed</h3>
-                  <div class="cluster-badges provenance-badges" id="speed-cluster-provenance"></div>
-                </div>
-
-                <label class="field field--wide">
-                  <span id="speed-label">Speed (km/h)</span>
-                  <input
-                    id="speed-input"
-                    type="text"
-                    inputmode="decimal"
-                    autocomplete="off"
-                    spellcheck="false"
-                    aria-describedby="speed-cluster-provenance speed-hint speed-error"
-                  />
-                  <span class="field-hint" id="speed-hint">
-                    Use digits and one decimal point only.
-                  </span>
-                  <span class="field-error" id="speed-error" aria-live="polite"></span>
-                </label>
-              </section>
-            </div>
-
+    <main class="page-shell">
+      <section class="app-frame">
+        <header class="app-header">
+          <div class="app-header__copy">
+            <p class="eyebrow">Run Pace Calculator</p>
+            <h1>Set the distance, edit one metric, and let the others follow.</h1>
             <p
               class="status-message"
               id="status-message"
@@ -311,175 +28,345 @@
               aria-live="polite"
               aria-atomic="true"
             ></p>
-          </form>
-        </section>
-
-        <section class="panel summary">
-          <div class="section-heading section-heading--inline">
-            <div>
-              <p class="eyebrow">Output</p>
-              <h2>Results stay visible until the next valid calculation</h2>
-              <p>
-                A stale badge means the numbers below are the last valid answer,
-                not the result of the current incomplete edit.
-              </p>
-            </div>
-
-            <span class="result-badge" id="result-badge">Awaiting input</span>
           </div>
 
-          <div class="summary-grid">
-            <article class="stat-card stat-card--accent">
-              <div class="stat-card__heading">
-                <p class="stat-card__label" id="primary-label">Result</p>
-                <div class="provenance-badges" id="primary-provenance"></div>
-              </div>
-              <p
-                class="stat-card__value"
-                id="primary-value"
-                aria-labelledby="primary-label"
-                aria-describedby="primary-provenance primary-meta"
+          <div class="app-header__controls">
+            <div class="segmented" aria-label="Distance unit">
+              <button
+                type="button"
+                class="segmented__button is-active"
+                data-unit-button
+                data-unit="km"
+                aria-pressed="true"
               >
-                --
-              </p>
-              <p class="stat-card__meta" id="primary-meta">
-                Enter valid values to calculate.
-              </p>
-            </article>
+                km
+              </button>
+              <button
+                type="button"
+                class="segmented__button"
+                data-unit-button
+                data-unit="mi"
+                aria-pressed="false"
+              >
+                mi
+              </button>
+            </div>
 
-            <article class="stat-card">
-              <p class="stat-card__label">Selected Unit</p>
-              <dl class="stat-pairs">
-                <div>
-                  <div class="stat-pair__heading">
-                    <dt id="selected-pace-label">Pace /km</dt>
-                    <div class="provenance-badges provenance-badges--inline" id="selected-pace-provenance"></div>
-                  </div>
-                  <dd id="selected-pace-value" aria-describedby="selected-pace-provenance">--</dd>
-                </div>
-                <div>
-                  <div class="stat-pair__heading">
-                    <dt id="selected-speed-label">Speed km/h</dt>
-                    <div class="provenance-badges provenance-badges--inline" id="selected-speed-provenance"></div>
-                  </div>
-                  <dd id="selected-speed-value" aria-describedby="selected-speed-provenance">--</dd>
-                </div>
-              </dl>
-            </article>
+            <button class="ghost-button" id="reset-button" type="button">
+              Reset
+            </button>
+          </div>
+        </header>
 
-            <article class="stat-card">
-              <p class="stat-card__label">Alternate Unit</p>
-              <dl class="stat-pairs">
-                <div>
-                  <div class="stat-pair__heading">
-                    <dt id="alternate-pace-label">Pace /mi</dt>
-                    <div class="provenance-badges provenance-badges--inline" id="alternate-pace-provenance"></div>
-                  </div>
-                  <dd id="alternate-pace-value" aria-describedby="alternate-pace-provenance">--</dd>
-                </div>
-                <div>
-                  <div class="stat-pair__heading">
-                    <dt id="alternate-speed-label">Speed mph</dt>
-                    <div class="provenance-badges provenance-badges--inline" id="alternate-speed-provenance"></div>
-                  </div>
-                  <dd id="alternate-speed-value" aria-describedby="alternate-speed-provenance">--</dd>
-                </div>
-              </dl>
-            </article>
+        <section class="distance-panel">
+          <div class="distance-panel__top">
+            <div class="distance-panel__summary">
+              <p class="eyebrow">Distance</p>
+              <h2 id="selected-distance">10 km</h2>
+            </div>
 
-            <article class="stat-card">
-              <p class="stat-card__label">Context</p>
-              <div class="context-stack">
-                <div class="context-block">
-                  <p class="stat-card__subheading" id="locked-label">Locked input</p>
-                  <p
-                    class="stat-card__value stat-card__value--compact"
-                    id="locked-value"
-                    aria-labelledby="locked-label"
-                    aria-describedby="locked-provenance locked-meta"
-                  >
-                    --
-                  </p>
-                  <div class="provenance-badges" id="locked-provenance"></div>
-                  <p class="stat-card__meta" id="locked-meta">
-                    The active driving value appears here after the first valid result.
-                  </p>
-                </div>
-
-                <div class="context-block">
-                  <p class="stat-card__subheading" id="distance-context-label">Distance context</p>
-                  <p
-                    class="stat-card__value stat-card__value--compact"
-                    id="selected-distance"
-                    aria-labelledby="distance-context-label"
-                    aria-describedby="distance-provenance result-note"
-                  >
-                    --
-                  </p>
-                  <div class="provenance-badges" id="distance-provenance"></div>
-                  <p class="stat-card__meta" id="result-note">
-                    Common-race projections appear below after the first valid result.
-                  </p>
-                </div>
-              </div>
-            </article>
+            <label class="field field--distance">
+              <span id="distance-label">Distance (km)</span>
+              <input
+                id="distance-input"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                spellcheck="false"
+                aria-describedby="distance-error"
+              />
+            </label>
           </div>
 
-          <section class="split-panel" aria-labelledby="split-heading">
-            <div class="split-panel__copy">
-              <p class="eyebrow">Split Targets</p>
-              <h3 id="split-heading">Selected-distance splits</h3>
-              <p id="split-copy">
-                Select a distance in Pace or Finish Time mode to see cumulative split targets.
-              </p>
-            </div>
+          <input
+            id="distance-slider"
+            class="distance-slider"
+            type="range"
+            min="0.5"
+            max="60"
+            step="0.00001"
+            aria-label="Distance slider"
+            aria-describedby="distance-error"
+          />
 
-            <div class="table-shell table-shell--compact">
-              <table class="split-table" aria-describedby="split-copy">
-                <thead>
-                  <tr>
-                    <th scope="col">Split</th>
-                    <th scope="col">Cumulative</th>
-                  </tr>
-                </thead>
-                <tbody id="split-rows">
-                  <tr class="table-placeholder">
-                    <td colspan="2">Enter valid values to calculate.</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
+          <div class="preset-row" aria-label="Race presets" role="toolbar">
+            <button
+              type="button"
+              class="chip-button"
+              data-preset-button
+              data-preset="5k"
+              aria-pressed="false"
+            >
+              5K
+            </button>
+            <button
+              type="button"
+              class="chip-button"
+              data-preset-button
+              data-preset="10k"
+              aria-pressed="true"
+            >
+              10K
+            </button>
+            <button
+              type="button"
+              class="chip-button"
+              data-preset-button
+              data-preset="half"
+              aria-pressed="false"
+            >
+              Half
+            </button>
+            <button
+              type="button"
+              class="chip-button"
+              data-preset-button
+              data-preset="marathon"
+              aria-pressed="false"
+            >
+              Marathon
+            </button>
+          </div>
+
+          <p class="field-error" id="distance-error" aria-live="polite"></p>
         </section>
 
-        <section class="panel projections">
-          <div class="section-heading">
-            <p class="eyebrow">Projection Table</p>
-            <h2>Common race distances</h2>
-            <p>
-              Each row assumes the same sustainable effort. The selected preset
-              or custom distance is highlighted when it is available.
-            </p>
-          </div>
+        <section class="metrics-grid" aria-label="Calculator metrics">
+          <article class="metric-card metric-card--input" id="pace-card">
+            <div class="metric-card__header">
+              <div>
+                <p class="eyebrow">Pace</p>
+                <h2 id="pace-label">Pace /km</h2>
+              </div>
 
-          <div class="table-shell">
+              <div class="metric-card__actions">
+                <span class="metric-state" id="pace-state">Input</span>
+                <button
+                  type="button"
+                  class="chip-button chip-button--soft"
+                  id="pace-lock-button"
+                  aria-pressed="false"
+                >
+                  Lock
+                </button>
+                <button
+                  type="button"
+                  class="ghost-button ghost-button--compact"
+                  id="pace-driver-button"
+                >
+                  Editing
+                </button>
+              </div>
+            </div>
+
+            <div class="metric-inputs metric-inputs--pair">
+              <label class="field">
+                <span>Minutes</span>
+                <input
+                  id="pace-minutes"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="--"
+                  aria-describedby="pace-error"
+                />
+              </label>
+
+              <label class="field">
+                <span>Seconds</span>
+                <input
+                  id="pace-seconds"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="--"
+                  aria-describedby="pace-error"
+                />
+              </label>
+            </div>
+
+            <p class="metric-secondary" id="pace-secondary">Also --:-- /mi</p>
+            <p class="field-error" id="pace-error" aria-live="polite"></p>
+          </article>
+
+          <article class="metric-card metric-card--derived" id="speed-card">
+            <div class="metric-card__header">
+              <div>
+                <p class="eyebrow">Speed</p>
+                <h2 id="speed-label">Speed (km/h)</h2>
+              </div>
+
+              <div class="metric-card__actions">
+                <span class="metric-state" id="speed-state">Waiting</span>
+                <button
+                  type="button"
+                  class="ghost-button ghost-button--compact"
+                  id="speed-driver-button"
+                >
+                  Use as input
+                </button>
+              </div>
+            </div>
+
+            <div class="metric-inputs">
+              <label class="field">
+                <span>Value</span>
+                <input
+                  id="speed-input"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="--.--"
+                  aria-describedby="speed-error"
+                  disabled
+                />
+              </label>
+            </div>
+
+            <p class="metric-secondary" id="speed-secondary">Also --.-- mph</p>
+            <p class="field-error" id="speed-error" aria-live="polite"></p>
+          </article>
+
+          <article class="metric-card metric-card--derived" id="time-card">
+            <div class="metric-card__header">
+              <div>
+                <p class="eyebrow">Finish Time</p>
+                <h2>Goal or Result</h2>
+              </div>
+
+              <div class="metric-card__actions">
+                <span class="metric-state" id="time-state">Waiting</span>
+                <button
+                  type="button"
+                  class="chip-button chip-button--soft"
+                  id="time-lock-button"
+                  aria-pressed="false"
+                >
+                  Lock
+                </button>
+                <button
+                  type="button"
+                  class="ghost-button ghost-button--compact"
+                  id="time-driver-button"
+                >
+                  Use as input
+                </button>
+              </div>
+            </div>
+
+            <div class="metric-inputs metric-inputs--triplet">
+              <label class="field">
+                <span>Hours</span>
+                <input
+                  id="time-hours"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="--"
+                  aria-describedby="time-error"
+                  disabled
+                />
+              </label>
+
+              <label class="field">
+                <span>Minutes</span>
+                <input
+                  id="time-minutes"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="--"
+                  aria-describedby="time-error"
+                  disabled
+                />
+              </label>
+
+              <label class="field">
+                <span>Seconds</span>
+                <input
+                  id="time-seconds"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="--"
+                  aria-describedby="time-error"
+                  disabled
+                />
+              </label>
+            </div>
+
+            <p class="metric-secondary" id="time-secondary">
+              Set a valid distance to project finish time.
+            </p>
+            <p class="field-error" id="time-error" aria-live="polite"></p>
+          </article>
+        </section>
+
+        <details class="projection-panel">
+          <summary>Common race projections</summary>
+
+          <div class="projection-table">
             <table>
               <thead>
                 <tr>
                   <th scope="col">Distance</th>
-                  <th scope="col">Projected finish</th>
+                  <th scope="col">Finish</th>
                 </tr>
               </thead>
-              <tbody id="projection-rows">
-                <tr class="table-placeholder">
-                  <td colspan="2">Enter valid values to calculate.</td>
+              <tbody>
+                <tr>
+                  <th scope="row">5K</th>
+                  <td id="projection-5k">--:--:--</td>
+                </tr>
+                <tr>
+                  <th scope="row">10K</th>
+                  <td id="projection-10k">--:--:--</td>
+                </tr>
+                <tr>
+                  <th scope="row">Half Marathon</th>
+                  <td id="projection-half">--:--:--</td>
+                </tr>
+                <tr>
+                  <th scope="row">Marathon</th>
+                  <td id="projection-marathon">--:--:--</td>
                 </tr>
               </tbody>
             </table>
           </div>
-        </section>
-      </main>
-    </div>
+        </details>
+
+        <details class="projection-panel">
+          <summary>Selected-distance splits</summary>
+
+          <div class="projection-table">
+            <p class="projection-copy" id="split-copy">
+              Choose a distance and valid metric to see cumulative split targets.
+            </p>
+
+            <table>
+              <caption id="split-heading">Kilometer splits</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Split</th>
+                  <th scope="col">Finish</th>
+                </tr>
+              </thead>
+              <tbody id="split-rows">
+                <tr class="table-placeholder">
+                  <td colspan="2">Choose a distance, then edit pace, speed, or time.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+    </main>
 
     <script type="module" src="./main.js"></script>
   </body>

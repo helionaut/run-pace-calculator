@@ -2,823 +2,256 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  CONVERT_SOURCES,
+  DRIVER_METRICS,
   DISTANCE_PRESETS,
-  MODES,
-  applyConvertSourceChange,
   applyPresetSelection,
   applyUnitChange,
   createFormState,
   deriveCalculatorView,
   formatDistanceInputValue,
-  restoreCalculatorState,
+  parsePaceInput,
   resetFormState,
+  restoreCalculatorState,
   serializeCalculatorState,
+  setActiveMetric,
+  toggleMetricLock,
   updateDistanceInput,
   updateInputValue
 } from "../src/lib/calculator.js";
 
-function buildState(overrides = {}, inputOverrides = {}) {
-  const state = createFormState();
+function enterPace(state, minutes, seconds) {
+  let nextState = setActiveMetric(state, DRIVER_METRICS.PACE);
 
-  return {
-    ...state,
-    ...overrides,
-    inputs: {
-      ...state.inputs,
-      ...inputOverrides
-    }
-  };
+  nextState = updateInputValue(nextState, "paceMinutes", minutes);
+  nextState = updateInputValue(nextState, "paceSeconds", seconds);
+  return nextState;
 }
 
-function getBadgeLabels(item) {
-  return item.badges.map((badge) => badge.label);
+function enterSpeed(state, speed) {
+  let nextState = setActiveMetric(state, DRIVER_METRICS.SPEED);
+
+  nextState = updateInputValue(nextState, "speed", speed);
+  return nextState;
 }
 
-test("blank state stays empty without showing required-field errors", () => {
+function enterTime(state, hours, minutes, seconds) {
+  let nextState = setActiveMetric(state, DRIVER_METRICS.TIME);
+
+  nextState = updateInputValue(nextState, "timeHours", hours);
+  nextState = updateInputValue(nextState, "timeMinutes", minutes);
+  nextState = updateInputValue(nextState, "timeSeconds", seconds);
+  return nextState;
+}
+
+test("default state keeps a 10K distance selected and waits for input", () => {
   const view = deriveCalculatorView(createFormState());
 
-  assert.equal(view.resultState, "empty");
-  assert.equal(view.display, null);
-  assert.equal(view.errors.distance, null);
-  assert.equal(view.errors.finish, null);
-  assert.deepEqual(view.inputProvenance.distance.badges, []);
-  assert.deepEqual(view.inputProvenance.finish.badges, []);
-  assert.deepEqual(view.inputProvenance.pace.badges, []);
-  assert.deepEqual(view.inputProvenance.speed.badges, []);
-});
-
-test("pace mode calculates pace and speed from distance plus finish time", () => {
-  const view = deriveCalculatorView(
-    buildState(
-      { mode: MODES.PACE },
-      {
-        distance: "10",
-        finishHours: "0",
-        finishMinutes: "50",
-        finishSeconds: "0"
-      }
-    )
-  );
-
-  assert.equal(view.resultState, "current");
-  assert.equal(view.display.primaryLabel, "Pace");
-  assert.equal(view.display.primaryValue, "05:00 /km");
-  assert.equal(view.display.selectedSpeed, "12.00 km/h");
-  assert.equal(view.display.splitTitle, "Kilometer splits");
-  assert.equal(view.display.splitRows.length, 10);
-  assert.deepEqual(
-    view.display.splitRows.slice(0, 2).map((row) => [row.label, row.finishLabel]),
-    [
-      ["1 km", "00:05:00"],
-      ["2 km", "00:10:00"]
-    ]
-  );
-  assert.equal(view.display.splitRows.at(-1).label, "10 km");
-  assert.equal(view.display.splitRows.at(-1).finishLabel, "00:50:00");
-  assert.equal(view.display.splitRows.at(-1).isPartial, false);
-  assert.equal(view.errors.distance, null);
-  assert.equal(view.errors.finish, null);
-});
-
-test("pace mode exposes derived results and the locked finish time", () => {
-  const view = deriveCalculatorView(
-    buildState(
-      { mode: MODES.PACE },
-      {
-        distance: "10",
-        finishHours: "0",
-        finishMinutes: "50",
-        finishSeconds: "0"
-      }
-    )
-  );
-
-  assert.deepEqual(
-    getBadgeLabels(view.display.provenance.primary),
-    ["Derived"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.display.provenance.selectedPace),
-    ["Derived"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.display.provenance.selectedSpeed),
-    ["Derived"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.display.provenance.distance),
-    ["Entered"]
-  );
-  assert.equal(view.display.lockedSummary.label, "Locked finish time");
-  assert.equal(view.display.lockedSummary.value, "00:50:00");
-  assert.deepEqual(
-    getBadgeLabels(view.display.lockedSummary.provenance),
-    ["Entered", "Locked"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.inputProvenance.finish),
-    ["Entered", "Locked"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.inputProvenance.distance),
-    ["Entered"]
-  );
-});
-
-test("finish mode calculates finish time from distance plus pace", () => {
-  const view = deriveCalculatorView(
-    buildState(
-      { mode: MODES.FINISH },
-      {
-        distance: "10",
-        paceMinutes: "5",
-        paceSeconds: "0"
-      }
-    )
-  );
-
-  assert.equal(view.resultState, "current");
-  assert.equal(view.display.primaryLabel, "Finish time");
-  assert.equal(view.display.primaryValue, "00:50:00");
-  assert.equal(view.display.selectedSpeed, "12.00 km/h");
-  assert.equal(view.display.splitTitle, "Kilometer splits");
-  assert.equal(view.display.splitRows.length, 10);
-  assert.equal(view.display.splitRows.at(-1).label, "10 km");
-  assert.equal(view.display.splitRows.at(-1).finishLabel, "00:50:00");
-});
-
-test("convert mode uses the stored selected distance to render mile-based splits from speed", () => {
-  const view = deriveCalculatorView(
-    buildState(
-      {
-        mode: MODES.CONVERT,
-        convertSource: CONVERT_SOURCES.SPEED,
-        unit: "mi"
-      },
-      {
-        distance: "3",
-        speed: "7.5"
-      }
-    )
-  );
-
-  assert.equal(view.resultState, "current");
-  assert.equal(view.display.primaryLabel, "Pace");
-  assert.equal(view.display.primaryValue, "08:00 /mi");
-  assert.equal(view.display.splitTitle, "Mile splits");
-  assert.deepEqual(
-    view.display.splitRows.map((row) => [row.label, row.finishLabel]),
-    [
-      ["1 mi", "00:08:00"],
-      ["2 mi", "00:16:00"],
-      ["3 mi", "00:24:00"]
-    ]
-  );
-});
-
-test("half marathon includes a final partial split in metric mode", () => {
-  const presetState = applyPresetSelection(createFormState(), "half");
-  const view = deriveCalculatorView({
-    ...presetState,
-    mode: MODES.FINISH,
-    inputs: {
-      ...presetState.inputs,
-      paceMinutes: "5",
-      paceSeconds: "0"
-    }
+  assert.equal(view.selectedDistanceLabel, "10 km");
+  assert.equal(view.distance.inputValue, "10");
+  assert.equal(view.distance.presetId, "10k");
+  assert.equal(view.cards.pace.stateLabel, "Input");
+  assert.equal(view.cards.speed.stateLabel, "Waiting");
+  assert.equal(view.cards.time.stateLabel, "Waiting");
+  assert.equal(view.cards.speed.inputValue, "");
+  assert.deepEqual(view.cards.time.inputValues, {
+    hours: "",
+    minutes: "",
+    seconds: ""
   });
+});
 
-  assert.equal(view.resultState, "current");
-  assert.equal(view.display.splitTitle, "Kilometer splits");
-  assert.match(view.display.splitMeta, /final partial split/i);
-  assert.equal(view.display.splitRows.length, 22);
+test("pace input derives speed and finish time for the selected distance", () => {
+  const view = deriveCalculatorView(enterPace(createFormState(), "5", "0"));
+
+  assert.equal(view.driverMetric, DRIVER_METRICS.PACE);
+  assert.equal(view.cards.pace.stateLabel, "Input");
+  assert.equal(view.cards.speed.stateLabel, "Derived");
+  assert.equal(view.cards.time.stateLabel, "Derived");
+  assert.equal(view.cards.speed.inputValue, "12");
+  assert.equal(view.cards.speed.secondary, "Also 7.46 mph");
+  assert.deepEqual(view.cards.time.inputValues, {
+    hours: "0",
+    minutes: "50",
+    seconds: "00"
+  });
+  assert.equal(view.cards.time.secondary, "For 10 km");
+});
+
+test("speed input derives pace and finish time for the selected distance", () => {
+  const view = deriveCalculatorView(enterSpeed(createFormState(), "12"));
+
+  assert.equal(view.driverMetric, DRIVER_METRICS.SPEED);
+  assert.equal(view.cards.speed.stateLabel, "Input");
+  assert.equal(view.cards.pace.stateLabel, "Derived");
+  assert.deepEqual(view.cards.pace.inputValues, {
+    minutes: "5",
+    seconds: "00"
+  });
+  assert.deepEqual(view.cards.time.inputValues, {
+    hours: "0",
+    minutes: "50",
+    seconds: "00"
+  });
+});
+
+test("pace parsing allows long pace minutes", () => {
   assert.deepEqual(
-    view.display.splitRows.slice(-2).map((row) => [
-      row.label,
-      row.finishLabel,
-      row.isPartial
-    ]),
+    parsePaceInput({
+      paceMinutes: "65",
+      paceSeconds: "30"
+    }),
+    {
+      error: null,
+      value: 3930
+    }
+  );
+});
+
+test("time input derives the pace and speed required for the selected distance", () => {
+  const view = deriveCalculatorView(enterTime(createFormState(), "0", "50", "0"));
+
+  assert.equal(view.driverMetric, DRIVER_METRICS.TIME);
+  assert.equal(view.cards.time.stateLabel, "Input");
+  assert.deepEqual(view.cards.pace.inputValues, {
+    minutes: "5",
+    seconds: "00"
+  });
+  assert.equal(view.cards.speed.inputValue, "12");
+});
+
+test("locking time keeps the target fixed while distance changes", () => {
+  let state = enterPace(createFormState(), "5", "0");
+
+  state = toggleMetricLock(state, "time");
+  state = updateDistanceInput(state, "5");
+
+  const view = deriveCalculatorView(state);
+
+  assert.equal(view.lockMetric, "time");
+  assert.equal(view.driverMetric, DRIVER_METRICS.TIME);
+  assert.equal(view.cards.time.stateLabel, "Locked");
+  assert.deepEqual(view.cards.time.inputValues, {
+    hours: "0",
+    minutes: "50",
+    seconds: "00"
+  });
+  assert.deepEqual(view.cards.pace.inputValues, {
+    minutes: "10",
+    seconds: "00"
+  });
+  assert.equal(view.cards.speed.inputValue, "6");
+  assert.equal(
+    view.statusMessage,
+    "Time locked. Drag distance to see the required pace and speed."
+  );
+});
+
+test("locking pace keeps the effort fixed while distance changes", () => {
+  let state = enterTime(createFormState(), "0", "50", "0");
+
+  state = toggleMetricLock(state, "pace");
+  state = updateDistanceInput(state, "5");
+
+  const view = deriveCalculatorView(state);
+
+  assert.equal(view.lockMetric, "pace");
+  assert.equal(view.driverMetric, DRIVER_METRICS.PACE);
+  assert.equal(view.cards.pace.stateLabel, "Locked");
+  assert.deepEqual(view.cards.pace.inputValues, {
+    minutes: "5",
+    seconds: "00"
+  });
+  assert.deepEqual(view.cards.time.inputValues, {
+    hours: "0",
+    minutes: "25",
+    seconds: "00"
+  });
+  assert.equal(view.cards.speed.inputValue, "12");
+  assert.equal(
+    view.statusMessage,
+    "Pace locked. Drag distance to update the finish time."
+  );
+});
+
+test("split rows follow the selected distance and include a final partial segment", () => {
+  const tenKView = deriveCalculatorView(enterPace(createFormState(), "5", "0"));
+  const halfView = deriveCalculatorView(
+    enterPace(applyPresetSelection(createFormState(), "half"), "5", "0")
+  );
+
+  assert.equal(tenKView.split.heading, "Kilometer splits");
+  assert.deepEqual(
+    tenKView.split.rows.slice(0, 2).map((row) => [row.label, row.finishLabel, row.isPartial]),
+    [
+      ["1 km", "00:05:00", false],
+      ["2 km", "00:10:00", false]
+    ]
+  );
+  assert.equal(tenKView.split.rows.at(-1).label, "10 km");
+  assert.equal(tenKView.split.rows.at(-1).finishLabel, "00:50:00");
+
+  assert.match(halfView.split.meta, /final partial split/i);
+  assert.deepEqual(
+    halfView.split.rows.slice(-2).map((row) => [row.label, row.finishLabel, row.isPartial]),
     [
       ["21 km", "01:45:00", false],
-      ["Finish (21.0975 km)", "01:45:29", true]
+      ["21.0975 km", "01:45:29", true]
     ]
   );
 });
 
-test("marathon includes a final partial split in imperial mode", () => {
-  const presetState = applyPresetSelection(createFormState(), "marathon");
-  const milePresetState = applyUnitChange(presetState, "mi");
-  const mileState = {
-    ...milePresetState,
-    mode: MODES.FINISH,
-    inputs: {
-      ...milePresetState.inputs,
-      paceMinutes: "8",
-      paceSeconds: "0"
-    }
-  };
-  const view = deriveCalculatorView(mileState);
+test("unit changes convert the selected distance and preserve the live result", () => {
+  const paceState = enterPace(createFormState(), "5", "0");
+  const switched = applyUnitChange(paceState, "mi");
+  const view = deriveCalculatorView(switched);
 
-  assert.equal(view.resultState, "current");
-  assert.equal(view.display.splitTitle, "Mile splits");
-  assert.match(view.display.splitMeta, /final partial split/i);
-  assert.equal(view.display.splitRows.length, 27);
-  assert.deepEqual(
-    view.display.splitRows.slice(-2).map((row) => [
-      row.label,
-      row.finishLabel,
-      row.isPartial
-    ]),
-    [
-      ["26 mi", "03:28:00", false],
-      ["Finish (26.21876 mi)", "03:29:45", true]
-    ]
-  );
-});
-
-test("split rows update immediately when finish time, pace, speed, and distance change", () => {
-  const paceModeState = buildState(
-    { mode: MODES.PACE },
-    {
-      distance: "10",
-      finishHours: "0",
-      finishMinutes: "50",
-      finishSeconds: "0"
-    }
-  );
-  const initialPaceView = deriveCalculatorView(paceModeState);
-  const updatedFinishView = deriveCalculatorView(
-    updateInputValue(paceModeState, "finishMinutes", "45")
-  );
-
-  assert.equal(initialPaceView.resultState, "current");
-  assert.equal(updatedFinishView.resultState, "current");
-  assert.equal(initialPaceView.display.splitRows.at(0).finishLabel, "00:05:00");
-  assert.equal(updatedFinishView.display.splitRows.at(0).finishLabel, "00:04:30");
-  assert.equal(updatedFinishView.display.splitRows.at(-1).finishLabel, "00:45:00");
-
-  const finishModeState = buildState(
-    { mode: MODES.FINISH },
-    {
-      distance: "10",
-      paceMinutes: "5",
-      paceSeconds: "0"
-    }
-  );
-  const initialFinishView = deriveCalculatorView(finishModeState);
-  const updatedPaceView = deriveCalculatorView(
-    updateInputValue(finishModeState, "paceMinutes", "4")
-  );
-
-  assert.equal(initialFinishView.resultState, "current");
-  assert.equal(updatedPaceView.resultState, "current");
-  assert.equal(initialFinishView.display.splitRows.at(0).finishLabel, "00:05:00");
-  assert.equal(updatedPaceView.display.splitRows.at(0).finishLabel, "00:04:00");
-  assert.equal(updatedPaceView.display.splitRows.at(-1).finishLabel, "00:40:00");
-
-  const convertSpeedState = buildState(
-    {
-      mode: MODES.CONVERT,
-      convertSource: CONVERT_SOURCES.SPEED,
-      unit: "mi"
-    },
-    {
-      distance: "3",
-      speed: "7.5"
-    }
-  );
-  const initialSpeedView = deriveCalculatorView(convertSpeedState);
-  const updatedSpeedView = deriveCalculatorView(
-    updateInputValue(convertSpeedState, "speed", "6")
-  );
-
-  assert.equal(initialSpeedView.resultState, "current");
-  assert.equal(updatedSpeedView.resultState, "current");
-  assert.equal(initialSpeedView.display.splitRows.at(0).finishLabel, "00:08:00");
-  assert.equal(updatedSpeedView.display.splitRows.at(0).finishLabel, "00:10:00");
-  assert.equal(updatedSpeedView.display.splitRows.at(-1).finishLabel, "00:30:00");
-
-  const updatedDistanceView = deriveCalculatorView(
-    updateDistanceInput(finishModeState, "12")
-  );
-
-  assert.equal(updatedDistanceView.resultState, "current");
-  assert.equal(updatedDistanceView.display.splitRows.length, 12);
-  assert.equal(updatedDistanceView.display.splitRows.at(-1).label, "12 km");
-  assert.equal(updatedDistanceView.display.splitRows.at(-1).finishLabel, "01:00:00");
-});
-
-test("convert speed mode exposes entered speed and derived pace without distance", () => {
-  const view = deriveCalculatorView(
-    buildState(
-      {
-        mode: MODES.CONVERT,
-        convertSource: CONVERT_SOURCES.SPEED
-      },
-      {
-        speed: "12"
-      }
-    )
-  );
-
-  assert.equal(view.resultState, "current");
-  assert.equal(view.display.primaryLabel, "Pace");
-  assert.equal(view.display.primaryValue, "05:00 /km");
-  assert.deepEqual(
-    getBadgeLabels(view.display.provenance.primary),
-    ["Derived"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.display.provenance.selectedPace),
-    ["Derived"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.display.provenance.selectedSpeed),
-    ["Entered", "Locked"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.display.provenance.distance),
-    ["Not used"]
-  );
-  assert.equal(view.display.lockedSummary.label, "Locked speed");
-  assert.equal(view.display.lockedSummary.value, "12.00 km/h");
-  assert.deepEqual(
-    getBadgeLabels(view.display.lockedSummary.provenance),
-    ["Entered", "Locked"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.inputProvenance.speed),
-    ["Entered", "Locked"]
-  );
-  assert.deepEqual(view.inputProvenance.distance.badges, []);
-});
-
-test("convert pace mode exposes entered pace and derived speed without distance", () => {
-  const view = deriveCalculatorView(
-    buildState(
-      {
-        mode: MODES.CONVERT,
-        convertSource: CONVERT_SOURCES.PACE
-      },
-      {
-        paceMinutes: "5",
-        paceSeconds: "0"
-      }
-    )
-  );
-
-  assert.equal(view.resultState, "current");
-  assert.equal(view.display.primaryLabel, "Speed");
-  assert.equal(view.display.primaryValue, "12.00 km/h");
-  assert.deepEqual(
-    getBadgeLabels(view.display.provenance.primary),
-    ["Derived"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.display.provenance.selectedPace),
-    ["Entered", "Locked"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.display.provenance.selectedSpeed),
-    ["Derived"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.display.provenance.distance),
-    ["Not used"]
-  );
-  assert.equal(view.display.lockedSummary.label, "Locked pace");
-  assert.equal(view.display.lockedSummary.value, "05:00 /km");
-  assert.deepEqual(
-    getBadgeLabels(view.display.lockedSummary.provenance),
-    ["Entered", "Locked"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.inputProvenance.pace),
-    ["Entered", "Locked"]
-  );
-  assert.deepEqual(view.inputProvenance.distance.badges, []);
-});
-
-test("finish mode exposes entered versus derived provenance and the locked pace", () => {
-  const view = deriveCalculatorView(
-    buildState(
-      { mode: MODES.FINISH },
-      {
-        distance: "10",
-        paceMinutes: "5",
-        paceSeconds: "0"
-      }
-    )
-  );
-
-  assert.deepEqual(
-    getBadgeLabels(view.display.provenance.primary),
-    ["Derived"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.display.provenance.selectedPace),
-    ["Entered", "Locked"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.display.provenance.selectedSpeed),
-    ["Derived"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.display.provenance.distance),
-    ["Entered"]
-  );
-  assert.equal(view.display.lockedSummary.label, "Locked pace");
-  assert.equal(view.display.lockedSummary.value, "05:00 /km");
-  assert.deepEqual(
-    getBadgeLabels(view.display.lockedSummary.provenance),
-    ["Entered", "Locked"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.inputProvenance.pace),
-    ["Entered", "Locked"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.inputProvenance.distance),
-    ["Entered"]
-  );
-});
-
-test("finish mode allows long pace minutes without dropping current provenance", () => {
-  const view = deriveCalculatorView(
-    buildState(
-      { mode: MODES.FINISH },
-      {
-        distance: "5",
-        paceMinutes: "75",
-        paceSeconds: "0"
-      }
-    )
-  );
-
-  assert.equal(view.resultState, "current");
-  assert.equal(view.errors.pace, null);
-  assert.equal(view.display.primaryLabel, "Finish time");
-  assert.equal(view.display.primaryValue, "06:15:00");
-  assert.equal(view.display.selectedPace, "75:00 /km");
-  assert.equal(view.display.selectedSpeed, "0.80 km/h");
-  assert.deepEqual(
-    getBadgeLabels(view.display.provenance.primary),
-    ["Derived"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.display.provenance.selectedPace),
-    ["Entered", "Locked"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.display.lockedSummary.provenance),
-    ["Entered", "Locked"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.inputProvenance.pace),
-    ["Entered", "Locked"]
-  );
-});
-
-test("convert pace mode allows long pace minutes without falling stale", () => {
-  const view = deriveCalculatorView(
-    buildState(
-      {
-        mode: MODES.CONVERT,
-        convertSource: CONVERT_SOURCES.PACE
-      },
-      {
-        paceMinutes: "75",
-        paceSeconds: "0"
-      }
-    )
-  );
-
-  assert.equal(view.resultState, "current");
-  assert.equal(view.errors.pace, null);
-  assert.equal(view.display.primaryLabel, "Speed");
-  assert.equal(view.display.primaryValue, "0.80 km/h");
-  assert.equal(view.display.selectedPace, "75:00 /km");
-  assert.equal(view.display.selectedSpeed, "0.80 km/h");
-  assert.deepEqual(
-    getBadgeLabels(view.display.provenance.primary),
-    ["Derived"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.display.provenance.selectedPace),
-    ["Entered", "Locked"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.display.lockedSummary.provenance),
-    ["Entered", "Locked"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(view.inputProvenance.pace),
-    ["Entered", "Locked"]
-  );
-});
-
-test("incomplete structured finish time blocks a fresh calculation", () => {
-  const view = deriveCalculatorView(
-    buildState(
-      { mode: MODES.PACE },
-      {
-        distance: "10",
-        finishHours: "0",
-        finishMinutes: "",
-        finishSeconds: "0"
-      }
-    )
-  );
-
-  assert.equal(view.resultState, "empty");
-  assert.equal(view.currentResult, null);
-  assert.equal(view.display, null);
-  assert.equal(
-    view.errors.finish,
-    "Complete finish hours, minutes, and seconds."
-  );
-});
-
-test("invalid distance and speed inputs produce inline validation messages", () => {
-  const distanceView = deriveCalculatorView(
-    buildState(
-      { mode: MODES.FINISH },
-      {
-        distance: "10,5",
-        paceMinutes: "5",
-        paceSeconds: "0"
-      }
-    )
-  );
-  const speedView = deriveCalculatorView(
-    buildState(
-      {
-        mode: MODES.CONVERT,
-        convertSource: CONVERT_SOURCES.SPEED
-      },
-      {
-        speed: "fast"
-      }
-    )
-  );
-
-  assert.equal(
-    distanceView.errors.distance,
-    "Distance must use digits and one decimal point only."
-  );
-  assert.equal(
-    speedView.errors.speed,
-    "Speed must use digits and one decimal point only."
-  );
-});
-
-test("stale mode preserves the last valid result when a required field becomes invalid", () => {
-  const validState = buildState(
-    { mode: MODES.PACE },
-    {
-      distance: "10",
-      finishHours: "0",
-      finishMinutes: "50",
-      finishSeconds: "0"
-    }
-  );
-  const validView = deriveCalculatorView(validState);
-  const staleView = deriveCalculatorView(
-    buildState(
-      { mode: MODES.PACE },
-      {
-        distance: "10",
-        finishHours: "0",
-        finishMinutes: "50",
-        finishSeconds: "75"
-      }
-    ),
-    validView.currentResult
-  );
-
-  assert.equal(staleView.resultState, "stale");
-  assert.equal(staleView.display.primaryValue, validView.display.primaryValue);
-  assert.match(
-    staleView.display.primaryMeta,
-    /Last valid result derived from locked finish time/
-  );
-  assert.deepEqual(
-    getBadgeLabels(staleView.display.provenance.primary),
-    ["Derived", "Last valid"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(staleView.display.lockedSummary.provenance),
-    ["Entered", "Locked", "Last valid"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(staleView.inputProvenance.distance),
-    ["Entered"]
-  );
-  assert.deepEqual(staleView.inputProvenance.finish.badges, []);
-  assert.equal(
-    staleView.errors.finish,
-    "Finish seconds must stay between 0 and 59."
-  );
-});
-
-test("convert mode can mark the last answer stale after source changes", () => {
-  const paceSourceState = buildState(
-    {
-      mode: MODES.CONVERT,
-      convertSource: CONVERT_SOURCES.PACE
-    },
-    {
-      paceMinutes: "5",
-      paceSeconds: "0"
-    }
-  );
-  const validView = deriveCalculatorView(paceSourceState);
-  const speedSourceState = applyConvertSourceChange(
-    paceSourceState,
-    CONVERT_SOURCES.SPEED
-  );
-  const staleView = deriveCalculatorView(speedSourceState, validView.currentResult);
-
-  assert.equal(speedSourceState.inputs.paceMinutes, "");
-  assert.equal(speedSourceState.inputs.paceSeconds, "");
-  assert.equal(staleView.resultState, "stale");
-  assert.equal(staleView.display.primaryLabel, "Speed");
-  assert.equal(staleView.errors.speed, "Enter a speed.");
-});
-
-test("stale input provenance does not relabel blank current fields as entered", () => {
-  const finishState = buildState(
-    {
-      mode: MODES.FINISH
-    },
-    {
-      distance: "10",
-      paceMinutes: "5",
-      paceSeconds: "0"
-    }
-  );
-  const validView = deriveCalculatorView(finishState);
-  const stalePaceModeView = deriveCalculatorView(
-    buildState(
-      {
-        mode: MODES.PACE
-      },
-      {
-        distance: "10",
-        finishHours: "",
-        finishMinutes: "",
-        finishSeconds: ""
-      }
-    ),
-    validView.currentResult
-  );
-  const speedSourceState = applyConvertSourceChange(
-    buildState(
-      {
-        mode: MODES.CONVERT,
-        convertSource: CONVERT_SOURCES.PACE
-      },
-      {
-        paceMinutes: "5",
-        paceSeconds: "0"
-      }
-    ),
-    CONVERT_SOURCES.SPEED
-  );
-  const staleConvertView = deriveCalculatorView(
-    speedSourceState,
-    deriveCalculatorView(
-      buildState(
-        {
-          mode: MODES.CONVERT,
-          convertSource: CONVERT_SOURCES.PACE
-        },
-        {
-          paceMinutes: "5",
-          paceSeconds: "0"
-        }
-      )
-    ).currentResult
-  );
-
-  assert.equal(stalePaceModeView.resultState, "stale");
-  assert.equal(stalePaceModeView.display.lockedSummary.label, "Locked pace");
-  assert.deepEqual(
-    getBadgeLabels(stalePaceModeView.display.lockedSummary.provenance),
-    ["Entered", "Locked", "Last valid"]
-  );
-  assert.deepEqual(
-    getBadgeLabels(stalePaceModeView.inputProvenance.finish),
-    []
-  );
-  assert.deepEqual(stalePaceModeView.inputProvenance.pace.badges, []);
-
-  assert.equal(staleConvertView.resultState, "stale");
-  assert.equal(staleConvertView.display.lockedSummary.label, "Locked pace");
-  assert.deepEqual(
-    getBadgeLabels(staleConvertView.display.lockedSummary.provenance),
-    ["Entered", "Locked", "Last valid"]
-  );
-  assert.deepEqual(staleConvertView.inputProvenance.speed.badges, []);
-  assert.deepEqual(staleConvertView.inputProvenance.pace.badges, []);
-});
-
-test("reset clears editable fields and results while preserving mode, unit, and convert source", () => {
-  const resetState = resetFormState(
-    buildState(
-      {
-        mode: MODES.CONVERT,
-        unit: "mi",
-        convertSource: CONVERT_SOURCES.SPEED,
-        presetId: "10k"
-      },
-      {
-        distance: "6.21371",
-        finishHours: "1",
-        finishMinutes: "2",
-        finishSeconds: "3",
-        paceMinutes: "8",
-        paceSeconds: "3",
-        speed: "7.46"
-      }
-    )
-  );
-
-  assert.equal(resetState.mode, MODES.CONVERT);
-  assert.equal(resetState.unit, "mi");
-  assert.equal(resetState.convertSource, CONVERT_SOURCES.SPEED);
-  assert.equal(resetState.presetId, "custom");
-  assert.deepEqual(resetState.inputs, {
-    distance: "",
-    finishHours: "",
-    finishMinutes: "",
-    finishSeconds: "",
-    paceMinutes: "",
-    paceSeconds: "",
-    speed: ""
+  assert.equal(switched.unit, "mi");
+  assert.equal(switched.inputs.distance, "6.21371");
+  assert.equal(view.selectedDistanceLabel, "6.21371 mi");
+  assert.deepEqual(view.cards.pace.inputValues, {
+    minutes: "8",
+    seconds: "03"
+  });
+  assert.equal(view.cards.speed.inputValue, "7.46");
+  assert.deepEqual(view.cards.time.inputValues, {
+    hours: "0",
+    minutes: "50",
+    seconds: "00"
   });
 });
 
-test("unit changes convert preset distance, pace, and speed inputs in place", () => {
-  const initialState = buildState(
-    {
-      mode: MODES.FINISH,
-      presetId: "10k"
-    },
-    {
-      distance: "10",
-      paceMinutes: "5",
-      paceSeconds: "0",
-      speed: "12.5"
-    }
-  );
-  const finishBefore = deriveCalculatorView(initialState).display.primaryValue;
-  const nextState = applyUnitChange(
-    initialState,
-    "mi"
-  );
-  const finishAfter = deriveCalculatorView(nextState).display.primaryValue;
+test("reset restores the default distance and unlocks the calculator while preserving unit", () => {
+  let state = enterTime(createFormState(), "0", "50", "0");
 
-  assert.equal(nextState.unit, "mi");
-  assert.equal(nextState.inputs.distance, "6.21371");
-  assert.equal(nextState.inputs.paceMinutes, "8");
-  assert.equal(nextState.inputs.paceSeconds, "03");
-  assert.equal(nextState.inputs.speed, "7.77");
-  assert.equal(finishAfter, finishBefore);
+  state = toggleMetricLock(state, "time");
+  state = applyUnitChange(state, "mi");
+  state = resetFormState(state);
+
+  assert.equal(state.unit, "mi");
+  assert.equal(state.lockMetric, null);
+  assert.equal(state.driverMetric, DRIVER_METRICS.PACE);
+  assert.equal(state.inputs.distance, formatDistanceInputValue(10, "mi"));
+  assert.equal(state.presetId, "10k");
+  assert.deepEqual(state.inputs, {
+    distance: formatDistanceInputValue(10, "mi"),
+    paceMinutes: "",
+    paceSeconds: "",
+    speed: "",
+    timeHours: "",
+    timeMinutes: "",
+    timeSeconds: ""
+  });
 });
 
-test("named presets stay selected across unit switches and keep canonical miles", () => {
+test("manual distance edits leave presets active only on exact canonical matches", () => {
   const presetState = applyPresetSelection(createFormState(), "half");
-  const switchedState = applyUnitChange(
-    buildState(
-      {
-        mode: MODES.FINISH,
-        presetId: presetState.presetId,
-        canonical: presetState.canonical
-      },
-      {
-        distance: presetState.inputs.distance,
-        paceMinutes: "5",
-        paceSeconds: "0"
-      }
-    ),
-    "mi"
-  );
+  const customState = updateDistanceInput(presetState, "21.1");
 
-  assert.equal(switchedState.presetId, "half");
-  assert.equal(switchedState.inputs.distance, "13.10938");
+  assert.equal(presetState.presetId, "half");
+  assert.equal(customState.presetId, "custom");
 });
 
-test("manual distance edits switch the preset back to custom", () => {
-  const presetState = applyPresetSelection(createFormState(), "marathon");
-  const nextState = updateDistanceInput(presetState, "43");
-
-  assert.equal(nextState.presetId, "custom");
-  assert.equal(nextState.inputs.distance, "43");
-});
-
-test("named presets use the PRD canonical distances", () => {
+test("distance presets keep the PRD canonical kilometers", () => {
   assert.deepEqual(
     DISTANCE_PRESETS
       .filter((preset) => preset.distanceKm !== null)
@@ -839,86 +272,68 @@ test("preset distances render exact converted miles from canonical kilometers", 
   assert.equal(formatDistanceInputValue(42.195, "mi"), "26.21876");
 });
 
-test("serialize and restore preserve a valid finish-mode custom-distance scenario", () => {
-  const state = buildState(
-    {
-      mode: MODES.FINISH,
-      unit: "mi",
-      presetId: "custom"
-    },
-    {
-      distance: "6.5",
-      paceMinutes: "8",
-      paceSeconds: "15"
-    }
-  );
+test("serialize and restore preserve a valid custom-distance pace scenario", () => {
+  let state = applyUnitChange(createFormState(), "mi");
+
+  state = updateDistanceInput(state, "6.5");
+  state = enterPace(state, "8", "15");
 
   const search = serializeCalculatorState(state);
   const restored = restoreCalculatorState(new URLSearchParams(search));
 
-  assert.equal(search, "mode=finish&unit=mi&preset=custom&distance=6.5&pm=8&ps=15");
-  assert.equal(restored.mode, MODES.FINISH);
+  assert.equal(
+    search,
+    "metric=pace&preset=custom&unit=mi&distance=6.5&pm=8&ps=15"
+  );
   assert.equal(restored.unit, "mi");
   assert.equal(restored.presetId, "custom");
+  assert.equal(restored.driverMetric, DRIVER_METRICS.PACE);
   assert.equal(restored.inputs.distance, "6.5");
   assert.equal(restored.inputs.paceMinutes, "8");
   assert.equal(restored.inputs.paceSeconds, "15");
-  assert.equal(deriveCalculatorView(restored).resultState, "current");
+  assert.equal(deriveCalculatorView(restored).hasLiveResult, true);
 });
 
-test("serialize and restore preserve the active convert-source selection", () => {
-  const state = buildState(
-    {
-      mode: MODES.CONVERT,
-      unit: "mi",
-      convertSource: CONVERT_SOURCES.SPEED
-    },
-    {
-      speed: "7.5"
-    }
-  );
+test("serialize and restore preserve a locked time scenario", () => {
+  let state = enterTime(createFormState(), "1", "45", "0");
+
+  state = toggleMetricLock(state, DRIVER_METRICS.TIME);
+  state = applyPresetSelection(state, "half");
 
   const search = serializeCalculatorState(state);
   const restored = restoreCalculatorState(new URLSearchParams(search));
 
-  assert.equal(search, "mode=convert&unit=mi&source=speed&speed=7.5");
-  assert.equal(restored.mode, MODES.CONVERT);
-  assert.equal(restored.unit, "mi");
-  assert.equal(restored.convertSource, CONVERT_SOURCES.SPEED);
-  assert.equal(restored.inputs.speed, "7.5");
-  assert.equal(restored.inputs.paceMinutes, "");
-  assert.equal(restored.inputs.paceSeconds, "");
-  assert.equal(deriveCalculatorView(restored).showSpeedFields, true);
+  assert.equal(
+    search,
+    "metric=time&preset=half&unit=km&th=1&tm=45&ts=0&lock=time"
+  );
+  assert.equal(restored.driverMetric, DRIVER_METRICS.TIME);
+  assert.equal(restored.lockMetric, DRIVER_METRICS.TIME);
+  assert.equal(restored.presetId, "half");
+  assert.equal(restored.inputs.timeHours, "1");
+  assert.equal(restored.inputs.timeMinutes, "45");
+  assert.equal(restored.inputs.timeSeconds, "0");
+  assert.equal(deriveCalculatorView(restored).hasLiveResult, true);
 });
 
-test("malformed query state falls back to the default calculator", () => {
+test("malformed URL state falls back to the default calculator", () => {
   const restored = restoreCalculatorState(
-    new URLSearchParams("mode=convert&unit=km&source=speed&speed=12&pm=5")
+    new URLSearchParams("metric=speed&preset=10k&unit=km&speed=12&lock=time")
   );
 
   assert.deepEqual(restored, createFormState());
 });
 
 test("blank or invalid calculator state serializes to a clean URL", () => {
-  const partialState = buildState(
-    { mode: MODES.PACE },
-    {
-      distance: "10",
-      finishHours: "0",
-      finishMinutes: "",
-      finishSeconds: "0"
-    }
+  let partialState = createFormState();
+
+  partialState = updateDistanceInput(partialState, "10");
+  partialState = updateInputValue(
+    setActiveMetric(partialState, DRIVER_METRICS.PACE),
+    "paceMinutes",
+    "5"
   );
 
   assert.equal(serializeCalculatorState(createFormState()), "");
   assert.equal(serializeCalculatorState(partialState), "");
-});
-
-test("empty finish-mode state stays empty and serializes to a clean URL", () => {
-  const finishState = buildState({ mode: MODES.FINISH });
-  const view = deriveCalculatorView(finishState);
-
-  assert.equal(view.resultState, "empty");
-  assert.equal(view.currentResult, null);
-  assert.equal(serializeCalculatorState(finishState), "");
 });

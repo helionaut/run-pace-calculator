@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { access, readFile, stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -9,9 +9,9 @@ async function sha256(filePath) {
   return createHash("sha256").update(content).digest("hex");
 }
 
-async function runGit(args, cwd) {
+async function runCommand(command, args, cwd) {
   return new Promise((resolve, reject) => {
-    const child = spawn("git", args, {
+    const child = spawn(command, args, {
       cwd,
       stdio: ["ignore", "pipe", "pipe"]
     });
@@ -34,13 +34,13 @@ async function runGit(args, cwd) {
         return;
       }
 
-      reject(new Error(stderr.trim() || `git ${args.join(" ")} failed`));
+      reject(new Error(stderr.trim() || `${command} ${args.join(" ")} failed`));
     });
   });
 }
 
 async function verifyBundle(bundlePath, branch, head) {
-  const bundleHeads = await runGit(["bundle", "list-heads", bundlePath]);
+  const bundleHeads = await runCommand("git", ["bundle", "list-heads", bundlePath]);
   const expectedRef = `refs/heads/${branch}`;
   const bundleRefs = bundleHeads
     .split(/\r?\n/)
@@ -63,37 +63,22 @@ async function verifyBundle(bundlePath, branch, head) {
   }
 }
 
-async function verifyChecksumsFile(checksumsPath, baseDir) {
-  const content = await readFile(checksumsPath, "utf8");
-  const entries = content
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const match = /^([a-f0-9]{64})\s{2,}(.+)$/.exec(line);
+async function verifyPreviewArchive(archivePath) {
+  const archiveEntries = await runCommand("tar", ["-tf", archivePath]);
+  const normalizedEntries = new Set(
+    archiveEntries
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+  );
 
-      if (!match) {
-        throw new Error(`Malformed SHA256SUMS entry: ${line}`);
-      }
-
-      return {
-        digest: match[1],
-        relativePath: match[2]
-      };
-    });
-
-  for (const entry of entries) {
-    const artifactPath = path.resolve(baseDir, entry.relativePath);
-    const digest = await sha256(artifactPath);
-
-    if (digest !== entry.digest) {
+  for (const requiredEntry of ["before/index.html", "after/index.html"]) {
+    if (!normalizedEntries.has(requiredEntry)) {
       throw new Error(
-        `SHA256SUMS mismatch for ${entry.relativePath}: expected ${entry.digest}, got ${digest}`
+        `Preview archive is missing required entry ${requiredEntry}.`
       );
     }
   }
-
-  return entries.length;
 }
 
 export async function verifyManifest(manifestArg) {
@@ -140,23 +125,17 @@ export async function verifyManifest(manifestArg) {
     await verifyBundle(bundlePath, manifest.branch, manifest.head);
   }
 
-  let checksumCount = 0;
-  const checksumsPath = path.resolve(manifestDir, "SHA256SUMS");
-  try {
-    await access(checksumsPath);
-    checksumCount = await verifyChecksumsFile(checksumsPath, manifestDir);
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-      checksumCount = 0;
-    } else {
-      throw error;
-    }
+  const previewArchiveArtifact = manifest.artifacts.find(
+    (artifact) => artifact.name === "preview_snapshots"
+  );
+  if (previewArchiveArtifact) {
+    const previewArchivePath = path.resolve(manifestDir, previewArchiveArtifact.path);
+    await verifyPreviewArchive(previewArchivePath);
   }
 
   return {
     artifactCount: manifest.artifacts.length,
     branch: manifest.branch,
-    checksumCount,
     head: manifest.head,
     manifestPath
   };
@@ -169,9 +148,6 @@ if (isMain) {
     const result = await verifyManifest(process.argv[2]);
     console.log(`Verified handoff manifest: ${result.manifestPath}`);
     console.log(`Artifacts: ${result.artifactCount}`);
-    if (result.checksumCount > 0) {
-      console.log(`Checksums: ${result.checksumCount}`);
-    }
     if (result.branch) {
       console.log(`Branch: ${result.branch}`);
     }

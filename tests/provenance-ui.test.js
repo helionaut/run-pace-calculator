@@ -2,28 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  CONVERT_SOURCES,
-  MODES,
-  createFormState,
-  deriveCalculatorView
-} from "../src/lib/calculator.js";
-import {
   renderProvenanceBadges,
   setClusterState
 } from "../src/lib/provenance-ui.js";
-
-function buildState(overrides = {}, inputOverrides = {}) {
-  const state = createFormState();
-
-  return {
-    ...state,
-    ...overrides,
-    inputs: {
-      ...state.inputs,
-      ...inputOverrides
-    }
-  };
-}
 
 class FakeElement {
   constructor(tagName = "div") {
@@ -78,33 +59,46 @@ function getBadgeTexts(element) {
 
 test("renderProvenanceBadges shows entered and derived labels with screen-reader prefixes", () => {
   const documentRef = new FakeDocument();
-  const currentView = deriveCalculatorView(
-    buildState(
-      { mode: MODES.FINISH },
-      {
-        distance: "10",
-        paceMinutes: "5",
-        paceSeconds: "0"
-      }
-    )
-  );
   const primaryBadges = new FakeElement();
   const lockedBadges = new FakeElement();
   const lockedCluster = new FakeElement("section");
+  const derivedDescriptor = {
+    badges: [
+      {
+        ariaLabel: "Calculated value",
+        label: "Derived",
+        tone: "derived"
+      }
+    ]
+  };
+  const lockedDescriptor = {
+    badges: [
+      {
+        ariaLabel: "User-entered value",
+        label: "Entered",
+        tone: "entered"
+      },
+      {
+        ariaLabel: "Currently driving recalculation",
+        label: "Locked",
+        tone: "locked"
+      }
+    ]
+  };
 
   renderProvenanceBadges(
     primaryBadges,
-    currentView.display.provenance.primary,
+    derivedDescriptor,
     "Result provenance",
     documentRef
   );
   renderProvenanceBadges(
     lockedBadges,
-    currentView.display.lockedSummary.provenance,
+    lockedDescriptor,
     "Locked value provenance",
     documentRef
   );
-  setClusterState(lockedCluster, currentView.inputProvenance.pace);
+  setClusterState(lockedCluster, lockedDescriptor);
 
   assert.equal(primaryBadges.hidden, false);
   assert.equal(primaryBadges.children[0].className, "sr-only");
@@ -133,47 +127,43 @@ test("renderProvenanceBadges shows entered and derived labels with screen-reader
 
 test("stale provenance rendering keeps last-valid context in summary badges and clears ambiguous input badges", () => {
   const documentRef = new FakeDocument();
-  const validView = deriveCalculatorView(
-    buildState(
-      {
-        mode: MODES.CONVERT,
-        convertSource: CONVERT_SOURCES.PACE
-      },
-      {
-        paceMinutes: "5",
-        paceSeconds: "0"
-      }
-    )
-  );
-  const staleView = deriveCalculatorView(
-    buildState(
-      {
-        mode: MODES.CONVERT,
-        convertSource: CONVERT_SOURCES.SPEED
-      },
-      {
-        speed: ""
-      }
-    ),
-    validView.currentResult
-  );
   const lockedBadges = new FakeElement();
   const speedBadges = new FakeElement();
   const speedCluster = new FakeElement("section");
+  const staleDescriptor = {
+    badges: [
+      {
+        ariaLabel: "User-entered value",
+        label: "Entered",
+        tone: "entered"
+      },
+      {
+        ariaLabel: "Currently driving recalculation",
+        label: "Locked",
+        tone: "locked"
+      },
+      {
+        ariaLabel: "Shown from the last valid complete calculation",
+        label: "Last valid",
+        tone: "stale"
+      }
+    ]
+  };
+  const emptyDescriptor = { badges: [] };
 
   renderProvenanceBadges(
     lockedBadges,
-    staleView.display.lockedSummary.provenance,
+    staleDescriptor,
     "Locked value provenance",
     documentRef
   );
   renderProvenanceBadges(
     speedBadges,
-    staleView.inputProvenance.speed,
+    emptyDescriptor,
     "Speed input state",
     documentRef
   );
-  setClusterState(speedCluster, staleView.inputProvenance.speed);
+  setClusterState(speedCluster, emptyDescriptor);
 
   assert.deepEqual(getBadgeTexts(lockedBadges), ["Entered", "Locked", "Last valid"]);
   assert.equal(

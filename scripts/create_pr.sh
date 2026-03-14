@@ -4,31 +4,6 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
-resolve_branch() {
-  local branch_name
-
-  branch_name="$(git branch --show-current 2>/dev/null || true)"
-  if [[ -n "$branch_name" ]]; then
-    printf '%s\n' "$branch_name"
-    return 0
-  fi
-
-  for branch_name in "${GITHUB_HEAD_REF:-}" "${GITHUB_REF_NAME:-}" "${BRANCH_NAME:-}"; do
-    if [[ -n "$branch_name" ]]; then
-      printf '%s\n' "$branch_name"
-      return 0
-    fi
-  done
-
-  branch_name="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
-  if [[ -n "$branch_name" ]]; then
-    printf '%s\n' "$branch_name"
-    return 0
-  fi
-
-  return 1
-}
-
 dry_run=false
 if [[ "${1-}" == "--dry-run" ]]; then
   dry_run=true
@@ -37,28 +12,45 @@ elif [[ "${1-}" != "" ]]; then
   exit 1
 fi
 
-branch="$(resolve_branch || true)"
+branch="$(git branch --show-current)"
 pr_body_file="docs/pull-request-draft.md"
+pr_title_file="docs/pull-request-title.txt"
 dirty="$(git status --short)"
 
 derive_pr_title() {
   local branch_name="$1"
-  local title_slug="${branch_name##*/}"
+  local branch_basename="${branch_name##*/}"
+  local branch_slug="$branch_basename"
+  local sentence
+  local first_char
 
-  if [[ "$title_slug" =~ ^[[:alpha:]]+-[0-9]+-(.+)$ ]]; then
-    title_slug="${BASH_REMATCH[1]}"
+  if [[ "$branch_slug" =~ ^[A-Za-z]+-[0-9]+-(.+)$ ]]; then
+    branch_slug="${BASH_REMATCH[1]}"
   fi
 
-  title_slug="${title_slug//-/ }"
+  sentence="$(
+    printf '%s' "$branch_slug" |
+      sed -E 's/[-_]+/ /g; s/[[:space:]]+/ /g; s/^ //; s/ $//'
+  )"
 
-  if [[ -z "$title_slug" ]]; then
-    title_slug="Update run pace calculator"
+  if [[ -z "$sentence" ]]; then
+    echo "Update the run pace calculator"
+    return
   fi
 
-  printf '%s\n' "${title_slug^}"
+  first_char="$(printf '%s' "${sentence:0:1}" | tr '[:lower:]' '[:upper:]')"
+  printf '%s%s\n' "$first_char" "${sentence:1}"
 }
 
-pr_title="${PR_TITLE:-$(derive_pr_title "$branch")}"
+pr_title="${PR_TITLE:-}"
+
+if [[ -z "$pr_title" ]]; then
+  pr_title="$(derive_pr_title "$branch")"
+fi
+
+if [[ "$pr_title" == "Update the run pace calculator" && -f "$pr_title_file" ]]; then
+  pr_title="$(head -n 1 "$pr_title_file" | tr -d '\r')"
+fi
 
 repo_url="$(
   sed -n 's/^[[:space:]]*"url":[[:space:]]*"\([^"]*\)".*/\1/p' "$repo_root/.bootstrap/project.json" |
@@ -132,27 +124,19 @@ default_handoff_dir="${HANDOFF_DIR:-$repo_root/.handoff/$issue_identifier}"
 prepare_handoff_fallback() {
   local reason="$1"
   local handoff_output
-  local archive_path
   local bundle_path
-  local checksums_path
   local manifest_path
-  local resume_script_path
 
-  printf '%s\n' "$reason" >&2
+  echo "$reason" >&2
 
-  if ! handoff_output="$(
-    HANDOFF_BLOCKER_SNAPSHOT="$reason" ./scripts/prepare-handoff.sh "$default_handoff_dir"
-  )"; then
+  if ! handoff_output="$(./scripts/prepare-handoff.sh "$default_handoff_dir")"; then
     echo "Offline handoff preparation also failed." >&2
     return 1
   fi
 
   printf '%s\n' "$handoff_output" >&2
-  archive_path="$(printf '%s\n' "$handoff_output" | awk -F': ' '/^Archive:/ {print $2; exit}')"
   bundle_path="$(printf '%s\n' "$handoff_output" | awk -F': ' '/^Bundle:/ {print $2; exit}')"
-  checksums_path="$(printf '%s\n' "$handoff_output" | awk -F': ' '/^Checksums:/ {print $2; exit}')"
   manifest_path="$(printf '%s\n' "$handoff_output" | awk -F': ' '/^Manifest:/ {print $2; exit}')"
-  resume_script_path="$(printf '%s\n' "$handoff_output" | awk -F': ' '/^Resume script:/ {print $2; exit}')"
 
   if [[ -z "$bundle_path" ]]; then
     echo "Could not determine the handoff bundle path." >&2
@@ -164,33 +148,16 @@ prepare_handoff_fallback() {
     return 1
   fi
 
-  if [[ -n "$resume_script_path" ]]; then
-    echo "To resume the fallback handoff in another clone:" >&2
-    echo "  $resume_script_path <target-repo-dir> --validate --dry-run-publish" >&2
-  fi
-
   echo "To verify the fallback handoff locally:" >&2
   echo "  npm run handoff:verify -- $manifest_path" >&2
-  if [[ -n "$checksums_path" ]]; then
-    echo "To verify the packaged checksums:" >&2
-    echo "  sha256sum -c $checksums_path" >&2
-  fi
   echo "To import the fallback bundle into another clone:" >&2
   echo "  git -C <target-repo-dir> fetch $bundle_path $branch:$branch" >&2
   echo "  git -C <target-repo-dir> switch $branch" >&2
-  if [[ -n "$archive_path" ]]; then
-    echo "Packaged archive: $archive_path" >&2
-  fi
   return 1
 }
 
 if [[ ! -f "$pr_body_file" ]]; then
   echo "Missing PR body draft: $pr_body_file" >&2
-  exit 1
-fi
-
-if [[ -z "$branch" ]]; then
-  echo "Could not determine the current git branch." >&2
   exit 1
 fi
 
@@ -237,25 +204,18 @@ fi
 npm test
 npm run build
 
-blockers=()
-
 if ! gh auth status >/dev/null 2>&1; then
-  blockers+=("GitHub auth is not ready. Run 'gh auth status' for details.")
+  prepare_handoff_fallback "GitHub auth is not ready. Run 'gh auth status' for details."
 fi
 
 if ! python3 -c "import socket; socket.getaddrinfo('github.com', 443)" >/dev/null 2>&1; then
-  blockers+=("GitHub DNS resolution failed. Check outbound network access.")
+  prepare_handoff_fallback "GitHub DNS resolution failed. Check outbound network access."
 fi
 
 if command -v curl >/dev/null 2>&1; then
   if ! curl --silent --show-error --output /dev/null --connect-timeout 5 https://github.com; then
-    blockers+=("GitHub HTTPS reachability check failed. Check outbound network access.")
+    prepare_handoff_fallback "GitHub HTTPS reachability check failed. Check outbound network access."
   fi
-fi
-
-if [[ ${#blockers[@]} -gt 0 ]]; then
-  blocker_snapshot="$(printf -- '- %s\n' "${blockers[@]}")"
-  prepare_handoff_fallback "$blocker_snapshot"
 fi
 
 git push -u origin HEAD

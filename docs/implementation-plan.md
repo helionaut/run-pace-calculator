@@ -18,20 +18,23 @@ Deliver the first public working slice with:
 2. Calculator engine
    - Implemented pure conversion helpers for pace, speed, finish time, and
      common distance projections.
-   - Added Node tests for representative conversion flows.
+   - Added Node tests for representative conversion flows, slider updates, and
+     lock-driven recalculation behavior.
 3. UI
-   - Built a responsive static page with three input modes and live outputs.
-   - Added projection and split views for common running distances.
+   - Built a responsive one-screen calculator with a live distance slider,
+     preset chips, and visible pace, speed, and finish-time cards.
+   - Added clear input, derived, and locked states plus a compact projection
+     disclosure for common running distances.
 4. Deployment
    - Added a GitHub Pages workflow that builds and deploys `dist/`.
 5. Product docs
-   - Added PRD, requirements, and this implementation plan.
+   - Added and refreshed the PRD, requirements, and this implementation plan to
+     match the compact interactive experience.
 
 ## Next Slices
 
 1. Add richer race-time entry helpers such as `hh:mm:ss` text parsing and paste
    support.
-2. Add mile and kilometer split tables for longer races.
-3. Add permalink sharing so users can send a configured calculator state.
-4. Add smoke-test coverage in a browser runner once the repo standardizes on a
+2. Add permalink sharing so users can send a configured calculator state.
+3. Add browser-level smoke-test coverage once the repo standardizes on a
    test framework.

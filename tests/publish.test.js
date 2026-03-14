@@ -1,259 +1,214 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmod, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const publishScript = path.join(repoRoot, "scripts", "create_pr.sh");
-const simpleDraftBody = "## Summary\n\n- fixture\n";
 
-function run(command, args) {
+function run(command, args, cwd, options = {}) {
   const result = spawnSync(command, args, {
-    cwd: repoRoot,
-    encoding: "utf8"
+    cwd,
+    encoding: "utf8",
+    ...options
   });
 
   if (result.status !== 0) {
     throw new Error(result.stderr.trim() || `${command} ${args.join(" ")} failed`);
   }
 
-  return result.stdout;
-}
-
-function resolveCurrentBranch(env = process.env) {
-  const branch = run("git", ["branch", "--show-current"]).trim();
-
-  return branch || env.GITHUB_HEAD_REF || env.GITHUB_REF_NAME || "";
-}
-
-function git(args, cwd) {
-  const result = spawnSync("git", args, {
-    cwd,
-    encoding: "utf8"
-  });
-
-  if (result.status !== 0) {
-    throw new Error(result.stderr.trim() || `git ${args.join(" ")} failed`);
-  }
-
   return result.stdout.trim();
 }
 
-async function writeExecutable(filePath, content) {
-  await writeFile(filePath, content, "utf8");
-  await chmod(filePath, 0o755);
-}
-
 function deriveExpectedTitle(branch) {
-  const branchName = branch.split("/").at(-1) ?? branch;
-  const issueMatch = /^[A-Za-z]+-\d+-(.+)$/.exec(branchName);
-  const slug = (issueMatch?.[1] ?? branchName).replaceAll("-", " ");
+  const branchBase = branch.split("/").at(-1) ?? branch;
+  const branchSlug = branchBase.replace(/^[A-Za-z]+-\d+-/, "");
+  const sentence = branchSlug.replace(/[-_]+/g, " ").trim();
 
-  return slug.charAt(0).toUpperCase() + slug.slice(1);
+  if (sentence === "") {
+    return "Update the run pace calculator";
+  }
+
+  return sentence[0].toUpperCase() + sentence.slice(1);
 }
 
-test("create_pr.sh dry run uses the repo draft title metadata when present", () => {
-  const branch = resolveCurrentBranch();
-  const output = run(publishScript, ["--dry-run"]);
-  const expectedTitle = "Add confidence-focused result presentation and input provenance styling";
+async function cloneRepo() {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "hel-16-publish-test."));
+  const cloneDir = path.join(tempRoot, "repo");
 
-  assert.match(output, new RegExp(`Would create a PR with: gh pr create --head ${branch} --title "${expectedTitle}"`));
-  assert.doesNotMatch(output, /Build the first Run Pace Calculator slice/);
-  assert.match(output, /Would use body file: docs\/pull-request-draft\.md/);
-});
+  run("git", ["clone", repoRoot, cloneDir], tempRoot);
+  await syncWorkingTree(cloneDir);
+  normalizeFixtureRepo(cloneDir);
+  return cloneDir;
+}
 
-test("create_pr.sh dry run uses GITHUB_HEAD_REF when the checkout is detached", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "hel-18-publish-detached."));
-  const repoDir = path.join(tempRoot, "repo");
-  const scriptsDir = path.join(repoDir, "scripts");
-  const docsDir = path.join(repoDir, "docs");
-  const bootstrapDir = path.join(repoDir, ".bootstrap");
-  const branch = "eugeniy/hel-99-detached-publish";
-
-  await mkdir(repoDir, { recursive: true });
-  await mkdir(scriptsDir, { recursive: true });
-  await mkdir(docsDir, { recursive: true });
-  await mkdir(bootstrapDir, { recursive: true });
-
-  git(["init", "-b", "main"], repoDir);
-  git(["config", "user.name", "Codex"], repoDir);
-  git(["config", "user.email", "codex@example.com"], repoDir);
-  git(["remote", "add", "origin", "https://github.com/helionaut/run-pace-calculator.git"], repoDir);
-
-  await writeFile(path.join(repoDir, "README.md"), "# fixture repo\n");
-  await writeFile(
-    path.join(docsDir, "pull-request-draft.md"),
-    simpleDraftBody
+async function syncWorkingTree(cloneDir) {
+  const trackedOutput = run("git", ["ls-files", "-z"], repoRoot);
+  const untrackedOutput = run(
+    "git",
+    ["ls-files", "-z", "--others", "--exclude-standard"],
+    repoRoot
   );
-  await writeFile(
-    path.join(bootstrapDir, "project.json"),
-    JSON.stringify(
-      {
-        repo: {
-          slug: "run-pace-calculator",
-          url: "https://github.com/helionaut/run-pace-calculator"
-        },
-        linear: {
-          starter_issue_identifier: "HEL-99"
-        }
-      },
-      null,
-      2
-    )
-  );
-  await writeExecutable(
-    path.join(scriptsDir, "create_pr.sh"),
-    await readFile(path.join(repoRoot, "scripts", "create_pr.sh"), "utf8")
-  );
+  const relativePaths = `${trackedOutput}\0${untrackedOutput}`
+    .split("\0")
+    .filter(Boolean);
 
-  git(["add", "."], repoDir);
-  git(["commit", "-m", "Initial fixture"], repoDir);
-  git(["switch", "-c", branch], repoDir);
-  git(["checkout", "--detach"], repoDir);
+  for (const relativePath of relativePaths) {
+    const sourcePath = path.join(repoRoot, relativePath);
+    const targetPath = path.join(cloneDir, relativePath);
 
-  const result = spawnSync("./scripts/create_pr.sh", ["--dry-run"], {
-    cwd: repoDir,
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      GITHUB_HEAD_REF: branch
-    }
-  });
+    await mkdir(path.dirname(targetPath), { recursive: true });
+    await cp(sourcePath, targetPath, { force: true });
+  }
+}
 
-  assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, new RegExp(`Using branch: ${branch}`));
-  assert.match(
-    result.stdout,
-    /Would create a PR with: gh pr create --head eugeniy\/hel-99-detached-publish --title "Detached publish"/
-  );
-  assert.doesNotMatch(result.stdout, /Update run pace calculator/);
-});
+function snapshotWorkingTree(cloneDir, hasChanges) {
+  if (!hasChanges) {
+    return;
+  }
 
-test("create_pr.sh records combined blocker details in the fallback handoff summary", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "hel-18-publish-script."));
-  const repoDir = path.join(tempRoot, "repo");
-  const scriptsDir = path.join(repoDir, "scripts");
-  const docsDir = path.join(repoDir, "docs");
-  const bootstrapDir = path.join(repoDir, ".bootstrap");
-  const binDir = path.join(tempRoot, "bin");
-  const handoffDir = path.join(tempRoot, "handoff");
+  run("git", ["add", "--all"], cloneDir);
+  run("git", ["commit", "-m", "test: snapshot working tree"], cloneDir);
+}
 
-  await mkdir(repoDir, { recursive: true });
-  await mkdir(scriptsDir, { recursive: true });
-  await mkdir(docsDir, { recursive: true });
-  await mkdir(bootstrapDir, { recursive: true });
-  await mkdir(binDir, { recursive: true });
+function hasParentCommit(cloneDir) {
+  return spawnSync("git", ["rev-parse", "--verify", "HEAD~1"], {
+    cwd: cloneDir
+  }).status === 0;
+}
 
-  git(["init", "-b", "main"], repoDir);
-  git(["config", "user.name", "Codex"], repoDir);
-  git(["config", "user.email", "codex@example.com"], repoDir);
-  git(["remote", "add", "origin", "https://github.com/helionaut/run-pace-calculator.git"], repoDir);
+function normalizeFixtureRepo(cloneDir) {
+  run("git", ["config", "user.name", "Codex Test"], cloneDir);
+  run("git", ["config", "user.email", "codex-test@example.com"], cloneDir);
 
-  await writeFile(path.join(repoDir, "README.md"), "# fixture repo\n");
-  await writeFile(
-    path.join(docsDir, "pull-request-draft.md"),
-    simpleDraftBody
-  );
-  await writeFile(
-    path.join(bootstrapDir, "project.json"),
-    JSON.stringify(
-      {
-        repo: {
-          slug: "run-pace-calculator",
-          url: "https://github.com/helionaut/run-pace-calculator"
-        },
-        linear: {
-          starter_issue_identifier: "HEL-99"
-        }
-      },
-      null,
-      2
-    )
-  );
-
-  for (const scriptName of ["create_pr.sh", "prepare-handoff.sh", "export_bundle.sh"]) {
-    await writeExecutable(
-      path.join(scriptsDir, scriptName),
-      await readFile(path.join(repoRoot, "scripts", scriptName), "utf8")
+  if (run("git", ["branch", "--show-current"], cloneDir) === "") {
+    run(
+      "git",
+      ["switch", "-c", "codex/hel-16-publish-test-fixture"],
+      cloneDir
     );
   }
 
-  await writeExecutable(
-    path.join(binDir, "npm"),
-    `#!/bin/sh
-if [ "$1" = "test" ]; then
-  exit 0
-fi
-if [ "$1" = "run" ] && [ "$2" = "build" ]; then
-  exit 0
-fi
-if [ "$1" = "run" ] && [ "$2" = "pr:dry-run" ]; then
-  branch=$(git branch --show-current)
-  printf '%s\n' "Would create a PR with: gh pr create --head $branch --title \\"Fixture title\\" --body-file docs/pull-request-draft.md"
-  printf '%s\n' "Would use body file: docs/pull-request-draft.md"
-  exit 0
-fi
-echo "unexpected npm invocation: $*" >&2
-exit 1
-`
-  );
-  await writeExecutable(
-    path.join(binDir, "gh"),
-    `#!/bin/sh
-if [ "$1" = "auth" ] && [ "$2" = "status" ]; then
-  exit 1
-fi
-echo "unexpected gh invocation: $*" >&2
-exit 1
-`
-  );
-  await writeExecutable(
-    path.join(binDir, "python3"),
-    `#!/bin/sh
-exit 1
-`
-  );
-  await writeExecutable(
-    path.join(binDir, "curl"),
-    `#!/bin/sh
-exit 1
-`
-  );
+  const hasChanges =
+    spawnSync("git", ["diff", "--quiet"], { cwd: cloneDir }).status !== 0 ||
+    spawnSync("git", ["diff", "--cached", "--quiet"], { cwd: cloneDir }).status !== 0 ||
+    run("git", ["status", "--short"], cloneDir) !== "";
 
-  git(["add", "."], repoDir);
-  git(["commit", "-m", "Initial fixture"], repoDir);
-  git(["switch", "-c", "eugeniy/hel-99-publish-fixture"], repoDir);
+  snapshotWorkingTree(cloneDir, hasChanges);
 
-  const result = spawnSync("./scripts/create_pr.sh", [], {
-    cwd: repoDir,
-    encoding: "utf8",
+  // CI checkouts can be depth-1 and detached, so make HEAD~1 exist explicitly.
+  if (!hasParentCommit(cloneDir)) {
+    run("git", ["commit", "--allow-empty", "-m", "test: add fixture parent"], cloneDir);
+  }
+}
+
+test("create_pr.sh dry run uses a branch-derived PR title", async () => {
+  const cloneDir = await cloneRepo();
+  const branch = run("git", ["branch", "--show-current"], cloneDir);
+  const expectedTitle = deriveExpectedTitle(branch);
+  const output = run("./scripts/create_pr.sh", ["--dry-run"], cloneDir);
+
+  assert.match(
+    output,
+    new RegExp(`--title "${expectedTitle.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}"`)
+  );
+  assert.doesNotMatch(output, /Build the first Run Pace Calculator slice/);
+});
+
+test("prepare_handoff summary includes preview notes from the PR draft", async () => {
+  const cloneDir = await cloneRepo();
+  const outputDir = path.join(cloneDir, ".handoff-test");
+  const output = run("./scripts/prepare-handoff.sh", [outputDir], cloneDir);
+  const summary = await readFile(path.join(outputDir, "SUMMARY.md"), "utf8");
+  const manifestPathMatch = output.match(/^Manifest: (.+)$/m);
+
+  assert.match(summary, /## Preview notes/);
+  assert.match(
+    summary,
+    /Interaction: entering pace immediately reveals speed and finish time/
+  );
+  assert.doesNotMatch(summary, /## Preview notes\n\n\n-/);
+  assert.match(summary, /## Demo script/);
+  assert.match(summary, /Turn on the finish-time lock, set the time to `1:45:00`/);
+  assert.match(summary, /Attach the resulting PR to `HEL-16` and move the issue to/);
+  assert.match(summary, /\.\/resume-from-handoff\.sh <target-repo-dir>/);
+  assert.match(summary, /- `SUMMARY.md`/);
+  assert.match(summary, /- `verify-handoff\.mjs`/);
+  assert.match(summary, /- `resume-from-handoff\.sh`/);
+  assert.match(summary, /In a browser-enabled environment, use the demo script above/);
+  assert.ok(manifestPathMatch, "prepare-handoff should print the manifest path");
+
+  run("node", ["scripts/verify-handoff.mjs", manifestPathMatch[1]], cloneDir);
+});
+
+test("prepare_handoff can package optional preview capture artifacts", async () => {
+  const cloneDir = await cloneRepo();
+  const outputDir = path.join(cloneDir, ".handoff-test");
+  const beforeRef = run("git", ["rev-parse", "HEAD~1"], cloneDir);
+  const afterRef = run("git", ["rev-parse", "HEAD"], cloneDir);
+  const output = run("./scripts/prepare-handoff.sh", [outputDir], cloneDir, {
     env: {
       ...process.env,
-      PATH: `${binDir}:${process.env.PATH}`,
-      HANDOFF_DIR: handoffDir
+      HANDOFF_PREVIEW_BEFORE_REF: beforeRef,
+      HANDOFF_PREVIEW_AFTER_REF: afterRef
     }
   });
+  const summary = await readFile(path.join(outputDir, "SUMMARY.md"), "utf8");
+  const captureNote = await readFile(path.join(outputDir, "PREVIEW-CAPTURE.md"), "utf8");
+  const previewArchivePath = path.join(outputDir, "preview-snapshots.tar");
+  const manifestPathMatch = output.match(/^Manifest: (.+)$/m);
+  const previewArchiveEntries = run("tar", ["-tf", previewArchivePath], cloneDir);
 
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /GitHub auth is not ready/);
-  assert.match(result.stderr, /GitHub DNS resolution failed/);
-  assert.match(result.stderr, /GitHub HTTPS reachability check failed/);
-  assert.match(result.stderr, /Resume script: .*resume-handoff\.sh/);
-  assert.match(result.stderr, /Checksums: .*SHA256SUMS/);
-  assert.match(result.stderr, /Archive: .*HEL-99-handoff\.tar\.gz/);
-  assert.match(result.stderr, /To resume the fallback handoff in another clone:/);
-  assert.match(
-    result.stderr,
-    /resume-handoff\.sh <target-repo-dir> --validate --dry-run-publish/
+  assert.match(captureNote, new RegExp(beforeRef));
+  assert.match(captureNote, new RegExp(afterRef));
+  assert.match(captureNote, /python3 -m http\.server 4301/);
+  assert.match(captureNote, /python3 -m http\.server 4302/);
+  assert.match(summary, /- `PREVIEW-CAPTURE\.md`/);
+  assert.match(summary, /- `preview-snapshots\.tar`/);
+  assert.match(summary, /- `previews\/before\/`/);
+  assert.match(summary, /- `previews\/after\/`/);
+  await stat(path.join(outputDir, "previews", "before", "index.html"));
+  await stat(path.join(outputDir, "previews", "after", "index.html"));
+  await stat(previewArchivePath);
+  assert.match(previewArchiveEntries, /^before\/index\.html$/m);
+  assert.match(previewArchiveEntries, /^after\/index\.html$/m);
+  assert.ok(manifestPathMatch, "prepare-handoff should print the manifest path");
+
+  run("node", ["scripts/verify-handoff.mjs", manifestPathMatch[1]], cloneDir);
+});
+
+test("prepare_handoff exports a self-contained resume script", async () => {
+  const cloneDir = await cloneRepo();
+  const outputDir = path.join(cloneDir, ".handoff-test");
+  const output = run("./scripts/prepare-handoff.sh", [outputDir], cloneDir);
+  const summary = await readFile(path.join(outputDir, "SUMMARY.md"), "utf8");
+  const resumeScriptPath = path.join(outputDir, "resume-from-handoff.sh");
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "hel-16-resume-test."));
+  const targetRepo = path.join(tempRoot, "target");
+
+  run("git", ["clone", cloneDir, targetRepo], tempRoot);
+  run("git", ["switch", "-c", "scratch", "HEAD~1"], targetRepo);
+  run(
+    "git",
+    [
+      "branch",
+      "-D",
+      run("git", ["branch", "--show-current"], cloneDir)
+    ],
+    targetRepo
   );
 
-  const summary = await readFile(path.join(handoffDir, "SUMMARY.md"), "utf8");
+  const resumeOutput = run(resumeScriptPath, [targetRepo], outputDir);
+  const manifestPathMatch = output.match(/^Manifest: (.+)$/m);
 
-  assert.match(summary, /## Current blocker snapshot \(\d{4}-\d{2}-\d{2}\)/);
-  assert.match(summary, /- GitHub auth is not ready/);
-  assert.match(summary, /- GitHub DNS resolution failed/);
-  assert.match(summary, /- GitHub HTTPS reachability check failed/);
+  assert.match(summary, /\.\/resume-from-handoff\.sh <target-repo-dir>/);
+  assert.match(resumeOutput, /Verified manifest:/);
+  assert.match(resumeOutput, /Imported branch:/);
+  assert.equal(
+    run("git", ["branch", "--show-current"], targetRepo),
+    run("git", ["branch", "--show-current"], cloneDir)
+  );
+  assert.ok(manifestPathMatch, "prepare-handoff should print the manifest path");
 });

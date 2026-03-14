@@ -1,299 +1,209 @@
-import assert from "node:assert/strict";
 import test from "node:test";
+import assert from "node:assert/strict";
+
+import { createCalculatorApp } from "../src/main.js";
 
 class FakeClassList {
-  constructor(element) {
-    this.element = element;
+  constructor() {
+    this.tokens = new Set();
   }
 
   add(...tokens) {
-    const classes = this.#getClasses();
-
     for (const token of tokens) {
-      classes.add(token);
+      this.tokens.add(token);
     }
-
-    this.#setClasses(classes);
   }
 
   remove(...tokens) {
-    const classes = this.#getClasses();
-
     for (const token of tokens) {
-      classes.delete(token);
+      this.tokens.delete(token);
     }
-
-    this.#setClasses(classes);
   }
 
   toggle(token, force) {
-    const classes = this.#getClasses();
-    const shouldAdd = force ?? !classes.has(token);
-
-    if (shouldAdd) {
-      classes.add(token);
-    } else {
-      classes.delete(token);
+    if (force === true) {
+      this.tokens.add(token);
+      return true;
     }
 
-    this.#setClasses(classes);
-    return shouldAdd;
+    if (force === false) {
+      this.tokens.delete(token);
+      return false;
+    }
+
+    if (this.tokens.has(token)) {
+      this.tokens.delete(token);
+      return false;
+    }
+
+    this.tokens.add(token);
+    return true;
   }
 
-  #getClasses() {
-    return new Set(this.element.className.split(/\s+/).filter(Boolean));
+  contains(token) {
+    return this.tokens.has(token);
   }
 
-  #setClasses(classes) {
-    this.element.className = [...classes].join(" ");
+  setFromString(value) {
+    this.tokens = new Set(String(value).split(/\s+/).filter(Boolean));
+  }
+
+  toString() {
+    return [...this.tokens].join(" ");
   }
 }
 
 class FakeElement {
-  constructor(tagName, { id = "", dataset = {} } = {}) {
-    this.tagName = tagName.toUpperCase();
-    this.id = id;
-    this.dataset = { ...dataset };
-    this.attributes = new Map();
+  constructor({ dataset = {}, value = "", textContent = "" } = {}) {
+    this.classList = new FakeClassList();
     this.children = [];
-    this.className = "";
-    this.classList = new FakeClassList(this);
-    this.hidden = false;
+    this.dataset = { ...dataset };
+    this.disabled = false;
     this.listeners = new Map();
-    this.scope = "";
-    this.tabIndex = 0;
-    this.textContent = "";
-    this.value = "";
+    this.textContent = textContent;
+    this.value = value;
+    this.attributes = new Map();
   }
 
-  addEventListener(type, handler) {
-    const handlers = this.listeners.get(type) ?? [];
+  addEventListener(type, listener) {
+    const listeners = this.listeners.get(type) ?? [];
 
-    handlers.push(handler);
-    this.listeners.set(type, handlers);
+    listeners.push(listener);
+    this.listeners.set(type, listeners);
+  }
+
+  dispatch(type, extra = {}) {
+    const listeners = this.listeners.get(type) ?? [];
+    const event = {
+      currentTarget: this,
+      preventDefault() {},
+      target: this,
+      type,
+      ...extra
+    };
+
+    for (const listener of listeners) {
+      listener(event);
+    }
+  }
+
+  getAttribute(name) {
+    return this.attributes.get(name) ?? null;
+  }
+
+  setAttribute(name, value) {
+    this.attributes.set(name, String(value));
   }
 
   append(...children) {
     this.children.push(...children);
   }
 
-  dispatch(type, init = {}) {
-    const handlers = this.listeners.get(type) ?? [];
-    const event = {
-      currentTarget: this,
-      defaultPrevented: false,
-      preventDefault() {
-        this.defaultPrevented = true;
-      },
-      target: this,
-      ...init
-    };
-
-    for (const handler of handlers) {
-      handler(event);
-    }
-  }
-
-  focus() {}
-
-  getAttribute(name) {
-    return this.attributes.get(name) ?? null;
-  }
-
   replaceChildren(...children) {
     this.children = [...children];
   }
 
-  setAttribute(name, value) {
-    this.attributes.set(name, String(value));
+  get className() {
+    return this.classList.toString();
+  }
+
+  set className(value) {
+    this.classList.setFromString(value);
   }
 }
 
-class FakeDocument {
-  constructor() {
-    this.elements = new Map();
-    this.modeButtons = [];
-    this.unitButtons = [];
-    this.convertSourceButtons = [];
-  }
-
-  createElement(tagName) {
-    return new FakeElement(tagName);
-  }
-
-  querySelector(selector) {
-    if (!selector.startsWith("#")) {
-      throw new Error(`Unsupported selector: ${selector}`);
-    }
-
-    return this.elements.get(selector.slice(1)) ?? null;
-  }
-
-  querySelectorAll(selector) {
-    if (selector === "[data-mode-button]") {
-      return this.modeButtons;
-    }
-
-    if (selector === "[data-unit-button]") {
-      return this.unitButtons;
-    }
-
-    if (selector === "[data-convert-source-button]") {
-      return this.convertSourceButtons;
-    }
-
-    throw new Error(`Unsupported selector: ${selector}`);
-  }
-
-  register(tagName, id, dataset = {}) {
-    const element = new FakeElement(tagName, { id, dataset });
-
-    this.elements.set(id, element);
-    return element;
-  }
-}
-
-function createFakeDom() {
-  const document = new FakeDocument();
-  const make = (tagName, id, dataset) => document.register(tagName, id, dataset);
-
-  const elements = {
-    alternatePaceLabel: make("span", "alternate-pace-label"),
-    alternatePaceProvenance: make("span", "alternate-pace-provenance"),
-    alternatePaceValue: make("span", "alternate-pace-value"),
-    alternateSpeedLabel: make("span", "alternate-speed-label"),
-    alternateSpeedProvenance: make("span", "alternate-speed-provenance"),
-    alternateSpeedValue: make("span", "alternate-speed-value"),
-    convertSourceCluster: make("div", "convert-source-cluster"),
-    distanceCluster: make("div", "distance-cluster"),
-    distanceClusterProvenance: make("div", "distance-cluster-provenance"),
-    distanceError: make("p", "distance-error"),
-    distanceInput: make("input", "distance-input"),
-    distanceLabel: make("span", "distance-label"),
-    distanceProvenance: make("span", "distance-provenance"),
-    finishCluster: make("div", "finish-cluster"),
-    finishClusterProvenance: make("div", "finish-cluster-provenance"),
-    finishError: make("p", "finish-error"),
-    finishHours: make("input", "finish-hours"),
-    finishMinutes: make("input", "finish-minutes"),
-    finishSeconds: make("input", "finish-seconds"),
-    heroChips: make("div", "hero-chips"),
-    lockedLabel: make("span", "locked-label"),
-    lockedMeta: make("p", "locked-meta"),
-    lockedProvenance: make("span", "locked-provenance"),
-    lockedValue: make("span", "locked-value"),
-    paceCluster: make("div", "pace-cluster"),
-    paceClusterProvenance: make("div", "pace-cluster-provenance"),
-    paceCopy: make("p", "pace-copy"),
-    paceError: make("p", "pace-error"),
-    paceMinutes: make("input", "pace-minutes"),
-    paceSeconds: make("input", "pace-seconds"),
-    presetSelect: make("select", "preset-select"),
-    primaryLabel: make("span", "primary-label"),
-    primaryMeta: make("p", "primary-meta"),
-    primaryProvenance: make("span", "primary-provenance"),
-    primaryValue: make("span", "primary-value"),
-    projectionRows: make("tbody", "projection-rows"),
-    resetButton: make("button", "reset-button"),
-    resultBadge: make("span", "result-badge"),
-    resultNote: make("p", "result-note"),
-    selectedDistance: make("span", "selected-distance"),
-    selectedPaceLabel: make("span", "selected-pace-label"),
-    selectedPaceProvenance: make("span", "selected-pace-provenance"),
-    selectedPaceValue: make("span", "selected-pace-value"),
-    selectedSpeedLabel: make("span", "selected-speed-label"),
-    selectedSpeedProvenance: make("span", "selected-speed-provenance"),
-    selectedSpeedValue: make("span", "selected-speed-value"),
-    splitCopy: make("p", "split-copy"),
-    splitHeading: make("h3", "split-heading"),
-    splitRows: make("tbody", "split-rows"),
-    speedCluster: make("div", "speed-cluster"),
-    speedClusterProvenance: make("div", "speed-cluster-provenance"),
-    speedError: make("p", "speed-error"),
-    speedInput: make("input", "speed-input"),
-    speedLabel: make("span", "speed-label"),
-    statusMessage: make("p", "status-message")
-  };
-
-  document.modeButtons = [
-    make("button", "mode-tab-pace", { mode: "pace" }),
-    make("button", "mode-tab-finish", { mode: "finish" }),
-    make("button", "mode-tab-convert", { mode: "convert" })
+function createElements() {
+  const unitButtons = [
+    new FakeElement({ dataset: { unit: "km" } }),
+    new FakeElement({ dataset: { unit: "mi" } })
   ];
-  document.unitButtons = [
-    make("button", "unit-km", { unit: "km" }),
-    make("button", "unit-mi", { unit: "mi" })
+  const presetButtons = [
+    new FakeElement({ dataset: { preset: "5k" } }),
+    new FakeElement({ dataset: { preset: "10k" } }),
+    new FakeElement({ dataset: { preset: "half" } }),
+    new FakeElement({ dataset: { preset: "marathon" } })
   ];
-  document.convertSourceButtons = [
-    make("button", "convert-source-pace", { convertSource: "pace" }),
-    make("button", "convert-source-speed", { convertSource: "speed" })
-  ];
-
-  elements.modeTabPace = document.modeButtons[0];
-  elements.modeTabFinish = document.modeButtons[1];
-  elements.modeTabConvert = document.modeButtons[2];
-  elements.unitKm = document.unitButtons[0];
-  elements.unitMi = document.unitButtons[1];
-  elements.convertSourcePace = document.convertSourceButtons[0];
-  elements.convertSourceSpeed = document.convertSourceButtons[1];
-
-  return { document, elements };
-}
-
-let importCounter = 0;
-
-async function loadApp() {
-  const { document, elements } = createFakeDom();
-  const previousDocument = globalThis.document;
-  const previousWindow = globalThis.window;
-
-  globalThis.document = document;
-  globalThis.window = {
-    document,
-    history: {
-      replaceState(_state, _title, url) {
-        const parsed = new URL(url, "https://example.test");
-
-        globalThis.window.location.pathname = parsed.pathname;
-        globalThis.window.location.search = parsed.search;
-        globalThis.window.location.hash = parsed.hash;
-      }
-    },
-    location: {
-      hash: "",
-      pathname: "/index.html",
-      search: ""
-    }
-  };
-
-  importCounter += 1;
-  await import(new URL(`../src/main.js?test=${importCounter}`, import.meta.url).href);
 
   return {
-    elements,
-    restore() {
-      if (previousDocument === undefined) {
-        delete globalThis.document;
-      } else {
-        globalThis.document = previousDocument;
-      }
-
-      if (previousWindow === undefined) {
-        delete globalThis.window;
-      } else {
-        globalThis.window = previousWindow;
-      }
-    }
+    distanceError: new FakeElement(),
+    distanceInput: new FakeElement({ value: "10" }),
+    distanceLabel: new FakeElement(),
+    distanceSlider: new FakeElement({ value: "10" }),
+    paceCard: new FakeElement(),
+    paceDriverButton: new FakeElement(),
+    paceError: new FakeElement(),
+    paceLabel: new FakeElement(),
+    paceLockButton: new FakeElement(),
+    paceMinutes: new FakeElement(),
+    paceSecondary: new FakeElement(),
+    paceSeconds: new FakeElement(),
+    paceState: new FakeElement(),
+    presetButtons,
+    projectionValues: {
+      "5k": new FakeElement(),
+      "10k": new FakeElement(),
+      half: new FakeElement(),
+      marathon: new FakeElement()
+    },
+    resetButton: new FakeElement(),
+    selectedDistance: new FakeElement(),
+    splitCopy: new FakeElement(),
+    splitHeading: new FakeElement(),
+    splitRows: new FakeElement(),
+    speedCard: new FakeElement(),
+    speedDriverButton: new FakeElement(),
+    speedError: new FakeElement(),
+    speedInput: new FakeElement(),
+    speedLabel: new FakeElement(),
+    speedSecondary: new FakeElement(),
+    speedState: new FakeElement(),
+    statusMessage: new FakeElement(),
+    timeCard: new FakeElement(),
+    timeDriverButton: new FakeElement(),
+    timeError: new FakeElement(),
+    timeHours: new FakeElement(),
+    timeLockButton: new FakeElement(),
+    timeMinutes: new FakeElement(),
+    timeSecondary: new FakeElement(),
+    timeSeconds: new FakeElement(),
+    timeState: new FakeElement(),
+    unitButtons
   };
 }
 
-function setInputValue(element, value) {
-  element.value = value;
-  element.dispatch("input");
+function installFakeDocument(t) {
+  const previousDocument = globalThis.document;
+
+  globalThis.document = {
+    createElement() {
+      return new FakeElement();
+    }
+  };
+
+  t.after(() => {
+    if (previousDocument === undefined) {
+      delete globalThis.document;
+    } else {
+      globalThis.document = previousDocument;
+    }
+  });
 }
 
-function click(element) {
-  element.dispatch("click");
+function enterPace(elements, minutes, seconds) {
+  elements.paceMinutes.value = minutes;
+  elements.paceMinutes.dispatch("input");
+  elements.paceSeconds.value = seconds;
+  elements.paceSeconds.dispatch("input");
+}
+
+function enterTime(elements, hours, minutes, seconds) {
+  elements.timeDriverButton.dispatch("click");
+  elements.timeHours.value = hours;
+  elements.timeHours.dispatch("input");
+  elements.timeMinutes.value = minutes;
+  elements.timeMinutes.dispatch("input");
+  elements.timeSeconds.value = seconds;
+  elements.timeSeconds.dispatch("input");
 }
 
 function readSplitRows(splitRows) {
@@ -301,79 +211,122 @@ function readSplitRows(splitRows) {
     const [labelCell, finishCell] = row.children;
 
     return {
-      finishLabel: finishCell?.textContent ?? "",
-      isPartial: row.className.includes("is-final-partial"),
-      label: labelCell?.textContent ?? ""
+      label: labelCell.textContent,
+      finishLabel: finishCell.textContent,
+      isPartial: row.classList.contains("is-final-partial")
     };
   });
 }
 
-test("main.js updates split rows in the DOM when result-driving inputs change", async (t) => {
-  const app = await loadApp();
-  const { elements } = app;
+test("pace input plus slider movement updates derived speed and finish time live", (t) => {
+  installFakeDocument(t);
+  const elements = createElements();
 
-  t.after(() => {
-    app.restore();
-  });
+  createCalculatorApp(elements);
+  enterPace(elements, "5", "0");
 
-  assert.equal(elements.splitHeading.textContent, "Selected-distance splits");
+  assert.equal(elements.paceState.textContent, "Input");
+  assert.equal(elements.speedState.textContent, "Derived");
+  assert.equal(elements.timeState.textContent, "Derived");
+  assert.equal(elements.speedInput.value, "12");
+  assert.equal(elements.timeHours.value, "0");
+  assert.equal(elements.timeMinutes.value, "50");
+  assert.equal(elements.timeSeconds.value, "00");
+
+  elements.distanceSlider.value = "5";
+  elements.distanceSlider.dispatch("input");
+
+  assert.equal(elements.selectedDistance.textContent, "5 km");
+  assert.equal(elements.speedInput.value, "12");
+  assert.equal(elements.timeHours.value, "0");
+  assert.equal(elements.timeMinutes.value, "25");
+  assert.equal(elements.timeSeconds.value, "00");
+  assert.equal(elements.paceMinutes.disabled, false);
+  assert.equal(elements.speedInput.disabled, true);
+});
+
+test("locking time keeps the target fixed while the slider recalculates pace and speed", (t) => {
+  installFakeDocument(t);
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+  enterPace(elements, "5", "0");
+
+  elements.timeLockButton.dispatch("click");
+
+  assert.equal(elements.timeState.textContent, "Locked");
+  assert.equal(elements.timeDriverButton.textContent, "Locked input");
+  assert.equal(elements.speedDriverButton.disabled, true);
+
+  elements.distanceSlider.value = "5";
+  elements.distanceSlider.dispatch("input");
+
+  assert.equal(elements.timeHours.value, "0");
+  assert.equal(elements.timeMinutes.value, "50");
+  assert.equal(elements.timeSeconds.value, "00");
+  assert.equal(elements.paceMinutes.value, "10");
+  assert.equal(elements.paceSeconds.value, "00");
+  assert.equal(elements.speedInput.value, "6");
+  assert.equal(
+    elements.statusMessage.textContent,
+    "Time locked. Drag distance to see the required pace and speed."
+  );
+});
+
+test("locking pace keeps finish time live and blocks switching drivers until unlocked", (t) => {
+  installFakeDocument(t);
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+  enterTime(elements, "0", "50", "0");
+
+  elements.paceLockButton.dispatch("click");
+
+  assert.equal(elements.paceState.textContent, "Locked");
+  assert.equal(elements.speedDriverButton.disabled, true);
+  assert.equal(elements.timeDriverButton.disabled, true);
+
+  elements.distanceSlider.value = "5";
+  elements.distanceSlider.dispatch("input");
+
+  assert.equal(elements.paceMinutes.value, "5");
+  assert.equal(elements.paceSeconds.value, "00");
+  assert.equal(elements.timeHours.value, "0");
+  assert.equal(elements.timeMinutes.value, "25");
+  assert.equal(elements.timeSeconds.value, "00");
+  assert.equal(
+    elements.statusMessage.textContent,
+    "Pace locked. Drag distance to update the finish time."
+  );
+});
+
+test("split rows update in the DOM as the selected distance changes", (t) => {
+  installFakeDocument(t);
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+
+  assert.equal(elements.splitHeading.textContent, "Kilometer splits");
   assert.equal(
     elements.splitRows.children[0].children[0].textContent,
-    "Enter valid values to calculate."
+    "Choose a distance, then edit pace, speed, or time."
   );
 
-  setInputValue(elements.distanceInput, "10");
-  setInputValue(elements.finishHours, "0");
-  setInputValue(elements.finishMinutes, "50");
-  setInputValue(elements.finishSeconds, "0");
+  enterPace(elements, "5", "0");
 
   let rows = readSplitRows(elements.splitRows);
   assert.deepEqual(rows.slice(0, 2), [
     { label: "1 km", finishLabel: "00:05:00", isPartial: false },
     { label: "2 km", finishLabel: "00:10:00", isPartial: false }
   ]);
-
-  setInputValue(elements.finishMinutes, "45");
-  rows = readSplitRows(elements.splitRows);
-  assert.equal(rows[0].finishLabel, "00:04:30");
   assert.equal(rows.at(-1).label, "10 km");
-  assert.equal(rows.at(-1).finishLabel, "00:45:00");
-
-  click(elements.modeTabFinish);
-  setInputValue(elements.distanceInput, "10");
-  setInputValue(elements.paceMinutes, "5");
-  setInputValue(elements.paceSeconds, "0");
-
-  rows = readSplitRows(elements.splitRows);
-  assert.equal(rows[0].finishLabel, "00:05:00");
   assert.equal(rows.at(-1).finishLabel, "00:50:00");
 
-  setInputValue(elements.paceMinutes, "4");
-  rows = readSplitRows(elements.splitRows);
-  assert.equal(rows[0].finishLabel, "00:04:00");
-  assert.equal(rows.at(-1).finishLabel, "00:40:00");
-
-  click(elements.modeTabConvert);
-  click(elements.unitMi);
-  click(elements.convertSourceSpeed);
-  setInputValue(elements.distanceInput, "3");
-  setInputValue(elements.speedInput, "7.5");
+  elements.distanceSlider.value = "5";
+  elements.distanceSlider.dispatch("input");
 
   rows = readSplitRows(elements.splitRows);
-  assert.deepEqual(rows, [
-    { label: "1 mi", finishLabel: "00:08:00", isPartial: false },
-    { label: "2 mi", finishLabel: "00:16:00", isPartial: false },
-    { label: "3 mi", finishLabel: "00:24:00", isPartial: false }
-  ]);
-
-  setInputValue(elements.speedInput, "6");
-  rows = readSplitRows(elements.splitRows);
-  assert.equal(rows[0].finishLabel, "00:10:00");
-  assert.equal(rows.at(-1).finishLabel, "00:30:00");
-
-  setInputValue(elements.distanceInput, "4");
-  rows = readSplitRows(elements.splitRows);
-  assert.equal(rows.length, 4);
-  assert.equal(rows.at(-1).label, "4 mi");
-  assert.equal(rows.at(-1).finishLabel, "00:40:00");
+  assert.equal(rows.length, 5);
+  assert.equal(rows.at(-1).label, "5 km");
+  assert.equal(rows.at(-1).finishLabel, "00:25:00");
 });
