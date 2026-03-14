@@ -226,7 +226,7 @@ test("mile mode exposes native mile quick-distance chips", () => {
       ["1mi", "1 mi"],
       ["5mi", "5 mi"],
       ["10mi", "10 mi"],
-      ["half", "Half Marathon"],
+      ["half", "Half"],
       ["marathon", "Marathon"]
     ]
   );
@@ -260,7 +260,7 @@ test("short mile quick-distance chips select native mile values", () => {
   assert.equal(view.distance.presetId, "1mi");
 });
 
-test("mile half and marathon presets keep canonical labels while selecting mile distances", () => {
+test("mile half and marathon presets keep compact labels while selecting mile distances", () => {
   const halfView = deriveCalculatorView(
     applyPresetSelection(applyUnitChange(createFormState(), "mi"), "half")
   );
@@ -270,7 +270,7 @@ test("mile half and marathon presets keep canonical labels while selecting mile 
 
   assert.equal(
     halfView.distance.presets.find(({ id }) => id === "half")?.label,
-    "Half Marathon"
+    "Half"
   );
   assert.equal(halfView.distance.inputValue, "13.1");
   assert.equal(halfView.selectedDistanceLabel, "13.1 mi");

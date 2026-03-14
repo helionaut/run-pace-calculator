@@ -1,29 +1,29 @@
-<!-- PR_TITLE: Add a compact workout split builder below the calculator -->
+<!-- PR_TITLE: Tighten the mobile layout and stabilize preset wrapping -->
 
 ## Summary
 
-- add a workout split builder below the calculator with dense single-line split
-  rows that show distance, pace, and time together
-- support adding the current calculator state as a split, then selecting,
-  copying, deleting, and saving edits back into an existing split
-- tighten headings, padding, and spacing so the extra planning UI fits cleanly
-  on mobile and desktop without horizontal overflow
+- tighten padding, gaps, and control sizing across the calculator so the mobile
+  layout stays denser without adding extra rows
+- remove the duplicate `Time` title treatment, move split status onto the
+  workout-splits heading line, and let the top status text wrap cleanly instead
+  of truncating
+- normalize quick-preset labeling and mobile layout so km/mi switching keeps
+  the preset area at the same height
 
 ## Testing
 
-- [x] `npm test`
-- [x] `npm run build`
 - [x] `npm run check`
-- [x] Built-preview desktop/mobile verification via a temporary Puppeteer run
+- [x] Built-preview desktop/mobile verification via a temporary Playwright run
   against `dist`
+- [x] Mobile preset row measured at the same height in preview for km and mi
+  (`58px`)
 
 ## Risks
 
-- Low: split plans are intentionally in-memory only for now, so refreshing the
-  page still resets the lower split list even though the main calculator state
-  remains shareable via the URL
-- Low: split rows are rendered from saved calculator snapshots, so future
-  calculator-state shape changes need to preserve that snapshot compatibility
+- Low: the mobile preset row now uses a fixed compact grid, so any future
+  addition of more quick presets will need a deliberate responsive layout pass
+- Low: the header status now wraps to two lines; longer future status copy may
+  need another wording pass if it becomes materially longer
 
 ## Checklist
 
@@ -33,13 +33,11 @@
 
 Preview notes:
 
-- Desktop built-preview screenshot reviewed with two saved workout splits; both
-  split rows rendered as dense single-line rows with inline actions, while
-  distance, pace, and time all stayed visible without horizontal overflow.
-- Mobile built-preview screenshot reviewed in the selected-split edit state;
-  the bottom action switched to `Save split` with the save styling, and both
-  saved split rows still rendered as dense single-line rows with inline actions
-  and no horizontal overflow at 390px width.
-- The screenshots matched the issue request: the calculator stayed compact
-  while the new split-builder flow supported add/save/edit semantics below the
-  main calculator.
+- Desktop built-preview screenshot reviewed with a saved split present; the
+  layout stayed compact and the split status remained inline with the heading.
+- Mobile built-preview screenshots reviewed in both km and mi modes at 390px
+  width; the quick preset area stayed at two rows in both unit systems with no
+  extra wrap on unit switch.
+- Narrow mobile built-preview screenshot reviewed at 320px width; the top
+  status text wrapped cleanly across two lines without clipping, and the
+  compact spacing changes still preserved the one-screen layout.

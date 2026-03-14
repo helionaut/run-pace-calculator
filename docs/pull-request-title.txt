@@ -1,1 +1,1 @@
-Add a compact workout split builder below the calculator
+Tighten the mobile layout and stabilize preset wrapping

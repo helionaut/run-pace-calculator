@@ -46,12 +46,17 @@ test("calculator markup keeps the compact three-value flow in DOM order", async 
   assert.match(html, /id="split-action-button"/);
   assert.match(html, /id="split-summary"/);
   assert.match(html, /id="split-list"/);
+  assert.match(
+    html,
+    /<div class="metric-card__title metric-card__title--solo">[\s\S]*<h2>Time<\/h2>/
+  );
   assert.match(html, /id="distance-slider"[\s\S]*type="range"/);
   assert.match(html, /<span id="pace-label">Pace \(min\/km\)<\/span>/);
   assert.match(html, /<span id="speed-label">Speed \(km\/h\)<\/span>/);
   assert.match(html, /<span>Hours<\/span>[\s\S]*id="time-hours"/);
   assert.match(html, /<span>Minutes<\/span>[\s\S]*id="time-minutes"/);
   assert.match(html, /<span>Seconds<\/span>[\s\S]*id="time-seconds"/);
+  assert.doesNotMatch(html, /<p class="eyebrow">Time<\/p>[\s\S]*<h2>Time<\/h2>/);
   assert.doesNotMatch(html, /pace-lock-button/);
   assert.doesNotMatch(html, /time-lock-button/);
   assert.doesNotMatch(html, /pace-driver-button/);
@@ -86,9 +91,22 @@ test("status messaging, error affordances, and responsive safeguards are present
   assert.match(css, /\.split-builder\s*{/);
   assert.match(css, /\.split-card\s*{[\s\S]*display:\s*flex;/);
   assert.match(css, /\.split-card__actions\s*{[\s\S]*display:\s*flex;/);
+  assert.match(
+    css,
+    /\.status-message\s*{[\s\S]*-webkit-line-clamp:\s*2;[\s\S]*white-space:\s*normal;/
+  );
+  assert.match(css, /\.preset-row\s*{[\s\S]*display:\s*grid;/);
+  assert.match(css, /\.split-builder__title\s*{[\s\S]*display:\s*flex;/);
+  assert.match(
+    css,
+    /\.split-builder__summary\s*{[\s\S]*white-space:\s*nowrap;[\s\S]*text-overflow:\s*ellipsis;/
+  );
   assert.match(css, /\.status-message:empty\s*{/);
   assert.match(css, /min-height:\s*100dvh/);
-  assert.match(css, /@media \(max-width: 540px\)/);
+  assert.match(
+    css,
+    /@media \(max-width: 540px\)\s*{[\s\S]*\.preset-row\s*{[\s\S]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\);/
+  );
   assert.doesNotMatch(css, /\.metric-row--goal\s*{/);
   assert.doesNotMatch(css, /\.ghost-button--compact\s*{/);
 });
