@@ -1,1 +1,1 @@
-Keep half-marathon and marathon labels stable across unit switch
+Match pace first-entry autofill to time input

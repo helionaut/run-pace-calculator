@@ -1,12 +1,13 @@
-<!-- PR_TITLE: Keep half-marathon and marathon labels stable across unit switch -->
+<!-- PR_TITLE: Match pace first-entry autofill to time input -->
 
 ## Summary
 
-- keep the mile-mode `Half Marathon` and `Marathon` quick preset labels
-  canonical instead of renaming them to `13.1 mi` and `26.2 mi`
-- leave the generic quick buttons unitized in miles as `5 mi` and `10 mi`
-- add calculator-view and DOM regression coverage so the race-name labels stay
-  stable while the selected distance summary still shows the native mile value
+- make the pace minutes/seconds inputs auto-fill untouched zero values on the
+  first edit, matching the existing finish-time input behavior
+- keep the change in the UI event layer so calculator parsing, validation, URL
+  state, and last-valid blur normalization keep their current behavior
+- add a regression for the new pace autofill behavior and update the
+  incomplete-pace blur test to cover a manually cleared seconds field
 
 ## Testing
 
@@ -17,11 +18,12 @@
 
 ## Risks
 
-- Low: the fix only changes the mile quick-preset labels for half marathon and
-  marathon, so any future preset additions still need explicit label coverage
-- Low: half-marathon and marathon selections in mile mode still use the native
-  `13.1 mi` and `26.2 mi` distances, which remains important for race-name
-  buttons that no longer expose the number directly
+- Low: the shared first-entry autofill helper now drives both pace and time
+  groups, so any future grouped-input changes should keep their default zero
+  values aligned with the field names
+- Low: first-entry edits to pace seconds now auto-fill pace minutes with `0`,
+  matching the existing time-group behavior even though the issue example
+  focused on pace minutes first
 
 ## Checklist
 
@@ -31,12 +33,10 @@
 
 Preview notes:
 
-- Desktop miles-state screenshot reviewed locally with the half-marathon preset
-  active; the button label stayed `Half Marathon` while the distance summary
-  showed `13.1 mi`.
-- Mobile miles-state screenshot reviewed locally with the marathon preset
-  active; the button label stayed `Marathon` while the distance summary showed
-  `26.2 mi`.
-- The screenshots matched the issue request: only the generic numeric quick
-  buttons changed to mile labels, while the two race-name presets stayed
-  canonical across the unit switch.
+- Desktop built-preview screenshot reviewed after typing `5` into pace minutes;
+  pace seconds auto-filled to `00`, derived finish time showed `0:50:00`, and
+  the calculator still fit the one-screen desktop layout with no overflow.
+- Mobile built-preview screenshot reviewed after the same interaction; pace
+  seconds auto-filled to `00`, derived finish time showed `0:50:00`, and the
+  card stack still fit the intended one-screen mobile presentation with no
+  horizontal overflow.
