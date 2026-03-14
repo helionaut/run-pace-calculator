@@ -10,6 +10,8 @@ import {
   updateInputValue
 } from "./lib/calculator.js";
 
+const TIME_FIELDS = Object.freeze(["timeHours", "timeMinutes", "timeSeconds"]);
+
 function setTextContent(element, value) {
   if (!element) {
     return;
@@ -89,6 +91,98 @@ function renderProjections(elements, projectionRows) {
   }
 }
 
+function hasValue(value) {
+  return String(value ?? "").trim() !== "";
+}
+
+function hasViewErrors(view) {
+  return Boolean(
+    view.distance.error ||
+      view.rate.paceError ||
+      view.rate.speedError ||
+      view.time.error
+  );
+}
+
+function setFieldTone(field, isActive) {
+  if (!field) {
+    return;
+  }
+
+  field.classList.toggle("field--active", isActive);
+  field.classList.toggle("field--linked", !isActive);
+}
+
+function renderRateInputMode(elements, rateInputMode) {
+  setFieldTone(elements.paceField, rateInputMode === "pace");
+  setFieldTone(elements.speedField, rateInputMode === "speed");
+}
+
+function syncStateInputsFromView(
+  state,
+  view,
+  { includeDistance = false, includeRate = false, includeTime = false, rateInputMode } = {}
+) {
+  const nextRateInputMode = rateInputMode ?? state.rateInputMode;
+  const nextInputs = { ...state.inputs };
+  let changed = nextRateInputMode !== state.rateInputMode;
+
+  if (includeDistance && nextInputs.distance !== view.distance.inputValue) {
+    nextInputs.distance = view.distance.inputValue;
+    changed = true;
+  }
+
+  if (includeRate) {
+    if (nextInputs.paceMinutes !== view.rate.paceInputValues.minutes) {
+      nextInputs.paceMinutes = view.rate.paceInputValues.minutes;
+      changed = true;
+    }
+
+    if (nextInputs.paceSeconds !== view.rate.paceInputValues.seconds) {
+      nextInputs.paceSeconds = view.rate.paceInputValues.seconds;
+      changed = true;
+    }
+
+    if (nextInputs.speed !== view.rate.speedInputValue) {
+      nextInputs.speed = view.rate.speedInputValue;
+      changed = true;
+    }
+  }
+
+  if (includeTime) {
+    if (nextInputs.timeHours !== view.time.inputValues.hours) {
+      nextInputs.timeHours = view.time.inputValues.hours;
+      changed = true;
+    }
+
+    if (nextInputs.timeMinutes !== view.time.inputValues.minutes) {
+      nextInputs.timeMinutes = view.time.inputValues.minutes;
+      changed = true;
+    }
+
+    if (nextInputs.timeSeconds !== view.time.inputValues.seconds) {
+      nextInputs.timeSeconds = view.time.inputValues.seconds;
+      changed = true;
+    }
+  }
+
+  return changed
+    ? {
+        ...state,
+        inputs: nextInputs,
+        rateInputMode: nextRateInputMode
+      }
+    : state;
+}
+
+function normalizeStateFromView(state, view) {
+  return syncStateInputsFromView(state, view, {
+    includeDistance: true,
+    includeRate: true,
+    includeTime: true
+  });
+}
+
 function render(elements, state) {
   const view = deriveCalculatorView(state);
   const hasError = Boolean(
@@ -104,6 +198,7 @@ function render(elements, state) {
   renderMetricTone(elements.distanceCard, view.distance.tone);
   renderMetricTone(elements.rateCard, view.rate.tone);
   renderMetricTone(elements.timeCard, view.time.tone);
+  renderRateInputMode(elements, state.rateInputMode);
 
   setTextContent(elements.distanceLabel, view.distance.label);
   setTextContent(elements.selectedDistance, view.selectedDistanceLabel);
@@ -166,6 +261,35 @@ function syncUrlState(state) {
 }
 
 function bindMetricInputs(elements, getState, setStateAndRender) {
+  function updateTimeField(field, value) {
+    const shouldAutoFill =
+      hasValue(value) &&
+      TIME_FIELDS
+        .filter((name) => name !== field)
+        .every((name) => !hasValue(getState().inputs[name]));
+
+    let nextState = updateInputValue(getState(), field, value);
+
+    if (!shouldAutoFill) {
+      setStateAndRender(nextState);
+      return;
+    }
+
+    for (const name of TIME_FIELDS) {
+      if (name === field || hasValue(nextState.inputs[name])) {
+        continue;
+      }
+
+      nextState = updateInputValue(
+        nextState,
+        name,
+        name === "timeHours" ? "0" : "00"
+      );
+    }
+
+    setStateAndRender(nextState);
+  }
+
   elements.paceMinutes.addEventListener("input", () => {
     setStateAndRender(
       updateInputValue(getState(), "paceMinutes", elements.paceMinutes.value)
@@ -183,21 +307,15 @@ function bindMetricInputs(elements, getState, setStateAndRender) {
   });
 
   elements.timeHours.addEventListener("input", () => {
-    setStateAndRender(
-      updateInputValue(getState(), "timeHours", elements.timeHours.value)
-    );
+    updateTimeField("timeHours", elements.timeHours.value);
   });
 
   elements.timeMinutes.addEventListener("input", () => {
-    setStateAndRender(
-      updateInputValue(getState(), "timeMinutes", elements.timeMinutes.value)
-    );
+    updateTimeField("timeMinutes", elements.timeMinutes.value);
   });
 
   elements.timeSeconds.addEventListener("input", () => {
-    setStateAndRender(
-      updateInputValue(getState(), "timeSeconds", elements.timeSeconds.value)
-    );
+    updateTimeField("timeSeconds", elements.timeSeconds.value);
   });
 }
 
@@ -215,6 +333,7 @@ export function getElements(root) {
     distanceLabel: root.querySelector("#distance-label"),
     distanceSlider: root.querySelector("#distance-slider"),
     paceError: root.querySelector("#pace-error"),
+    paceField: root.querySelector("#pace-field"),
     paceLabel: root.querySelector("#pace-label"),
     paceMinutes: root.querySelector("#pace-minutes"),
     paceSeconds: root.querySelector("#pace-seconds"),
@@ -229,6 +348,7 @@ export function getElements(root) {
     resetButton: root.querySelector("#reset-button"),
     selectedDistance: root.querySelector("#selected-distance"),
     speedError: root.querySelector("#speed-error"),
+    speedField: root.querySelector("#speed-field"),
     speedInput: root.querySelector("#speed-input"),
     speedLabel: root.querySelector("#speed-label"),
     statusMessage: root.querySelector("#status-message"),
@@ -246,17 +366,60 @@ export function createCalculatorApp(elements) {
     typeof window === "undefined"
       ? createFormState()
       : restoreCalculatorState(window.location.search);
+  let lastStableState = state;
+  let lastView = null;
 
   function getState() {
     return state;
   }
 
+  function primeViewState(options) {
+    const view = lastView ?? deriveCalculatorView(state);
+    const nextState = syncStateInputsFromView(state, view, options);
+
+    if (nextState !== state) {
+      setStateAndRender(nextState);
+    }
+  }
+
   function setStateAndRender(nextState) {
     state = nextState;
     const view = render(elements, state);
+    const normalizedState = normalizeStateFromView(state, view);
+
+    lastView = view;
+
+    if (!hasViewErrors(view)) {
+      lastStableState = normalizedState;
+    }
 
     syncUrlState(state);
     return view;
+  }
+
+  function normalizeAfterBlur(errorMessage) {
+    if (errorMessage) {
+      setStateAndRender(lastStableState);
+      return;
+    }
+
+    const nextState = normalizeStateFromView(state, lastView ?? deriveCalculatorView(state));
+
+    if (nextState !== state) {
+      setStateAndRender(nextState);
+    }
+  }
+
+  function bindGroupBlur(inputs, getErrorMessage) {
+    for (const input of inputs) {
+      input.addEventListener("blur", (event) => {
+        if (inputs.includes(event.relatedTarget)) {
+          return;
+        }
+
+        normalizeAfterBlur(getErrorMessage());
+      });
+    }
   }
 
   for (const button of elements.unitButtons) {
@@ -285,7 +448,70 @@ export function createCalculatorApp(elements) {
 
   bindMetricInputs(elements, getState, setStateAndRender);
 
-  render(elements, state);
+  elements.paceMinutes.addEventListener("focus", () => {
+    primeViewState({
+      includeRate: true,
+      rateInputMode: "pace"
+    });
+  });
+
+  elements.paceSeconds.addEventListener("focus", () => {
+    primeViewState({
+      includeRate: true,
+      rateInputMode: "pace"
+    });
+  });
+
+  elements.speedInput.addEventListener("focus", () => {
+    primeViewState({
+      includeRate: true,
+      rateInputMode: "speed"
+    });
+  });
+
+  elements.distanceInput.addEventListener("focus", () => {
+    primeViewState({
+      includeDistance: true
+    });
+  });
+
+  elements.timeHours.addEventListener("focus", () => {
+    primeViewState({
+      includeTime: true
+    });
+  });
+
+  elements.timeMinutes.addEventListener("focus", () => {
+    primeViewState({
+      includeTime: true
+    });
+  });
+
+  elements.timeSeconds.addEventListener("focus", () => {
+    primeViewState({
+      includeTime: true
+    });
+  });
+
+  bindGroupBlur(
+    [elements.paceMinutes, elements.paceSeconds],
+    () => (lastView ?? deriveCalculatorView(state)).rate.paceError
+  );
+  bindGroupBlur(
+    [elements.speedInput],
+    () => (lastView ?? deriveCalculatorView(state)).rate.speedError
+  );
+  bindGroupBlur(
+    [elements.timeHours, elements.timeMinutes, elements.timeSeconds],
+    () => (lastView ?? deriveCalculatorView(state)).time.error
+  );
+  bindGroupBlur(
+    [elements.distanceInput],
+    () => (lastView ?? deriveCalculatorView(state)).distance.error
+  );
+
+  lastView = render(elements, state);
+  lastStableState = normalizeStateFromView(state, lastView);
   syncUrlState(state);
 
   return {
