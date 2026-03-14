@@ -424,7 +424,7 @@ test("unit switch updates quick-distance chip labels for the selected unit", () 
       ["1mi", "1 mi"],
       ["5mi", "5 mi"],
       ["10mi", "10 mi"],
-      ["half", "Half Marathon"],
+      ["half", "Half"],
       ["marathon", "Marathon"]
     ]
   );
@@ -462,7 +462,7 @@ test("add split captures the current calculator values into a compact row", () =
   enterPace(elements, "5", "0");
   elements.splitActionButton.dispatch("click");
 
-  assert.equal(elements.splitSummary.textContent, "1 split saved");
+  assert.equal(elements.splitSummary.textContent, "No split selected");
   assert.equal(elements.splitList.children.length, 1);
   assert.equal(elements.splitEmptyState.hidden, true);
   assert.equal(getSplitMetricValue(elements.splitList.children[0], 0), "10 km");

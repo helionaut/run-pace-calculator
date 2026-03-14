@@ -257,10 +257,7 @@ function renderSplitBuilder(
       `${selectedSplitDirty ? "Update" : "Editing"} split ${selectedIndex + 1}`
     );
   } else {
-    setTextContent(
-      elements.splitSummary,
-      `${splits.length} split${splits.length === 1 ? "" : "s"} saved`
-    );
+    setTextContent(elements.splitSummary, "No split selected");
   }
 
   if (elements.splitEmptyState) {
