@@ -14,6 +14,7 @@
 - [x] `npm test`
 - [x] `npm run build`
 - [x] `npm run check`
+- [x] `node --test tests/calculator.test.js tests/main.test.js`
 
 ## Risks
 
