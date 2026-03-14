@@ -209,6 +209,7 @@ test("prepare-handoff includes the resume helper in the verified package", async
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "hel-19-handoff-prepare."));
   const repoDir = path.join(tempRoot, "repo");
   const outputDir = path.join(repoDir, ".handoff", "HEL-19");
+  const takeoverDir = path.join(tempRoot, "takeover");
 
   t.after(async () => {
     await rm(tempRoot, { force: true, recursive: true });
@@ -263,12 +264,19 @@ test("prepare-handoff includes the resume helper in the verified package", async
     ) + "\n"
   );
 
-  for (const scriptName of ["create_pr.sh", "export_bundle.sh", "prepare-handoff.sh"]) {
+  for (const scriptName of [
+    "create_pr.sh",
+    "export_bundle.sh",
+    "prepare-handoff.sh",
+    "verify-handoff.mjs"
+  ]) {
     const sourcePath = path.join(repoRoot, "scripts", scriptName);
     const targetPath = path.join(repoDir, "scripts", scriptName);
 
     await writeFile(targetPath, await readFile(sourcePath, "utf8"));
-    await chmod(targetPath, 0o755);
+    if (scriptName.endsWith(".sh")) {
+      await chmod(targetPath, 0o755);
+    }
   }
 
   await writeFile(path.join(repoDir, "README.md"), "# fixture\n");
@@ -298,4 +306,10 @@ test("prepare-handoff includes the resume helper in the verified package", async
     await readFile(path.join(outputDir, "SUMMARY.md"), "utf8"),
     /resume-on-another-machine\.sh/
   );
+
+  git(["clone", "--quiet", `file://${repoDir}`, takeoverDir], tempRoot);
+  run(helperPath, [takeoverDir, "--skip-publish"], repoDir);
+
+  assert.equal(git(["branch", "--show-current"], takeoverDir), manifest.branch);
+  assert.equal(git(["rev-parse", "HEAD"], takeoverDir), manifest.head);
 });

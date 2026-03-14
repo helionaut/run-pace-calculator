@@ -105,7 +105,19 @@ if [[ ! -d "\$target_repo_dir/.git" ]]; then
 fi
 
 echo "Importing bundle into \$target_repo_dir"
-git -C "\$target_repo_dir" fetch "\$bundle_path" "\$branch:\$branch"
+git -C "\$target_repo_dir" fetch "\$bundle_path" "\$branch"
+
+current_branch="\$(git -C "\$target_repo_dir" branch --show-current)"
+if git -C "\$target_repo_dir" show-ref --verify --quiet "refs/heads/\$branch"; then
+  if [[ "\$current_branch" == "\$branch" ]]; then
+    git -C "\$target_repo_dir" switch --detach >/dev/null
+  fi
+
+  git -C "\$target_repo_dir" branch -f "\$branch" FETCH_HEAD
+else
+  git -C "\$target_repo_dir" branch "\$branch" FETCH_HEAD
+fi
+
 git -C "\$target_repo_dir" switch "\$branch"
 
 echo "Verifying handoff manifest"
