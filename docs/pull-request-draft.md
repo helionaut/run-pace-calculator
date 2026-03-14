@@ -2,8 +2,8 @@
 
 ## Summary
 
-- add a workout split builder below the calculator with compact split rows that
-  show distance, pace, and time together
+- add a workout split builder below the calculator with dense single-line split
+  rows that show distance, pace, and time together
 - support adding the current calculator state as a split, then selecting,
   copying, deleting, and saving edits back into an existing split
 - tighten headings, padding, and spacing so the extra planning UI fits cleanly
@@ -34,12 +34,12 @@
 Preview notes:
 
 - Desktop built-preview screenshot reviewed with two saved workout splits; both
-  split rows showed distance, pace, and time, and the tightened layout stayed
-  inside the viewport without horizontal overflow.
+  split rows rendered as dense single-line rows with inline actions, while
+  distance, pace, and time all stayed visible without horizontal overflow.
 - Mobile built-preview screenshot reviewed in the selected-split edit state;
   the bottom action switched to `Save split` with the save styling, and both
-  saved split rows still showed distance, pace, and time without horizontal
-  overflow.
+  saved split rows still rendered as dense single-line rows with inline actions
+  and no horizontal overflow at 390px width.
 - The screenshots matched the issue request: the calculator stayed compact
   while the new split-builder flow supported add/save/edit semantics below the
   main calculator.

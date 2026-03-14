@@ -186,15 +186,16 @@ function resolveDocument(elements) {
   );
 }
 
-function createSplitMetric(documentRef, label, value) {
+function createSplitMetric(documentRef, shortLabel, fullLabel, value) {
   const metric = documentRef.createElement("span");
   const metricLabel = documentRef.createElement("span");
   const metricValue = documentRef.createElement("strong");
 
   metric.className = "split-card__metric";
+  metric.setAttribute("aria-label", `${fullLabel}: ${value}`);
   metricLabel.className = "split-card__metric-label";
   metricValue.className = "split-card__metric-value";
-  metricLabel.textContent = label;
+  metricLabel.textContent = shortLabel;
   metricValue.textContent = value;
   metric.append(metricLabel, metricValue);
 
@@ -259,9 +260,7 @@ function renderSplitBuilder(
   const rows = splits.map((split, index) => {
     const item = documentRef.createElement("li");
     const selectButton = documentRef.createElement("button");
-    const header = documentRef.createElement("span");
     const indexLabel = documentRef.createElement("span");
-    const unitLabel = documentRef.createElement("span");
     const metrics = documentRef.createElement("span");
     const actions = documentRef.createElement("span");
     const duplicateButton = documentRef.createElement("button");
@@ -275,32 +274,37 @@ function renderSplitBuilder(
     selectButton.type = "button";
     selectButton.setAttribute("aria-pressed", String(isSelected));
     selectButton.classList.toggle("is-selected", isSelected);
+    selectButton.setAttribute(
+      "aria-label",
+      `Edit split ${index + 1}: distance ${splitView.selectedDistanceLabel}, pace ${formatSplitPaceLabel(
+        splitView.rate.paceInputValues,
+        splitView.unit
+      )}, time ${formatSplitTimeLabel(splitView.time.inputValues)}`
+    );
     selectButton.addEventListener("click", () => {
       onSelectSplit(split.id);
     });
 
-    header.className = "split-card__top";
     indexLabel.className = "split-card__index";
-    unitLabel.className = "split-card__unit";
-    indexLabel.textContent = `Split ${index + 1}`;
-    unitLabel.textContent = splitView.unit.toUpperCase();
-    header.append(indexLabel, unitLabel);
+    indexLabel.textContent = String(index + 1);
 
     metrics.className = "split-card__metrics";
     metrics.append(
-      createSplitMetric(documentRef, "Distance", splitView.selectedDistanceLabel),
+      createSplitMetric(documentRef, "D", "Distance", splitView.selectedDistanceLabel),
       createSplitMetric(
         documentRef,
+        "P",
         "Pace",
         formatSplitPaceLabel(splitView.rate.paceInputValues, splitView.unit)
       ),
       createSplitMetric(
         documentRef,
+        "T",
         "Time",
         formatSplitTimeLabel(splitView.time.inputValues)
       )
     );
-    selectButton.append(header, metrics);
+    selectButton.append(indexLabel, metrics);
 
     actions.className = "split-card__actions";
 
