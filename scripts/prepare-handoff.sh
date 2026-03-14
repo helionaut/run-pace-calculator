@@ -203,6 +203,11 @@ if [[ ! -d "\$target_repo/.git" ]]; then
   exit 1
 fi
 
+if [[ -n "\$(git -C "\$target_repo" status --short)" ]]; then
+  echo "Target repo working tree must be clean before restoring the handoff: \$target_repo" >&2
+  exit 1
+fi
+
 node - "\$manifest_path" <<'NODE'
 const crypto = require("node:crypto");
 const fs = require("node:fs");
@@ -264,8 +269,15 @@ head="\$(
   node -e 'const info = JSON.parse(process.argv[1]); process.stdout.write(info.head);' "\$bundle_info"
 )"
 
-git -C "\$target_repo" fetch "\$bundle_path" "\$branch:\$branch"
-git -C "\$target_repo" switch "\$branch"
+current_branch="\$(git -C "\$target_repo" branch --show-current)"
+
+if [[ "\$current_branch" == "\$branch" ]]; then
+  git -C "\$target_repo" fetch "\$bundle_path" "\$branch"
+  git -C "\$target_repo" reset --hard FETCH_HEAD >/dev/null
+else
+  git -C "\$target_repo" fetch "\$bundle_path" "\$branch:\$branch"
+  git -C "\$target_repo" switch "\$branch"
+fi
 
 printf 'Verified handoff artifacts from: %s\n' "\$handoff_dir"
 printf 'Imported branch: %s\n' "\$branch"
