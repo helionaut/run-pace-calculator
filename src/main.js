@@ -13,6 +13,7 @@ import {
 
 const PACE_FIELDS = Object.freeze(["paceMinutes", "paceSeconds"]);
 const TIME_FIELDS = Object.freeze(["timeHours", "timeMinutes", "timeSeconds"]);
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const GROUP_AUTO_FILL_DEFAULTS = Object.freeze({
   paceMinutes: "0",
   paceSeconds: "00",
@@ -170,28 +171,32 @@ function serializeCalculatorStateSnapshot(state) {
 }
 
 function formatSplitPaceLabel(paceInputValues, unit) {
-  const minutes = hasValue(paceInputValues.minutes)
-    ? String(paceInputValues.minutes).padStart(2, "0")
-    : "--";
-  const seconds = hasValue(paceInputValues.seconds)
-    ? String(paceInputValues.seconds).padStart(2, "0")
-    : "--";
+  const minutes = parseNumberGroup(paceInputValues.minutes);
+  const seconds = parseNumberGroup(paceInputValues.seconds);
+  const minuteLabel = minutes === null ? "--" : String(minutes);
+  const secondLabel = seconds === null ? "--" : String(seconds).padStart(2, "0");
 
-  return `${minutes}:${seconds} /${unit}`;
+  return `${minuteLabel}:${secondLabel}/${unit}`;
 }
 
 function formatSplitTimeLabel(timeInputValues) {
-  const hours = hasValue(timeInputValues.hours)
-    ? String(timeInputValues.hours).padStart(2, "0")
-    : "--";
-  const minutes = hasValue(timeInputValues.minutes)
-    ? String(timeInputValues.minutes).padStart(2, "0")
-    : "--";
-  const seconds = hasValue(timeInputValues.seconds)
-    ? String(timeInputValues.seconds).padStart(2, "0")
-    : "--";
+  const hours = parseNumberGroup(timeInputValues.hours) ?? 0;
+  const minutes = parseNumberGroup(timeInputValues.minutes) ?? 0;
+  const seconds = parseNumberGroup(timeInputValues.seconds);
 
-  return `${hours}:${minutes}:${seconds}`;
+  if (seconds === null) {
+    return "--";
+  }
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  if (minutes > 0) {
+    return `${minutes}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  return `${seconds}s`;
 }
 
 function resolveDocument(elements) {
@@ -200,6 +205,63 @@ function resolveDocument(elements) {
     elements.splitList?.ownerDocument ??
     (typeof document !== "undefined" ? document : null)
   );
+}
+
+function parseNumberGroup(value) {
+  if (!hasValue(value)) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(String(value), 10);
+
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function createSvgElement(documentRef, tagName) {
+  if (typeof documentRef.createElementNS === "function") {
+    return documentRef.createElementNS(SVG_NAMESPACE, tagName);
+  }
+
+  return documentRef.createElement(tagName);
+}
+
+function createSplitActionIcon(documentRef, icon) {
+  const svg = createSvgElement(documentRef, "svg");
+
+  svg.setAttribute("class", "split-card__action-icon");
+  svg.setAttribute("viewBox", "0 0 16 16");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("focusable", "false");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+
+  const paths =
+    icon === "duplicate"
+      ? [
+          { tagName: "rect", attributes: { x: "2", y: "2", width: "7", height: "7", rx: "1.25" } },
+          { tagName: "rect", attributes: { x: "7", y: "7", width: "7", height: "7", rx: "1.25" } }
+        ]
+      : [
+          { tagName: "path", attributes: { d: "M3.5 4.5h9" } },
+          { tagName: "path", attributes: { d: "M6 2.5h4" } },
+          { tagName: "path", attributes: { d: "M5 4.5v7.25a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V4.5" } },
+          { tagName: "path", attributes: { d: "M7 7v4" } },
+          { tagName: "path", attributes: { d: "M9 7v4" } }
+        ];
+
+  for (const { tagName, attributes } of paths) {
+    const shape = createSvgElement(documentRef, tagName);
+
+    for (const [name, value] of Object.entries(attributes)) {
+      shape.setAttribute(name, value);
+    }
+
+    svg.append(shape);
+  }
+
+  return svg;
 }
 
 function createSplitMetric(documentRef, shortLabel, fullLabel, value) {
@@ -323,14 +385,18 @@ function renderSplitBuilder(
 
     duplicateButton.className = "split-card__action";
     duplicateButton.type = "button";
-    duplicateButton.textContent = "Copy";
+    duplicateButton.setAttribute("aria-label", `Duplicate split ${index + 1}`);
+    duplicateButton.setAttribute("title", `Duplicate split ${index + 1}`);
+    duplicateButton.append(createSplitActionIcon(documentRef, "duplicate"));
     duplicateButton.addEventListener("click", () => {
       onDuplicateSplit(split.id);
     });
 
     deleteButton.className = "split-card__action split-card__action--danger";
     deleteButton.type = "button";
-    deleteButton.textContent = "Delete";
+    deleteButton.setAttribute("aria-label", `Delete split ${index + 1}`);
+    deleteButton.setAttribute("title", `Delete split ${index + 1}`);
+    deleteButton.append(createSplitActionIcon(documentRef, "delete"));
     deleteButton.addEventListener("click", () => {
       onDeleteSplit(split.id);
     });

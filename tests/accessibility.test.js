@@ -91,7 +91,13 @@ test("status messaging, error affordances, and responsive safeguards are present
   assert.match(css, /\.split-builder\s*{/);
   assert.match(css, /input\s*{[\s\S]*font-size:\s*1rem;/);
   assert.match(css, /\.split-card\s*{[\s\S]*display:\s*flex;/);
+  assert.match(
+    css,
+    /\.split-card__metrics\s*{[\s\S]*display:\s*grid;[\s\S]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\);/
+  );
   assert.match(css, /\.split-card__actions\s*{[\s\S]*display:\s*flex;/);
+  assert.match(css, /\.split-card__action\s*{[\s\S]*inline-size:\s*[0-9.]+rem;/);
+  assert.match(css, /\.split-card__action-icon\s*{/);
   assert.match(
     css,
     /\.status-message\s*{[\s\S]*-webkit-line-clamp:\s*2;[\s\S]*white-space:\s*normal;/
@@ -111,6 +117,10 @@ test("status messaging, error affordances, and responsive safeguards are present
   assert.doesNotMatch(
     css,
     /@media \(max-width: 540px\)\s*{[\s\S]*\.preset-row\s*{[\s\S]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\);/
+  );
+  assert.doesNotMatch(
+    css,
+    /@media \(max-width: 360px\)\s*{[\s\S]*\.split-list__item\s*{[\s\S]*grid-template-columns:\s*1fr;/
   );
   assert.doesNotMatch(css, /\.metric-row--goal\s*{/);
   assert.doesNotMatch(css, /\.ghost-button--compact\s*{/);

@@ -60,6 +60,10 @@ class FakeDocument {
       tagName
     });
   }
+
+  createElementNS(_namespace, tagName) {
+    return this.createElement(tagName);
+  }
 }
 
 class FakeElement {
@@ -466,8 +470,8 @@ test("add split captures the current calculator values into a compact row", () =
   assert.equal(elements.splitList.children.length, 1);
   assert.equal(elements.splitEmptyState.hidden, true);
   assert.equal(getSplitMetricValue(elements.splitList.children[0], 0), "10 km");
-  assert.equal(getSplitMetricValue(elements.splitList.children[0], 1), "05:00 /km");
-  assert.equal(getSplitMetricValue(elements.splitList.children[0], 2), "00:50:00");
+  assert.equal(getSplitMetricValue(elements.splitList.children[0], 1), "5:00/km");
+  assert.equal(getSplitMetricValue(elements.splitList.children[0], 2), "50:00");
   assert.equal(elements.splitActionButton.textContent, "Add split");
 });
 
@@ -501,13 +505,32 @@ test("selecting a split loads it into the editor and dirty edits switch the acti
   elements.splitActionButton.dispatch("click");
 
   assert.equal(getSplitMetricValue(elements.splitList.children[0], 0), "12 km");
-  assert.equal(getSplitMetricValue(elements.splitList.children[0], 2), "01:00:00");
+  assert.equal(getSplitMetricValue(elements.splitList.children[0], 2), "1:00:00");
   assert.equal(elements.splitActionButton.textContent, "Add split");
   assert.equal(
     elements.splitActionButton.classList.contains("split-action-button--save"),
     false
   );
   assert.equal(elements.splitSummary.textContent, "Editing split 1");
+});
+
+test("split rows use icon-only duplicate and delete controls", () => {
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+  enterPace(elements, "6", "0");
+  elements.splitActionButton.dispatch("click");
+
+  const firstRow = elements.splitList.children[0];
+  const duplicateButton = firstRow.children[1].children[0];
+  const deleteButton = firstRow.children[1].children[1];
+
+  assert.equal(duplicateButton.textContent, "");
+  assert.equal(deleteButton.textContent, "");
+  assert.equal(duplicateButton.getAttribute("aria-label"), "Duplicate split 1");
+  assert.equal(deleteButton.getAttribute("aria-label"), "Delete split 1");
+  assert.equal(duplicateButton.children[0].tagName, "svg");
+  assert.equal(deleteButton.children[0].tagName, "svg");
 });
 
 test("duplicate and delete controls keep the split list editable", () => {
@@ -544,4 +567,15 @@ test("duplicate and delete controls keep the split list editable", () => {
   assert.equal(elements.splitList.children.length, 0);
   assert.equal(elements.splitSummary.textContent, "No splits yet");
   assert.equal(elements.splitEmptyState.hidden, false);
+});
+
+test("split rows trim leading zero groups when the duration only needs seconds", () => {
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+  getPresetButton(elements, "100m").dispatch("click");
+  enterPace(elements, "7", "30");
+  elements.splitActionButton.dispatch("click");
+
+  assert.equal(getSplitMetricValue(elements.splitList.children[0], 2), "45s");
 });

@@ -1,1 +1,1 @@
-Fix mobile input zoom and restore single-row distance chips
+Compact split rows and swap in icon actions

@@ -1,29 +1,29 @@
-<!-- PR_TITLE: Fix mobile input zoom and restore single-row distance chips -->
+<!-- PR_TITLE: Compact split rows and swap in icon actions -->
 
 ## Summary
 
-- raise calculator input text to the Safari-safe `16px` threshold while keeping
-  the compact mobile control sizing
-- restore the distance preset chips to a single row on mobile and keep the chip
-  labels from wrapping within their pills
-- add a CSS regression test that prevents the 4-column wrapped preset layout
-  and undersized mobile inputs from returning
+- shorten split-row pace and time formatting so the row shows compact values
+  like `12:34/mi`, `1:00:00`, and `45s` instead of padded verbose strings
+- replace the row-level `Copy` and `Delete` text buttons with compact SVG
+  duplicate/trash icon buttons that keep accessible labels
+- tighten the split-row layout and add regression coverage so the metrics stay
+  on one line across desktop and narrow mobile widths
 
 ## Testing
 
 - [x] `npm run check`
 - [x] Built-preview desktop/mobile verification via a temporary Playwright
   Chromium run against `dist`
-- [x] Mobile preset row measured at `390px` width in both km and mi modes with
-  `rowCount = 1`
+- [x] Reviewed split-row screenshots at desktop, `390px`, and `320px` mobile
+  widths against the issue requirements
 
 ## Risks
 
-- Low: the mobile preset row still depends on a fixed 7-chip grid, so any
-  future preset additions will need a deliberate responsive pass
-- Low: Safari zoom prevention is achieved through the standard `16px` input
-  threshold, so future restyling must avoid shrinking focused input text below
-  that size again
+- Low: very long custom split values still depend on ellipsis as a last resort,
+  so future additions that widen the row will need another responsive check
+- Low: the duplicate/trash icons are inline SVG elements, so future style
+  changes should keep the icon buttons readable in both default and danger
+  states
 
 ## Checklist
 
@@ -33,11 +33,11 @@
 
 Preview notes:
 
-- Desktop built-preview screenshot reviewed against the compact single-screen
-  calculator layout; no new wrapping or clipping was introduced.
-- Mobile built-preview screenshots reviewed for default km view, focused-input
-  view, and mi view at `390px` width; the quick preset chips stayed on one row
-  in each state and the focused input remained fully in-layout.
-- Computed mobile input font sizes were verified at `16px`; Safari no-zoom
-  behavior is inferred from that threshold because WebKit could not run on this
-  host due missing native libraries.
+- Desktop split-builder screenshot reviewed with a long `26.2 mi` row and a
+  `45s` row; both rows stayed on one line with the new icon buttons visible.
+- Mobile split-builder screenshot reviewed at `390px` width; the compact
+  distance, pace, and time labels fit on one line without the action buttons
+  forcing wraps.
+- Narrow mobile split-builder screenshot reviewed at `320px` width; both rows
+  still fit on one line and the icon-only duplicate/delete controls remained
+  tappable and visually distinct.

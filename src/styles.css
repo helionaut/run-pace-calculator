@@ -627,9 +627,9 @@ input[aria-invalid="true"] {
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   width: 100%;
-  padding: 5px 7px;
+  padding: 4px 6px;
   border: 1px solid rgba(49, 41, 28, 0.14);
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.9);
@@ -652,11 +652,11 @@ input[aria-invalid="true"] {
 
 .split-card__index {
   display: inline-flex;
-  min-width: 22px;
-  min-height: 22px;
+  min-width: 20px;
+  min-height: 20px;
   align-items: center;
   justify-content: center;
-  padding: 0 6px;
+  padding: 0 5px;
   border-radius: 999px;
   background: rgba(49, 41, 28, 0.06);
   color: var(--text);
@@ -664,42 +664,45 @@ input[aria-invalid="true"] {
 }
 
 .split-card__metrics {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   min-width: 0;
   flex: 1 1 auto;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   overflow: hidden;
 }
 
 .split-card__metric {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
-  flex: 0 1 auto;
+  overflow: hidden;
   white-space: nowrap;
 }
 
 .split-card__metric-label {
   display: inline-flex;
-  min-width: 16px;
-  min-height: 16px;
+  min-width: 14px;
+  min-height: 14px;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
   background: rgba(187, 93, 42, 0.12);
   color: var(--accent);
-  font-size: 0.48rem;
+  font-size: 0.42rem;
   flex: 0 0 auto;
 }
 
 .split-card__metric-value {
   margin: 0;
+  min-width: 0;
   overflow: hidden;
   color: var(--text);
   font-family: var(--number-font);
-  font-size: 0.76rem;
+  font-size: 0.7rem;
+  letter-spacing: -0.03em;
   line-height: 1;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -707,23 +710,37 @@ input[aria-invalid="true"] {
 
 .split-card__actions {
   display: flex;
-  gap: 3px;
+  gap: 2px;
   align-items: center;
+  flex: 0 0 auto;
 }
 
 .split-card__action {
-  min-height: 28px;
-  padding: 0 7px;
+  display: inline-flex;
+  inline-size: 1.85rem;
+  block-size: 1.85rem;
+  min-height: 1.85rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   border: 1px solid rgba(49, 41, 28, 0.12);
-  border-radius: 999px;
+  border-radius: 0.8rem;
   background: rgba(255, 255, 255, 0.94);
   color: var(--text);
   cursor: pointer;
+  line-height: 0;
   transition:
     border-color 160ms ease,
     background-color 160ms ease,
     color 160ms ease,
     transform 160ms ease;
+}
+
+.split-card__action-icon {
+  inline-size: 0.9rem;
+  block-size: 0.9rem;
+  stroke-width: 1.35;
+  pointer-events: none;
 }
 
 .split-card__action--danger {
@@ -759,14 +776,40 @@ input[aria-invalid="true"] {
   .split-action-button {
     width: 100%;
   }
+
+  .split-card {
+    gap: 4px;
+    padding: 4px 5px;
+  }
+
+  .split-card__metrics {
+    gap: 3px;
+  }
+
+  .split-card__metric-value {
+    font-size: 0.66rem;
+  }
+
+  .split-card__action {
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    min-height: 1.75rem;
+  }
 }
 
 @media (max-width: 360px) {
-  .split-list__item {
-    grid-template-columns: 1fr;
+  .split-card__metric-label {
+    min-width: 13px;
+    min-height: 13px;
   }
 
-  .split-card__actions {
-    justify-content: flex-end;
+  .split-card__metric-value {
+    font-size: 0.62rem;
+  }
+
+  .split-card__action {
+    inline-size: 1.65rem;
+    block-size: 1.65rem;
+    min-height: 1.65rem;
   }
 }
