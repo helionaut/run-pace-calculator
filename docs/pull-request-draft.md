@@ -1,13 +1,13 @@
-<!-- PR_TITLE: Replace lock-based calculator with implicit last-two-input solving -->
+<!-- PR_TITLE: Tighten top row and normalize unit-specific distance controls -->
 
 ## Summary
 
-- replace the lock-based calculator state with implicit last-two-input
-  solving across distance, movement rate, and time
-- combine pace and speed into a single movement-rate card and tighten the
-  mobile layout so the calculator fits on one phone screen
-- update deep-link serialization, dist verification, and reducer/DOM
-  tests for the new interaction model
+- tighten the calculator header so the helper/status copy sits inline with
+  the unit toggle and reset controls instead of taking its own row
+- swap the quick distance chips to unit-aware labels and values in miles
+  mode, while preserving the existing kilometer-side presets
+- round slider-driven distance selections to at most two decimals in the
+  active unit and add calculator/DOM tests for the new behavior
 
 ## Testing
 
@@ -17,24 +17,28 @@
 
 ## Risks
 
-- Medium: the calculator state and URL model changed substantially, so any
-  saved deep links from the old lock-based format should be rechecked
-- Low: the layout is intentionally tight on mobile, so extra copy or new
-  controls could push the projection strip below the first viewport again
-- Low: pace/speed displays round to user-facing precision while a
-  canonical internal rate preserves exact time math across unit switches
+- Low: the inline status copy now truncates on narrow widths to keep the top
+  row compact, so future helper text should stay short
+- Low: mile-mode quick chips intentionally use native mile distances, so a
+  converted kilometer default remains a custom selection after a unit switch
+- Low: slider interaction now snaps to two-decimal precision in the active
+  unit, which trades a small amount of fine-grained range control for cleaner
+  displayed values
 
 ## Checklist
 
 - [x] Scope matches the linked Linear issue
-- [x] Docs updated if behavior or workflow changed
+- [ ] Docs updated if behavior or workflow changed
 - [x] Screenshots or preview notes added when UI changed
 
 Preview notes:
 
-- Desktop screenshot reviewed at `/tmp/hel24-shots/desktop-pace.png`.
-- Mobile screenshots reviewed at `/tmp/hel24-shots/mobile-pace.png` and
-  `/tmp/hel24-shots/mobile-time.png`; both fit an iPhone 13 viewport with
-  no scrolling.
-- The same mobile review screenshots were posted to Telegram topic `7`
-  before publishing.
+- Desktop screenshot reviewed at
+  `/home/helionaut/workspaces/HEL-26/screenshots/hel-26-desktop-default.png`.
+- Desktop miles-state screenshot reviewed at
+  `/home/helionaut/workspaces/HEL-26/screenshots/hel-26-desktop-mi.png`.
+- Mobile miles-state screenshot reviewed at
+  `/home/helionaut/workspaces/HEL-26/screenshots/hel-26-mobile-mi.png`.
+- The screenshots matched the issue request: thinner top row, inline helper
+  copy, unit-aware mile chips, and two-decimal distance display after the
+  slider-driven selection.

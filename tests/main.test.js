@@ -331,3 +331,30 @@ test("preset buttons work with a time-driven solve and recalculate movement rate
     "Solving movement rate from distance + time."
   );
 });
+
+test("unit switch updates quick-distance chip labels for the selected unit", () => {
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+  elements.unitButtons[1].dispatch("click");
+
+  assert.equal(elements.presetButtons[0].dataset.preset, "5mi");
+  assert.equal(elements.presetButtons[0].textContent, "5 mi");
+  assert.equal(elements.presetButtons[1].dataset.preset, "10mi");
+  assert.equal(elements.presetButtons[1].textContent, "10 mi");
+  assert.equal(elements.presetButtons[2].textContent, "13.1 mi");
+  assert.equal(elements.presetButtons[3].textContent, "26.2 mi");
+});
+
+test("slider input rounds mile distances to at most two decimals", () => {
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+  elements.unitButtons[1].dispatch("click");
+  elements.distanceSlider.value = "6.21371";
+  elements.distanceSlider.dispatch("input");
+
+  assert.equal(elements.distanceInput.value, "6.21");
+  assert.equal(elements.selectedDistance.textContent, "6.21 mi");
+  assert.equal(elements.distanceSlider.step, "0.01");
+});

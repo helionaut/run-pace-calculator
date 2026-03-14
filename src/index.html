@@ -19,9 +19,19 @@
       <section class="calculator-panel" aria-labelledby="app-title">
         <header class="tool-bar">
           <div class="tool-bar__top">
-            <div class="title-block">
-              <p class="eyebrow">Run Pace</p>
-              <h1 id="app-title">Run Pace</h1>
+            <div class="tool-bar__heading">
+              <div class="title-block">
+                <p class="eyebrow">Run Pace</p>
+                <h1 id="app-title">Run Pace</h1>
+              </div>
+
+              <p
+                class="status-message"
+                id="status-message"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              ></p>
             </div>
 
             <div class="tool-bar__actions">
@@ -51,14 +61,6 @@
               </button>
             </div>
           </div>
-
-          <p
-            class="status-message"
-            id="status-message"
-            role="status"
-            aria-live="polite"
-            aria-atomic="true"
-          ></p>
         </header>
 
         <section class="distance-card metric-card metric-card--source" id="distance-card">

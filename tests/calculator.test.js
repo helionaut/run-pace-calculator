@@ -196,6 +196,31 @@ test("unit changes convert the selected distance and preserve the live result", 
   });
 });
 
+test("mile mode exposes native mile quick-distance chips", () => {
+  const state = applyUnitChange(createFormState(), "mi");
+  const view = deriveCalculatorView(state);
+
+  assert.deepEqual(
+    view.distance.presets.map(({ id, label }) => [id, label]),
+    [
+      ["5mi", "5 mi"],
+      ["10mi", "10 mi"],
+      ["half", "13.1 mi"],
+      ["marathon", "26.2 mi"]
+    ]
+  );
+  assert.equal(view.distance.presetId, "custom");
+});
+
+test("mile quick-distance chips select native mile values", () => {
+  const state = applyPresetSelection(applyUnitChange(createFormState(), "mi"), "10mi");
+  const view = deriveCalculatorView(state);
+
+  assert.equal(view.distance.inputValue, "10");
+  assert.equal(view.selectedDistanceLabel, "10 mi");
+  assert.equal(view.distance.presetId, "10mi");
+});
+
 test("reset restores the default distance while preserving unit", () => {
   let state = enterTime(createFormState(), "0", "50", "0");
 
