@@ -300,6 +300,44 @@ test("finish mode allows long pace minutes without dropping current provenance",
   );
 });
 
+test("convert pace mode allows long pace minutes without falling stale", () => {
+  const view = deriveCalculatorView(
+    buildState(
+      {
+        mode: MODES.CONVERT,
+        convertSource: CONVERT_SOURCES.PACE
+      },
+      {
+        paceMinutes: "75",
+        paceSeconds: "0"
+      }
+    )
+  );
+
+  assert.equal(view.resultState, "current");
+  assert.equal(view.errors.pace, null);
+  assert.equal(view.display.primaryLabel, "Speed");
+  assert.equal(view.display.primaryValue, "0.80 km/h");
+  assert.equal(view.display.selectedPace, "75:00 /km");
+  assert.equal(view.display.selectedSpeed, "0.80 km/h");
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.primary),
+    ["Derived"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.selectedPace),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.lockedSummary.provenance),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.inputProvenance.pace),
+    ["Entered", "Locked"]
+  );
+});
+
 test("incomplete structured finish time blocks a fresh calculation", () => {
   const view = deriveCalculatorView(
     buildState(
