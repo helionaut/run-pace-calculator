@@ -53,14 +53,31 @@ class FakeClassList {
   }
 }
 
+class FakeDocument {
+  createElement(tagName) {
+    return new FakeElement({
+      ownerDocument: this,
+      tagName
+    });
+  }
+}
+
 class FakeElement {
-  constructor({ dataset = {}, value = "", textContent = "" } = {}) {
+  constructor({
+    dataset = {},
+    ownerDocument = null,
+    tagName = "div",
+    textContent = "",
+    value = ""
+  } = {}) {
     this.classList = new FakeClassList();
     this.children = [];
     this.dataset = { ...dataset };
     this.disabled = false;
     this.hidden = false;
     this.listeners = new Map();
+    this.ownerDocument = ownerDocument;
+    this.tagName = tagName;
     this.textContent = textContent;
     this.value = value;
     this.attributes = new Map();
@@ -114,48 +131,54 @@ class FakeElement {
 }
 
 function createElements() {
+  const documentRef = new FakeDocument();
   const unitButtons = [
-    new FakeElement({ dataset: { unit: "km" } }),
-    new FakeElement({ dataset: { unit: "mi" } })
+    new FakeElement({ dataset: { unit: "km" }, ownerDocument: documentRef }),
+    new FakeElement({ dataset: { unit: "mi" }, ownerDocument: documentRef })
   ];
   const presetButtons = [
-    new FakeElement({ dataset: { preset: "5k" } }),
-    new FakeElement({ dataset: { preset: "10k" } }),
-    new FakeElement({ dataset: { preset: "half" } }),
-    new FakeElement({ dataset: { preset: "marathon" } })
+    new FakeElement({ dataset: { preset: "5k" }, ownerDocument: documentRef }),
+    new FakeElement({ dataset: { preset: "10k" }, ownerDocument: documentRef }),
+    new FakeElement({ dataset: { preset: "half" }, ownerDocument: documentRef }),
+    new FakeElement({ dataset: { preset: "marathon" }, ownerDocument: documentRef })
   ];
 
   return {
-    distanceCard: new FakeElement(),
-    distanceError: new FakeElement(),
-    distanceInput: new FakeElement({ value: "10" }),
-    distanceLabel: new FakeElement(),
-    distanceSlider: new FakeElement({ value: "10" }),
-    paceError: new FakeElement(),
-    paceField: new FakeElement(),
-    paceLabel: new FakeElement(),
-    paceMinutes: new FakeElement(),
-    paceSeconds: new FakeElement(),
+    distanceCard: new FakeElement({ ownerDocument: documentRef }),
+    distanceError: new FakeElement({ ownerDocument: documentRef }),
+    distanceInput: new FakeElement({ ownerDocument: documentRef, value: "10" }),
+    distanceLabel: new FakeElement({ ownerDocument: documentRef }),
+    distanceSlider: new FakeElement({ ownerDocument: documentRef, value: "10" }),
+    documentRef,
+    paceError: new FakeElement({ ownerDocument: documentRef }),
+    paceField: new FakeElement({ ownerDocument: documentRef }),
+    paceLabel: new FakeElement({ ownerDocument: documentRef }),
+    paceMinutes: new FakeElement({ ownerDocument: documentRef }),
+    paceSeconds: new FakeElement({ ownerDocument: documentRef }),
     presetButtons,
     projectionValues: {
-      "5k": new FakeElement(),
-      "10k": new FakeElement(),
-      half: new FakeElement(),
-      marathon: new FakeElement()
+      "5k": new FakeElement({ ownerDocument: documentRef }),
+      "10k": new FakeElement({ ownerDocument: documentRef }),
+      half: new FakeElement({ ownerDocument: documentRef }),
+      marathon: new FakeElement({ ownerDocument: documentRef })
     },
-    rateCard: new FakeElement(),
-    resetButton: new FakeElement(),
-    selectedDistance: new FakeElement(),
-    speedError: new FakeElement(),
-    speedField: new FakeElement(),
-    speedInput: new FakeElement(),
-    speedLabel: new FakeElement(),
-    statusMessage: new FakeElement(),
-    timeCard: new FakeElement(),
-    timeError: new FakeElement(),
-    timeHours: new FakeElement(),
-    timeMinutes: new FakeElement(),
-    timeSeconds: new FakeElement(),
+    rateCard: new FakeElement({ ownerDocument: documentRef }),
+    resetButton: new FakeElement({ ownerDocument: documentRef }),
+    selectedDistance: new FakeElement({ ownerDocument: documentRef }),
+    splitActionButton: new FakeElement({ ownerDocument: documentRef }),
+    splitEmptyState: new FakeElement({ ownerDocument: documentRef }),
+    splitList: new FakeElement({ ownerDocument: documentRef, tagName: "ol" }),
+    splitSummary: new FakeElement({ ownerDocument: documentRef }),
+    speedError: new FakeElement({ ownerDocument: documentRef }),
+    speedField: new FakeElement({ ownerDocument: documentRef }),
+    speedInput: new FakeElement({ ownerDocument: documentRef }),
+    speedLabel: new FakeElement({ ownerDocument: documentRef }),
+    statusMessage: new FakeElement({ ownerDocument: documentRef }),
+    timeCard: new FakeElement({ ownerDocument: documentRef }),
+    timeError: new FakeElement({ ownerDocument: documentRef }),
+    timeHours: new FakeElement({ ownerDocument: documentRef }),
+    timeMinutes: new FakeElement({ ownerDocument: documentRef }),
+    timeSeconds: new FakeElement({ ownerDocument: documentRef }),
     unitButtons
   };
 }
@@ -179,6 +202,14 @@ function enterTime(elements, hours, minutes, seconds) {
   elements.timeMinutes.dispatch("input");
   elements.timeSeconds.value = seconds;
   elements.timeSeconds.dispatch("input");
+}
+
+function getSplitMetricValue(splitRow, index) {
+  return splitRow.children[0].children[1].children[index].children[1].textContent;
+}
+
+function getSplitMetricValues(splitRow) {
+  return [0, 1, 2].map((index) => getSplitMetricValue(splitRow, index));
 }
 
 test("pace input plus slider movement updates derived speed and finish time live", () => {
@@ -359,4 +390,95 @@ test("slider input rounds mile distances to at most two decimals", () => {
   assert.equal(elements.distanceInput.value, "6.21");
   assert.equal(elements.selectedDistance.textContent, "6.21 mi");
   assert.equal(elements.distanceSlider.step, "0.01");
+});
+
+test("add split captures the current calculator values into a compact row", () => {
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+  enterPace(elements, "5", "0");
+  elements.splitActionButton.dispatch("click");
+
+  assert.equal(elements.splitSummary.textContent, "1 split saved");
+  assert.equal(elements.splitList.children.length, 1);
+  assert.equal(elements.splitEmptyState.hidden, true);
+  assert.equal(getSplitMetricValue(elements.splitList.children[0], 0), "10 km");
+  assert.equal(getSplitMetricValue(elements.splitList.children[0], 1), "05:00 /km");
+  assert.equal(getSplitMetricValue(elements.splitList.children[0], 2), "00:50:00");
+  assert.equal(elements.splitActionButton.textContent, "Add split");
+});
+
+test("selecting a split loads it into the editor and dirty edits switch the action into save mode", () => {
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+  enterPace(elements, "5", "0");
+  elements.splitActionButton.dispatch("click");
+  enterTime(elements, "0", "40", "0");
+  elements.splitActionButton.dispatch("click");
+
+  elements.splitList.children[0].children[0].dispatch("click");
+
+  assert.equal(elements.distanceInput.value, "10");
+  assert.equal(elements.timeMinutes.value, "50");
+  assert.equal(elements.timeSeconds.value, "00");
+  assert.equal(elements.splitSummary.textContent, "Editing split 1");
+
+  elements.distanceInput.dispatch("focus");
+  elements.distanceInput.value = "12";
+  elements.distanceInput.dispatch("input");
+
+  assert.equal(elements.splitActionButton.textContent, "Save split");
+  assert.equal(
+    elements.splitActionButton.classList.contains("split-action-button--save"),
+    true
+  );
+  assert.equal(elements.splitSummary.textContent, "Update split 1");
+
+  elements.splitActionButton.dispatch("click");
+
+  assert.equal(getSplitMetricValue(elements.splitList.children[0], 0), "12 km");
+  assert.equal(getSplitMetricValue(elements.splitList.children[0], 2), "01:00:00");
+  assert.equal(elements.splitActionButton.textContent, "Add split");
+  assert.equal(
+    elements.splitActionButton.classList.contains("split-action-button--save"),
+    false
+  );
+  assert.equal(elements.splitSummary.textContent, "Editing split 1");
+});
+
+test("duplicate and delete controls keep the split list editable", () => {
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+  enterPace(elements, "6", "0");
+  elements.splitActionButton.dispatch("click");
+
+  const firstRow = elements.splitList.children[0];
+  const duplicateButton = firstRow.children[1].children[0];
+  const deleteButton = firstRow.children[1].children[1];
+
+  duplicateButton.dispatch("click");
+
+  assert.equal(elements.splitList.children.length, 2);
+  assert.equal(elements.splitSummary.textContent, "Editing split 2");
+  assert.equal(elements.distanceInput.value, "10");
+  assert.equal(elements.timeHours.value, "1");
+  assert.equal(elements.timeMinutes.value, "00");
+  assert.deepEqual(
+    getSplitMetricValues(elements.splitList.children[1]),
+    getSplitMetricValues(firstRow)
+  );
+
+  deleteButton.dispatch("click");
+
+  assert.equal(elements.splitList.children.length, 1);
+  assert.equal(elements.splitSummary.textContent, "Editing split 1");
+  assert.equal(elements.splitEmptyState.hidden, true);
+
+  elements.splitList.children[0].children[1].children[1].dispatch("click");
+
+  assert.equal(elements.splitList.children.length, 0);
+  assert.equal(elements.splitSummary.textContent, "No splits yet");
+  assert.equal(elements.splitEmptyState.hidden, false);
 });
