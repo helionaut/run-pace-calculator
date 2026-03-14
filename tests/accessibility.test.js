@@ -83,3 +83,36 @@ test("validation text and 320 px layout safeguards are present in the shipped fi
     /@media \(max-width: 420px\)[\s\S]*?\.page-shell\s*{\s*padding: 14px 12px 24px;/
   );
 });
+
+test("interactive inputs reference provenance text for screen readers", async () => {
+  const html = await readFixture(htmlPath);
+
+  assert.match(
+    html,
+    /id="distance-input"[\s\S]*?aria-describedby="distance-cluster-provenance distance-hint distance-error"/
+  );
+  assert.match(
+    html,
+    /id="finish-hours"[\s\S]*?aria-describedby="finish-cluster-provenance finish-error"/
+  );
+  assert.match(
+    html,
+    /id="finish-minutes"[\s\S]*?aria-describedby="finish-cluster-provenance finish-error"/
+  );
+  assert.match(
+    html,
+    /id="finish-seconds"[\s\S]*?aria-describedby="finish-cluster-provenance finish-error"/
+  );
+  assert.match(
+    html,
+    /id="pace-minutes"[\s\S]*?aria-describedby="pace-cluster-provenance pace-copy pace-error"/
+  );
+  assert.match(
+    html,
+    /id="pace-seconds"[\s\S]*?aria-describedby="pace-cluster-provenance pace-copy pace-error"/
+  );
+  assert.match(
+    html,
+    /id="speed-input"[\s\S]*?aria-describedby="speed-cluster-provenance speed-hint speed-error"/
+  );
+});
