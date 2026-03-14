@@ -16,12 +16,18 @@ test("calculator markup keeps the compact control flow in DOM order", async () =
     "distance-slider",
     "pace-lock-button",
     "pace-driver-button",
+    "pace-value",
+    "pace-editor",
     "pace-minutes",
     "pace-seconds",
     "speed-driver-button",
+    "speed-value",
+    "speed-editor",
     "speed-input",
     "time-lock-button",
     "time-driver-button",
+    "time-value",
+    "time-editor",
     "time-hours",
     "time-minutes",
     "time-seconds"
@@ -37,6 +43,11 @@ test("calculator markup keeps the compact control flow in DOM order", async () =
   }
 
   assert.match(html, /<span id="distance-label">Distance \(km\)<\/span>/);
+  assert.match(html, /class="calculator-panel"/);
+  assert.match(html, /class="metric-stack"/);
+  assert.match(html, /id="pace-value"/);
+  assert.match(html, /id="speed-value"/);
+  assert.match(html, /id="time-value"/);
   assert.match(html, /id="distance-slider"[\s\S]*type="range"/);
   assert.match(html, /<span>Minutes<\/span>[\s\S]*id="pace-minutes"/);
   assert.match(html, /<span>Seconds<\/span>[\s\S]*id="pace-seconds"/);
@@ -66,9 +77,15 @@ test("status messaging, lock affordances, and responsive safeguards are present"
   );
   assert.match(html, /id="pace-lock-button"[\s\S]*aria-pressed="false"/);
   assert.match(html, /id="time-lock-button"[\s\S]*aria-pressed="false"/);
+  assert.match(html, /id="pace-value"[\s\S]*aria-live="polite"/);
+  assert.match(html, /id="speed-value"[\s\S]*aria-live="polite"/);
+  assert.match(html, /id="time-value"[\s\S]*aria-live="polite"/);
   assert.match(css, /input\[aria-invalid="true"\]/);
   assert.match(css, /input:disabled/);
-  assert.match(css, /\.metrics-grid\s*{\s*display: grid;\s*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
+  assert.match(css, /\.calculator-panel\s*{/);
+  assert.match(css, /\.metric-stack\s*{/);
+  assert.match(css, /\.metric-panel--goal\s*{/);
+  assert.match(css, /\.metric-value\s*{/);
   assert.match(css, /\.projection-copy,\s*caption/);
   assert.match(css, /\.is-final-partial th,\s*\.is-final-partial td/);
   assert.match(css, /table\s*{\s*width: 100%;[\s\S]*table-layout: fixed;/);

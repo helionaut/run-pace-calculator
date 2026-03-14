@@ -303,36 +303,78 @@ function seedMetricInputs(inputs, metric, calculation, unit) {
   };
 }
 
+function hasValidSpeedKmh(speedKmh) {
+  return Number.isFinite(speedKmh) && speedKmh > 0;
+}
+
+function hasValidFinishSeconds(finishSeconds) {
+  return Number.isFinite(finishSeconds) && finishSeconds > 0;
+}
+
+function formatPaceDisplayFromInputs(inputs, unit) {
+  const pace = parsePaceInput(inputs, {
+    showRequiredError: false
+  });
+
+  return !pace.error && pace.value !== null
+    ? formatPace(pace.value, unit)
+    : `--:-- /${unit}`;
+}
+
+function formatTimeDisplayFromInputs(inputs) {
+  const time = parseTimeInput(inputs, {
+    showRequiredError: false
+  });
+
+  return !time.error && time.value !== null ? formatDuration(time.value) : "--:--:--";
+}
+
 function getMetricStateLabel(metric, driverMetric, lockMetric, hasDerivedValue) {
   if (lockMetric === metric) {
-    return "Locked";
+    return "Goal";
   }
 
   if (driverMetric === metric) {
-    return "Input";
+    return "Adjust";
   }
 
   if (hasDerivedValue) {
-    return "Derived";
+    return "Auto";
   }
 
-  return "Waiting";
+  return "Ready";
+}
+
+function getMetricTone(stateLabel) {
+  if (stateLabel === "Goal") {
+    return "goal";
+  }
+
+  if (stateLabel === "Adjust") {
+    return "adjust";
+  }
+
+  if (stateLabel === "Auto") {
+    return "auto";
+  }
+
+  return "ready";
 }
 
 function getDriverButtonLabel(metric, driverMetric, lockMetric) {
-  if (metric === driverMetric && lockMetric === metric) {
-    return "Locked input";
-  }
-
-  if (metric === driverMetric) {
-    return "Editing";
+  if (lockMetric === metric) {
+    return "Goal";
   }
 
   if (lockMetric) {
-    return "Unlock to edit";
+    return "Auto";
   }
 
-  return "Use as input";
+  if (metric === driverMetric) {
+    return "Adjusting";
+  }
+
+  return "Adjust";
 }
 
 function buildProjectionRows(speedKmh, unit) {
@@ -518,8 +560,9 @@ function createSplitView(state, calculation) {
 function createPaceCardView(state, calculation) {
   const driverMetric = getEffectiveDriverMetric(state);
   const alternateUnit = getAlternateUnit(state.unit);
-  const isEditable = driverMetric === DRIVER_METRICS.PACE;
-  const derivedPaceSeconds = Number.isFinite(calculation.speedKmh)
+  const isEditable =
+    driverMetric === DRIVER_METRICS.PACE && state.lockMetric !== LOCK_METRICS.PACE;
+  const derivedPaceSeconds = hasValidSpeedKmh(calculation.speedKmh)
     ? speedToPaceSeconds(calculation.speedKmh, state.unit)
     : null;
   const displayInputs = isEditable
@@ -528,9 +571,20 @@ function createPaceCardView(state, calculation) {
         seconds: state.inputs.paceSeconds
       }
     : formatPaceFields(derivedPaceSeconds);
+  const stateLabel = getMetricStateLabel(
+    DRIVER_METRICS.PACE,
+    driverMetric,
+    state.lockMetric,
+    Number.isFinite(derivedPaceSeconds)
+  );
 
   return {
+    displayValue:
+      state.lockMetric === LOCK_METRICS.PACE
+        ? formatPaceDisplayFromInputs(state.inputs, state.unit)
+        : formatPace(derivedPaceSeconds, state.unit),
     editable: isEditable,
+    editorHidden: !isEditable,
     error: isEditable ? calculation.errors.pace : null,
     inputValues: displayInputs,
     label: `Pace /${state.unit}`,
@@ -539,7 +593,7 @@ function createPaceCardView(state, calculation) {
         ? false
         : !canLockMetric(LOCK_METRICS.PACE, calculation),
     lockLabel:
-      state.lockMetric === LOCK_METRICS.PACE ? "Unlock" : "Lock",
+      state.lockMetric === LOCK_METRICS.PACE ? "Unlock goal" : "Set goal",
     lockPressed: state.lockMetric === LOCK_METRICS.PACE,
     secondary: Number.isFinite(calculation.speedKmh)
       ? `Also ${formatPace(
@@ -547,12 +601,8 @@ function createPaceCardView(state, calculation) {
           alternateUnit
         )}`
       : `Also --:-- /${alternateUnit}`,
-    stateLabel: getMetricStateLabel(
-      DRIVER_METRICS.PACE,
-      driverMetric,
-      state.lockMetric,
-      Number.isFinite(derivedPaceSeconds)
-    )
+    stateLabel,
+    tone: getMetricTone(stateLabel)
   };
 }
 
@@ -560,13 +610,21 @@ function createSpeedCardView(state, calculation) {
   const driverMetric = getEffectiveDriverMetric(state);
   const alternateUnit = getAlternateUnit(state.unit);
   const isEditable = driverMetric === DRIVER_METRICS.SPEED;
+  const stateLabel = getMetricStateLabel(
+    DRIVER_METRICS.SPEED,
+    driverMetric,
+    state.lockMetric,
+    hasValidSpeedKmh(calculation.speedKmh)
+  );
 
   return {
+    displayValue: formatSpeed(calculation.speedKmh, state.unit),
     editable: isEditable,
+    editorHidden: !isEditable,
     error: isEditable ? calculation.errors.speed : null,
     inputValue: isEditable
       ? state.inputs.speed
-      : Number.isFinite(calculation.speedKmh)
+      : hasValidSpeedKmh(calculation.speedKmh)
         ? formatSpeedInputValue(fromKilometersPerHour(calculation.speedKmh, state.unit))
         : "",
     label: state.unit === "mi" ? "Speed (mph)" : "Speed (km/h)",
@@ -575,18 +633,15 @@ function createSpeedCardView(state, calculation) {
       : alternateUnit === "mi"
         ? "Also --.-- mph"
         : "Also --.-- km/h",
-    stateLabel: getMetricStateLabel(
-      DRIVER_METRICS.SPEED,
-      driverMetric,
-      state.lockMetric,
-      Number.isFinite(calculation.speedKmh)
-    )
+    stateLabel,
+    tone: getMetricTone(stateLabel)
   };
 }
 
 function createTimeCardView(state, calculation) {
   const driverMetric = getEffectiveDriverMetric(state);
-  const isEditable = driverMetric === DRIVER_METRICS.TIME;
+  const isEditable =
+    driverMetric === DRIVER_METRICS.TIME && state.lockMetric !== LOCK_METRICS.TIME;
   const displayInputs = isEditable
     ? {
         hours: state.inputs.timeHours,
@@ -597,9 +652,20 @@ function createTimeCardView(state, calculation) {
   const distanceText = calculation.distanceKm !== null
     ? `For ${formatDistance(calculation.distanceKm, state.unit)}`
     : "Set a valid distance to project finish time.";
+  const stateLabel = getMetricStateLabel(
+    DRIVER_METRICS.TIME,
+    driverMetric,
+    state.lockMetric,
+    hasValidFinishSeconds(calculation.finishSeconds)
+  );
 
   return {
+    displayValue:
+      state.lockMetric === LOCK_METRICS.TIME
+        ? formatTimeDisplayFromInputs(state.inputs)
+        : formatDuration(calculation.finishSeconds),
     editable: isEditable,
+    editorHidden: !isEditable,
     error: isEditable ? calculation.errors.time : null,
     inputValues: displayInputs,
     label: "Finish time",
@@ -608,15 +674,11 @@ function createTimeCardView(state, calculation) {
         ? false
         : !canLockMetric(LOCK_METRICS.TIME, calculation),
     lockLabel:
-      state.lockMetric === LOCK_METRICS.TIME ? "Unlock" : "Lock",
+      state.lockMetric === LOCK_METRICS.TIME ? "Unlock goal" : "Set goal",
     lockPressed: state.lockMetric === LOCK_METRICS.TIME,
     secondary: distanceText,
-    stateLabel: getMetricStateLabel(
-      DRIVER_METRICS.TIME,
-      driverMetric,
-      state.lockMetric,
-      Number.isFinite(calculation.finishSeconds)
-    )
+    stateLabel,
+    tone: getMetricTone(stateLabel)
   };
 }
 
@@ -634,22 +696,22 @@ function createStatusMessage(state, calculation) {
   }
 
   if (state.lockMetric === LOCK_METRICS.TIME) {
-    return "Time locked. Drag distance to see the required pace and speed.";
+    return "Time goal locked. Drag distance to see the pace and speed you need.";
   }
 
   if (state.lockMetric === LOCK_METRICS.PACE) {
-    return "Pace locked. Drag distance to update the finish time.";
+    return "Pace goal locked. Drag distance to see the finish time it produces.";
   }
 
   if (driverMetric === DRIVER_METRICS.PACE) {
-    return "Edit pace to update speed and finish time instantly.";
+    return "Adjust pace, or lock pace or time as the goal.";
   }
 
   if (driverMetric === DRIVER_METRICS.SPEED) {
-    return "Edit speed to update pace and finish time instantly.";
+    return "Adjust speed to update the pace and finish time.";
   }
 
-  return "Edit finish time to see the pace and speed needed for this distance.";
+  return "Adjust finish time to see the pace and speed required.";
 }
 
 export function getPresetById(id) {
@@ -1319,7 +1381,8 @@ export function deriveCalculatorView(state) {
           DRIVER_METRICS.PACE,
           driverMetric,
           state.lockMetric
-        )
+        ),
+        pressed: !state.lockMetric && driverMetric === DRIVER_METRICS.PACE
       },
       speed: {
         disabled:
@@ -1328,7 +1391,8 @@ export function deriveCalculatorView(state) {
           DRIVER_METRICS.SPEED,
           driverMetric,
           state.lockMetric
-        )
+        ),
+        pressed: !state.lockMetric && driverMetric === DRIVER_METRICS.SPEED
       },
       time: {
         disabled:
@@ -1338,7 +1402,8 @@ export function deriveCalculatorView(state) {
           DRIVER_METRICS.TIME,
           driverMetric,
           state.lockMetric
-        )
+        ),
+        pressed: !state.lockMetric && driverMetric === DRIVER_METRICS.TIME
       }
     },
     driverMetric,

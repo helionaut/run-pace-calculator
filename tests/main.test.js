@@ -131,6 +131,7 @@ function createElements() {
     distanceSlider: new FakeElement({ value: "10" }),
     paceCard: new FakeElement(),
     paceDriverButton: new FakeElement(),
+    paceEditor: new FakeElement(),
     paceError: new FakeElement(),
     paceLabel: new FakeElement(),
     paceLockButton: new FakeElement(),
@@ -138,6 +139,7 @@ function createElements() {
     paceSecondary: new FakeElement(),
     paceSeconds: new FakeElement(),
     paceState: new FakeElement(),
+    paceValue: new FakeElement(),
     presetButtons,
     projectionValues: {
       "5k": new FakeElement(),
@@ -152,14 +154,17 @@ function createElements() {
     splitRows: new FakeElement(),
     speedCard: new FakeElement(),
     speedDriverButton: new FakeElement(),
+    speedEditor: new FakeElement(),
     speedError: new FakeElement(),
     speedInput: new FakeElement(),
     speedLabel: new FakeElement(),
     speedSecondary: new FakeElement(),
     speedState: new FakeElement(),
+    speedValue: new FakeElement(),
     statusMessage: new FakeElement(),
     timeCard: new FakeElement(),
     timeDriverButton: new FakeElement(),
+    timeEditor: new FakeElement(),
     timeError: new FakeElement(),
     timeHours: new FakeElement(),
     timeLockButton: new FakeElement(),
@@ -167,6 +172,7 @@ function createElements() {
     timeSecondary: new FakeElement(),
     timeSeconds: new FakeElement(),
     timeState: new FakeElement(),
+    timeValue: new FakeElement(),
     unitButtons
   };
 }
@@ -225,9 +231,18 @@ test("pace input plus slider movement updates derived speed and finish time live
   createCalculatorApp(elements);
   enterPace(elements, "5", "0");
 
-  assert.equal(elements.paceState.textContent, "Input");
-  assert.equal(elements.speedState.textContent, "Derived");
-  assert.equal(elements.timeState.textContent, "Derived");
+  assert.equal(elements.paceState.textContent, "Adjust");
+  assert.equal(elements.speedState.textContent, "Auto");
+  assert.equal(elements.timeState.textContent, "Auto");
+  assert.equal(elements.paceDriverButton.textContent, "Adjusting");
+  assert.equal(elements.speedDriverButton.textContent, "Adjust");
+  assert.equal(elements.timeDriverButton.textContent, "Adjust");
+  assert.equal(elements.paceEditor.hidden, false);
+  assert.equal(elements.paceValue.hidden, true);
+  assert.equal(elements.speedEditor.hidden, true);
+  assert.equal(elements.speedValue.hidden, false);
+  assert.equal(elements.speedValue.textContent, "12.00 km/h");
+  assert.equal(elements.timeValue.textContent, "00:50:00");
   assert.equal(elements.speedInput.value, "12");
   assert.equal(elements.timeHours.value, "0");
   assert.equal(elements.timeMinutes.value, "50");
@@ -254,9 +269,12 @@ test("locking time keeps the target fixed while the slider recalculates pace and
 
   elements.timeLockButton.dispatch("click");
 
-  assert.equal(elements.timeState.textContent, "Locked");
-  assert.equal(elements.timeDriverButton.textContent, "Locked input");
+  assert.equal(elements.timeState.textContent, "Goal");
+  assert.equal(elements.timeDriverButton.textContent, "Goal");
   assert.equal(elements.speedDriverButton.disabled, true);
+  assert.equal(elements.timeEditor.hidden, true);
+  assert.equal(elements.timeValue.hidden, false);
+  assert.equal(elements.timeValue.textContent, "00:50:00");
 
   elements.distanceSlider.value = "5";
   elements.distanceSlider.dispatch("input");
@@ -269,7 +287,7 @@ test("locking time keeps the target fixed while the slider recalculates pace and
   assert.equal(elements.speedInput.value, "6");
   assert.equal(
     elements.statusMessage.textContent,
-    "Time locked. Drag distance to see the required pace and speed."
+    "Time goal locked. Drag distance to see the pace and speed you need."
   );
 });
 
@@ -282,9 +300,12 @@ test("locking pace keeps finish time live and blocks switching drivers until unl
 
   elements.paceLockButton.dispatch("click");
 
-  assert.equal(elements.paceState.textContent, "Locked");
+  assert.equal(elements.paceState.textContent, "Goal");
   assert.equal(elements.speedDriverButton.disabled, true);
   assert.equal(elements.timeDriverButton.disabled, true);
+  assert.equal(elements.paceEditor.hidden, true);
+  assert.equal(elements.paceValue.hidden, false);
+  assert.equal(elements.paceValue.textContent, "05:00 /km");
 
   elements.distanceSlider.value = "5";
   elements.distanceSlider.dispatch("input");
@@ -296,7 +317,7 @@ test("locking pace keeps finish time live and blocks switching drivers until unl
   assert.equal(elements.timeSeconds.value, "00");
   assert.equal(
     elements.statusMessage.textContent,
-    "Pace locked. Drag distance to update the finish time."
+    "Pace goal locked. Drag distance to see the finish time it produces."
   );
 });
 
