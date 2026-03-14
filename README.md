@@ -192,6 +192,12 @@ git -C /path/to/repo fetch .handoff/<issue-key>/<bundle-name>.bundle <branch>:<b
 git -C /path/to/repo switch <branch>
 ```
 
+Every generated handoff package also includes a shortcut helper:
+
+```sh
+.handoff/<issue-key>/resume-on-another-machine.sh /path/to/repo
+```
+
 If you already have a checkout of this feature branch with the helper scripts
 available, you can also use
 `./scripts/import_bundle.sh <bundle-path|manifest-path|handoff-dir> <target-repo-dir>`.

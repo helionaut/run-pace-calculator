@@ -74,6 +74,50 @@ if [[ -z "$issue_identifier" ]]; then
   exit 1
 fi
 
+derive_pr_title() {
+  if [[ -n "${PR_TITLE-}" ]]; then
+    printf '%s\n' "$PR_TITLE"
+    return
+  fi
+
+  local draft_title
+  local branch_slug
+  local issue_prefix
+
+  draft_title="$(
+    sed -n 's/^<!--[[:space:]]*PR_TITLE:[[:space:]]*\(.*[^[:space:]]\)[[:space:]]*-->$/\1/p' "$pr_body_file" |
+      head -n 1
+  )"
+
+  if [[ -n "$draft_title" ]]; then
+    printf '%s\n' "$draft_title"
+    return
+  fi
+
+  branch_slug="${branch##*/}"
+  issue_prefix="${issue_identifier,,}-"
+
+  if [[ "${branch_slug,,}" == "$issue_prefix"* ]]; then
+    branch_slug="${branch_slug:${#issue_prefix}}"
+  fi
+
+  branch_slug="${branch_slug//-/ }"
+  branch_slug="${branch_slug//_/ }"
+  branch_slug="$(
+    printf '%s' "$branch_slug" |
+      sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//'
+  )"
+
+  if [[ -n "$branch_slug" ]]; then
+    printf '%s\n' "${branch_slug^}"
+    return
+  fi
+
+  printf 'Update %s\n' "$issue_identifier"
+}
+
+pr_title="$(derive_pr_title)"
+
 origin_url="$(git remote get-url origin 2>/dev/null || true)"
 default_handoff_dir="${HANDOFF_DIR:-$repo_root/.handoff/$issue_identifier}"
 
@@ -128,6 +172,7 @@ if ! $dry_run && ! command -v gh >/dev/null 2>&1; then
 fi
 
 echo "Using branch: $branch"
+echo "Using PR title: $pr_title"
 echo "Using PR body: $pr_body_file"
 echo "Current origin: ${origin_url:-<missing>}"
 

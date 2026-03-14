@@ -9,6 +9,7 @@ import {
   createFormState,
   deriveCalculatorView,
   formatDistanceInputValue,
+  parsePaceInput,
   resetFormState,
   restoreCalculatorState,
   serializeCalculatorState,
@@ -91,6 +92,19 @@ test("speed input derives pace and finish time for the selected distance", () =>
     minutes: "50",
     seconds: "00"
   });
+});
+
+test("pace parsing allows long pace minutes", () => {
+  assert.deepEqual(
+    parsePaceInput({
+      paceMinutes: "65",
+      paceSeconds: "30"
+    }),
+    {
+      error: null,
+      value: 3930
+    }
+  );
 });
 
 test("time input derives the pace and speed required for the selected distance", () => {
