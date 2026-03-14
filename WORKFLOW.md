@@ -19,7 +19,7 @@ workspace:
   root: /home/helionaut/workspaces
 hooks:
   after_create: |
-    git clone --depth 1 /home/helionaut/src/projects/run-pace-calculator .
+    git clone --depth 1 --branch main https://github.com/helionaut/run-pace-calculator .
   before_remove: |
     true
 agent:
