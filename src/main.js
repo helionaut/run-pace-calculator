@@ -58,6 +58,8 @@ function renderPresetButtons(elements, presetId) {
 function renderDriverButton(button, view) {
   setTextContent(button, view.label);
   button.disabled = view.disabled;
+  button.classList.toggle("is-active", Boolean(view.pressed));
+  button.setAttribute("aria-pressed", String(Boolean(view.pressed)));
 }
 
 function renderLockButton(button, cardView) {
@@ -67,23 +69,22 @@ function renderLockButton(button, cardView) {
   button.setAttribute("aria-pressed", String(cardView.lockPressed));
 }
 
-function renderCardState(card, stateLabel) {
-  const isInput = stateLabel === "Input";
-  const isLocked = stateLabel === "Locked";
-  const isDerived = stateLabel === "Derived";
-  const isWaiting = stateLabel === "Waiting";
-
-  card.classList.toggle("metric-card--input", isInput);
-  card.classList.toggle("metric-card--locked", isLocked);
-  card.classList.toggle("metric-card--derived", isDerived || isWaiting);
+function renderCardState(card, tone) {
+  card.classList.toggle("metric-panel--adjust", tone === "adjust");
+  card.classList.toggle("metric-panel--goal", tone === "goal");
+  card.classList.toggle("metric-panel--auto", tone === "auto");
+  card.classList.toggle("metric-panel--ready", tone === "ready");
 }
 
 function renderPaceCard(elements, view, driverButtonView) {
-  renderCardState(elements.paceCard, view.stateLabel);
+  renderCardState(elements.paceCard, view.tone);
   setTextContent(elements.paceLabel, view.label);
   setTextContent(elements.paceState, view.stateLabel);
   renderDriverButton(elements.paceDriverButton, driverButtonView);
   renderLockButton(elements.paceLockButton, view);
+  setTextContent(elements.paceValue, view.displayValue);
+  elements.paceEditor.hidden = view.editorHidden;
+  elements.paceValue.hidden = !view.editorHidden;
   setInputValue(elements.paceMinutes, view.inputValues.minutes);
   setInputValue(elements.paceSeconds, view.inputValues.seconds);
   elements.paceMinutes.disabled = !view.editable;
@@ -97,10 +98,13 @@ function renderPaceCard(elements, view, driverButtonView) {
 }
 
 function renderSpeedCard(elements, view, driverButtonView) {
-  renderCardState(elements.speedCard, view.stateLabel);
+  renderCardState(elements.speedCard, view.tone);
   setTextContent(elements.speedLabel, view.label);
   setTextContent(elements.speedState, view.stateLabel);
   renderDriverButton(elements.speedDriverButton, driverButtonView);
+  setTextContent(elements.speedValue, view.displayValue);
+  elements.speedEditor.hidden = view.editorHidden;
+  elements.speedValue.hidden = !view.editorHidden;
   setInputValue(elements.speedInput, view.inputValue);
   elements.speedInput.disabled = !view.editable;
   setTextContent(elements.speedSecondary, view.secondary);
@@ -108,10 +112,13 @@ function renderSpeedCard(elements, view, driverButtonView) {
 }
 
 function renderTimeCard(elements, view, driverButtonView) {
-  renderCardState(elements.timeCard, view.stateLabel);
+  renderCardState(elements.timeCard, view.tone);
   setTextContent(elements.timeState, view.stateLabel);
   renderDriverButton(elements.timeDriverButton, driverButtonView);
   renderLockButton(elements.timeLockButton, view);
+  setTextContent(elements.timeValue, view.displayValue);
+  elements.timeEditor.hidden = view.editorHidden;
+  elements.timeValue.hidden = !view.editorHidden;
   setInputValue(elements.timeHours, view.inputValues.hours);
   setInputValue(elements.timeMinutes, view.inputValues.minutes);
   setInputValue(elements.timeSeconds, view.inputValues.seconds);
@@ -310,6 +317,7 @@ export function getElements(root) {
     distanceSlider: root.querySelector("#distance-slider"),
     paceCard: root.querySelector("#pace-card"),
     paceDriverButton: root.querySelector("#pace-driver-button"),
+    paceEditor: root.querySelector("#pace-editor"),
     paceError: root.querySelector("#pace-error"),
     paceLabel: root.querySelector("#pace-label"),
     paceLockButton: root.querySelector("#pace-lock-button"),
@@ -317,6 +325,7 @@ export function getElements(root) {
     paceSecondary: root.querySelector("#pace-secondary"),
     paceSeconds: root.querySelector("#pace-seconds"),
     paceState: root.querySelector("#pace-state"),
+    paceValue: root.querySelector("#pace-value"),
     presetButtons: root.querySelectorAll("[data-preset-button]"),
     projectionValues: {
       "5k": root.querySelector("#projection-5k"),
@@ -331,14 +340,17 @@ export function getElements(root) {
     splitRows: root.querySelector("#split-rows"),
     speedCard: root.querySelector("#speed-card"),
     speedDriverButton: root.querySelector("#speed-driver-button"),
+    speedEditor: root.querySelector("#speed-editor"),
     speedError: root.querySelector("#speed-error"),
     speedInput: root.querySelector("#speed-input"),
     speedLabel: root.querySelector("#speed-label"),
     speedSecondary: root.querySelector("#speed-secondary"),
     speedState: root.querySelector("#speed-state"),
+    speedValue: root.querySelector("#speed-value"),
     statusMessage: root.querySelector("#status-message"),
     timeCard: root.querySelector("#time-card"),
     timeDriverButton: root.querySelector("#time-driver-button"),
+    timeEditor: root.querySelector("#time-editor"),
     timeError: root.querySelector("#time-error"),
     timeHours: root.querySelector("#time-hours"),
     timeLockButton: root.querySelector("#time-lock-button"),
@@ -346,6 +358,7 @@ export function getElements(root) {
     timeSecondary: root.querySelector("#time-secondary"),
     timeSeconds: root.querySelector("#time-seconds"),
     timeState: root.querySelector("#time-state"),
+    timeValue: root.querySelector("#time-value"),
     unitButtons: root.querySelectorAll("[data-unit-button]")
   };
 }

@@ -49,9 +49,14 @@ test("default state keeps a 10K distance selected and waits for input", () => {
   assert.equal(view.selectedDistanceLabel, "10 km");
   assert.equal(view.distance.inputValue, "10");
   assert.equal(view.distance.presetId, "10k");
-  assert.equal(view.cards.pace.stateLabel, "Input");
-  assert.equal(view.cards.speed.stateLabel, "Waiting");
-  assert.equal(view.cards.time.stateLabel, "Waiting");
+  assert.equal(view.cards.pace.stateLabel, "Adjust");
+  assert.equal(view.cards.speed.stateLabel, "Ready");
+  assert.equal(view.cards.time.stateLabel, "Ready");
+  assert.equal(view.cards.pace.editorHidden, false);
+  assert.equal(view.cards.speed.editorHidden, true);
+  assert.equal(view.cards.time.editorHidden, true);
+  assert.equal(view.cards.speed.displayValue, "--.-- km/h");
+  assert.equal(view.cards.time.displayValue, "--:--:--");
   assert.equal(view.cards.speed.inputValue, "");
   assert.deepEqual(view.cards.time.inputValues, {
     hours: "",
@@ -64,9 +69,14 @@ test("pace input derives speed and finish time for the selected distance", () =>
   const view = deriveCalculatorView(enterPace(createFormState(), "5", "0"));
 
   assert.equal(view.driverMetric, DRIVER_METRICS.PACE);
-  assert.equal(view.cards.pace.stateLabel, "Input");
-  assert.equal(view.cards.speed.stateLabel, "Derived");
-  assert.equal(view.cards.time.stateLabel, "Derived");
+  assert.equal(view.cards.pace.stateLabel, "Adjust");
+  assert.equal(view.cards.speed.stateLabel, "Auto");
+  assert.equal(view.cards.time.stateLabel, "Auto");
+  assert.equal(view.cards.pace.editorHidden, false);
+  assert.equal(view.cards.speed.editorHidden, true);
+  assert.equal(view.cards.time.editorHidden, true);
+  assert.equal(view.cards.speed.displayValue, "12.00 km/h");
+  assert.equal(view.cards.time.displayValue, "00:50:00");
   assert.equal(view.cards.speed.inputValue, "12");
   assert.equal(view.cards.speed.secondary, "Also 7.46 mph");
   assert.deepEqual(view.cards.time.inputValues, {
@@ -81,8 +91,14 @@ test("speed input derives pace and finish time for the selected distance", () =>
   const view = deriveCalculatorView(enterSpeed(createFormState(), "12"));
 
   assert.equal(view.driverMetric, DRIVER_METRICS.SPEED);
-  assert.equal(view.cards.speed.stateLabel, "Input");
-  assert.equal(view.cards.pace.stateLabel, "Derived");
+  assert.equal(view.cards.speed.stateLabel, "Adjust");
+  assert.equal(view.cards.pace.stateLabel, "Auto");
+  assert.equal(view.cards.time.stateLabel, "Auto");
+  assert.equal(view.cards.speed.editorHidden, false);
+  assert.equal(view.cards.pace.editorHidden, true);
+  assert.equal(view.cards.time.editorHidden, true);
+  assert.equal(view.cards.pace.displayValue, "05:00 /km");
+  assert.equal(view.cards.time.displayValue, "00:50:00");
   assert.deepEqual(view.cards.pace.inputValues, {
     minutes: "5",
     seconds: "00"
@@ -111,7 +127,14 @@ test("time input derives the pace and speed required for the selected distance",
   const view = deriveCalculatorView(enterTime(createFormState(), "0", "50", "0"));
 
   assert.equal(view.driverMetric, DRIVER_METRICS.TIME);
-  assert.equal(view.cards.time.stateLabel, "Input");
+  assert.equal(view.cards.time.stateLabel, "Adjust");
+  assert.equal(view.cards.pace.stateLabel, "Auto");
+  assert.equal(view.cards.speed.stateLabel, "Auto");
+  assert.equal(view.cards.time.editorHidden, false);
+  assert.equal(view.cards.pace.editorHidden, true);
+  assert.equal(view.cards.speed.editorHidden, true);
+  assert.equal(view.cards.pace.displayValue, "05:00 /km");
+  assert.equal(view.cards.speed.displayValue, "12.00 km/h");
   assert.deepEqual(view.cards.pace.inputValues, {
     minutes: "5",
     seconds: "00"
@@ -129,7 +152,11 @@ test("locking time keeps the target fixed while distance changes", () => {
 
   assert.equal(view.lockMetric, "time");
   assert.equal(view.driverMetric, DRIVER_METRICS.TIME);
-  assert.equal(view.cards.time.stateLabel, "Locked");
+  assert.equal(view.cards.time.stateLabel, "Goal");
+  assert.equal(view.cards.time.editorHidden, true);
+  assert.equal(view.cards.time.displayValue, "00:50:00");
+  assert.equal(view.cards.pace.stateLabel, "Auto");
+  assert.equal(view.cards.speed.stateLabel, "Auto");
   assert.deepEqual(view.cards.time.inputValues, {
     hours: "0",
     minutes: "50",
@@ -142,7 +169,7 @@ test("locking time keeps the target fixed while distance changes", () => {
   assert.equal(view.cards.speed.inputValue, "6");
   assert.equal(
     view.statusMessage,
-    "Time locked. Drag distance to see the required pace and speed."
+    "Time goal locked. Drag distance to see the pace and speed you need."
   );
 });
 
@@ -156,7 +183,11 @@ test("locking pace keeps the effort fixed while distance changes", () => {
 
   assert.equal(view.lockMetric, "pace");
   assert.equal(view.driverMetric, DRIVER_METRICS.PACE);
-  assert.equal(view.cards.pace.stateLabel, "Locked");
+  assert.equal(view.cards.pace.stateLabel, "Goal");
+  assert.equal(view.cards.pace.editorHidden, true);
+  assert.equal(view.cards.pace.displayValue, "05:00 /km");
+  assert.equal(view.cards.time.stateLabel, "Auto");
+  assert.equal(view.cards.speed.stateLabel, "Auto");
   assert.deepEqual(view.cards.pace.inputValues, {
     minutes: "5",
     seconds: "00"
@@ -169,7 +200,7 @@ test("locking pace keeps the effort fixed while distance changes", () => {
   assert.equal(view.cards.speed.inputValue, "12");
   assert.equal(
     view.statusMessage,
-    "Pace locked. Drag distance to update the finish time."
+    "Pace goal locked. Drag distance to see the finish time it produces."
   );
 });
 

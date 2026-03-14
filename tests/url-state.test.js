@@ -154,6 +154,8 @@ function createEnvironment(search = "") {
     "pace-secondary",
     "pace-seconds",
     "pace-state",
+    "pace-editor",
+    "pace-value",
     "projection-5k",
     "projection-10k",
     "projection-half",
@@ -170,6 +172,8 @@ function createEnvironment(search = "") {
     "speed-label",
     "speed-secondary",
     "speed-state",
+    "speed-editor",
+    "speed-value",
     "status-message",
     "time-card",
     "time-driver-button",
@@ -179,7 +183,9 @@ function createEnvironment(search = "") {
     "time-minutes",
     "time-secondary",
     "time-seconds",
-    "time-state"
+    "time-state",
+    "time-editor",
+    "time-value"
   ];
 
   for (const id of ids) {

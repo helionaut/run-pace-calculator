@@ -1,17 +1,19 @@
 :root {
   --bg: #f3ead8;
   --bg-deep: #17382f;
-  --surface: rgba(255, 248, 239, 0.88);
-  --surface-strong: rgba(255, 252, 247, 0.96);
-  --surface-muted: rgba(249, 241, 230, 0.72);
+  --surface: rgba(255, 248, 239, 0.9);
+  --surface-strong: rgba(255, 252, 247, 0.97);
+  --surface-muted: rgba(246, 238, 228, 0.88);
   --line: rgba(23, 56, 47, 0.14);
   --line-strong: rgba(23, 56, 47, 0.28);
   --text: #17382f;
   --muted: #56685f;
   --accent: #e6803d;
-  --accent-soft: rgba(230, 128, 61, 0.12);
-  --locked: #1d6c5b;
-  --locked-soft: rgba(29, 108, 91, 0.14);
+  --accent-soft: rgba(230, 128, 61, 0.16);
+  --goal: #f08c2d;
+  --goal-soft: rgba(240, 140, 45, 0.2);
+  --adjust: #1d6c5b;
+  --adjust-soft: rgba(29, 108, 91, 0.14);
   --danger: #a0431f;
   --danger-soft: rgba(160, 67, 31, 0.1);
   --shadow: 0 24px 60px rgba(23, 56, 47, 0.12);
@@ -54,27 +56,20 @@ body::before {
 }
 
 .page-shell {
-  width: min(1180px, 100%);
+  width: min(980px, 100%);
   margin: 0 auto;
   padding: 24px;
 }
 
 .app-frame {
   display: grid;
-  gap: 18px;
-  padding: 24px;
+  gap: 16px;
+  padding: 20px;
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
   background: var(--surface);
   box-shadow: var(--shadow);
   backdrop-filter: blur(18px);
-}
-
-.app-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 20px;
-  align-items: start;
 }
 
 .app-header__copy {
@@ -83,31 +78,24 @@ body::before {
 }
 
 .app-header__copy h1,
-.distance-panel__summary h2,
-.metric-card__header h2 {
+.distance-strip__summary h2,
+.metric-panel__head h2,
+.metric-value {
   margin: 0;
   font-family: var(--display-font);
   letter-spacing: -0.03em;
 }
 
 .app-header__copy h1 {
-  max-width: 14ch;
-  font-size: clamp(2.1rem, 1.4rem + 2vw, 3.4rem);
+  max-width: 16ch;
+  font-size: clamp(1.9rem, 1.55rem + 1.35vw, 2.8rem);
   line-height: 0.98;
 }
 
-.distance-panel__summary h2,
-.metric-card__header h2 {
-  font-size: clamp(1.5rem, 1.2rem + 1vw, 2.2rem);
+.distance-strip__summary h2,
+.metric-panel__head h2 {
+  font-size: clamp(1.35rem, 1.15rem + 0.85vw, 1.95rem);
   line-height: 1;
-}
-
-.app-header__controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  justify-content: flex-end;
 }
 
 .eyebrow,
@@ -138,9 +126,21 @@ summary,
 }
 
 .status-message,
-.metric-secondary {
+.metric-secondary,
+.projection-copy,
+caption,
+tbody th {
   color: var(--muted);
+}
+
+.status-message {
   font-size: 0.98rem;
+}
+
+.metric-secondary,
+.projection-copy,
+caption {
+  font-size: 0.94rem;
 }
 
 .status-message--error,
@@ -148,30 +148,45 @@ summary,
   color: var(--danger);
 }
 
-.distance-panel,
-.metric-card,
+.calculator-panel,
 .projection-panel {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--surface-strong);
 }
 
-.distance-panel {
+.calculator-panel {
+  overflow: hidden;
+}
+
+.distance-strip {
   display: grid;
   gap: 14px;
   padding: 18px;
+  background:
+    linear-gradient(140deg, rgba(255, 255, 255, 0.75), rgba(249, 241, 230, 0.88));
+  border-bottom: 1px solid var(--line);
 }
 
-.distance-panel__top {
-  display: grid;
-  grid-template-columns: minmax(220px, 0.8fr) minmax(180px, 0.5fr);
+.distance-strip__summary {
+  display: flex;
+  justify-content: space-between;
   gap: 16px;
-  align-items: end;
+  align-items: start;
 }
 
-.distance-panel__summary {
+.distance-strip__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.distance-strip__entry {
   display: grid;
-  gap: 8px;
+  grid-template-columns: minmax(190px, 240px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: end;
 }
 
 .distance-slider {
@@ -180,7 +195,7 @@ summary,
   height: 14px;
   border-radius: 999px;
   background:
-    linear-gradient(90deg, rgba(29, 108, 91, 0.18), rgba(230, 128, 61, 0.22));
+    linear-gradient(90deg, rgba(29, 108, 91, 0.18), rgba(230, 128, 61, 0.24));
   cursor: pointer;
 }
 
@@ -199,9 +214,9 @@ summary,
 
 .distance-slider::-webkit-slider-thumb {
   appearance: none;
-  width: 26px;
-  height: 26px;
-  margin-top: -6px;
+  width: 24px;
+  height: 24px;
+  margin-top: -5px;
   border: 0;
   border-radius: 50%;
   background: var(--bg-deep);
@@ -209,8 +224,8 @@ summary,
 }
 
 .distance-slider::-moz-range-thumb {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border: 0;
   border-radius: 50%;
   background: var(--bg-deep);
@@ -221,51 +236,56 @@ summary,
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  align-items: center;
 }
 
-.metrics-grid {
+.metric-stack {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
 }
 
-.metric-card {
+.metric-panel {
   display: grid;
-  gap: 16px;
-  min-height: 240px;
-  padding: 18px;
+  gap: 12px;
+  padding: 16px 18px;
+  border-top: 1px solid var(--line);
   transition:
-    transform 180ms ease,
-    border-color 180ms ease,
     background-color 180ms ease,
-    box-shadow 180ms ease;
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
 }
 
-.metric-card--input {
-  border-color: rgba(230, 128, 61, 0.42);
+.metric-panel:first-child {
+  border-top: 0;
+}
+
+.metric-panel--adjust {
   background:
-    linear-gradient(160deg, rgba(230, 128, 61, 0.16), rgba(255, 252, 247, 0.98));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    linear-gradient(135deg, rgba(29, 108, 91, 0.1), rgba(255, 252, 247, 0.98));
 }
 
-.metric-card--derived {
-  background: var(--surface-muted);
-}
-
-.metric-card--locked {
-  border-color: rgba(29, 108, 91, 0.42);
+.metric-panel--goal {
   background:
-    linear-gradient(160deg, rgba(29, 108, 91, 0.16), rgba(255, 252, 247, 0.98));
+    linear-gradient(135deg, rgba(255, 226, 181, 0.95), rgba(255, 247, 231, 0.98));
+  box-shadow: inset 0 0 0 1px rgba(240, 140, 45, 0.22);
 }
 
-.metric-card__header {
+.metric-panel--auto {
+  background: rgba(246, 238, 228, 0.78);
+}
+
+.metric-panel--ready {
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.metric-panel__head {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
   align-items: start;
 }
 
-.metric-card__actions {
+.metric-panel__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -273,49 +293,72 @@ summary,
   align-items: center;
 }
 
+.metric-panel__body {
+  display: grid;
+  gap: 10px;
+}
+
 .metric-state {
   display: inline-flex;
   align-items: center;
-  padding: 9px 12px;
+  padding: 8px 12px;
   border: 1px solid rgba(23, 56, 47, 0.12);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.7);
   color: var(--muted);
 }
 
-.metric-card--input .metric-state {
-  border-color: rgba(230, 128, 61, 0.2);
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
-.metric-card--locked .metric-state {
+.metric-panel--adjust .metric-state {
   border-color: rgba(29, 108, 91, 0.2);
-  background: var(--locked-soft);
-  color: var(--locked);
+  background: var(--adjust-soft);
+  color: var(--adjust);
 }
 
-.metric-inputs {
+.metric-panel--goal .metric-state {
+  border-color: rgba(240, 140, 45, 0.26);
+  background: var(--goal-soft);
+  color: #8d4c17;
+}
+
+.metric-panel--auto .metric-state {
+  border-color: rgba(23, 56, 47, 0.16);
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.metric-panel--ready .metric-state {
+  border-style: dashed;
+}
+
+.metric-value {
+  font-size: clamp(1.6rem, 1.35rem + 1vw, 2.35rem);
+  line-height: 0.96;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-panel--goal .metric-value {
+  color: #8d4c17;
+}
+
+.metric-editor {
   display: grid;
   gap: 12px;
 }
 
-.metric-inputs--pair {
+.metric-editor--pair {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.metric-inputs--triplet {
+.metric-editor--triplet {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .field {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .field--distance {
   max-width: 240px;
-  justify-self: end;
 }
 
 .field span {
@@ -324,10 +367,10 @@ summary,
 
 input {
   width: 100%;
-  padding: 14px 16px;
+  padding: 12px 14px;
   border: 1px solid rgba(23, 56, 47, 0.12);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.84);
   color: var(--text);
   font: inherit;
   font-size: 1rem;
@@ -424,11 +467,18 @@ input:disabled {
 
 .chip-button--soft.is-active,
 .chip-button--soft[aria-pressed="true"] {
-  background: var(--locked);
+  background: #8d4c17;
+  color: #fff8f1;
+}
+
+.ghost-button.is-active,
+.ghost-button[aria-pressed="true"] {
+  border-color: rgba(29, 108, 91, 0.26);
+  background: rgba(29, 108, 91, 0.12);
 }
 
 button:disabled {
-  opacity: 0.56;
+  opacity: 0.62;
   cursor: not-allowed;
   transform: none;
 }
@@ -466,7 +516,6 @@ button:disabled {
 
 .projection-copy,
 caption {
-  color: var(--muted);
   text-align: left;
 }
 
@@ -477,11 +526,6 @@ caption {
 
 caption {
   padding: 0 0 10px;
-  font-family: var(--label-font);
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
 }
 
 table {
@@ -496,10 +540,6 @@ td {
   border-bottom: 1px solid rgba(23, 56, 47, 0.08);
   text-align: left;
   overflow-wrap: anywhere;
-}
-
-tbody th {
-  color: var(--muted);
 }
 
 .table-placeholder td,
@@ -518,26 +558,25 @@ td {
   font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 980px) {
-  .app-header,
-  .metrics-grid,
-  .distance-panel__top {
+@media (max-width: 860px) {
+  .distance-strip__summary,
+  .distance-strip__entry,
+  .metric-panel__head {
     grid-template-columns: 1fr;
+  }
+
+  .distance-strip__summary,
+  .metric-panel__head {
+    display: grid;
+  }
+
+  .distance-strip__controls,
+  .metric-panel__actions {
+    justify-content: flex-start;
   }
 
   .field--distance {
     max-width: none;
-    justify-self: stretch;
-  }
-}
-
-@media (max-width: 760px) {
-  .metric-inputs--triplet {
-    grid-template-columns: 1fr;
-  }
-
-  .metric-inputs--pair {
-    grid-template-columns: 1fr;
   }
 }
 
@@ -550,16 +589,10 @@ td {
     padding: 18px;
   }
 
-  .metric-card {
-    min-height: 0;
-  }
-
-  .metric-card__header {
-    flex-direction: column;
-  }
-
-  .metric-card__actions {
-    justify-content: flex-start;
+  .metric-editor--triplet,
+  .metric-editor--pair,
+  .distance-strip__entry {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -572,8 +605,8 @@ td {
     padding: 14px;
   }
 
-  .distance-panel,
-  .metric-card,
+  .distance-strip,
+  .metric-panel,
   .projection-table {
     padding-inline: 14px;
   }
