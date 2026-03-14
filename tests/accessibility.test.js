@@ -58,8 +58,13 @@ test("validation text and 320 px layout safeguards are present in the shipped fi
     html,
     /id="status-message"[\s\S]*role="status"[\s\S]*aria-live="polite"[\s\S]*aria-atomic="true"/
   );
+  assert.match(html, /<h3 id="split-heading">Selected-distance splits<\/h3>/);
+  assert.match(html, /id="split-copy"/);
+  assert.match(html, /<tbody id="split-rows">[\s\S]*?Enter valid values to calculate\./);
+  assert.match(html, /<table class="split-table" aria-describedby="split-copy">/);
   assert.match(css, /input\[aria-invalid="true"\],\s*select\[aria-invalid="true"\]/);
   assert.match(css, /table\s*{\s*width: 100%;\s*table-layout: fixed;/);
+  assert.match(css, /\.table-shell--compact\s*{\s*max-height: 320px;\s*overflow: auto;/);
   assert.match(css, /overflow-wrap: anywhere;/);
   assert.match(
     css,

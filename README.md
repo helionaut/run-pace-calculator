@@ -12,6 +12,7 @@ Production URL: https://helionaut.github.io/run-pace-calculator/
 - Pace, speed, finish-time, and conversion modes
 - Metric and imperial conversions
 - Projection table from one mile through the marathon
+- Selected-distance split table with kilometer or mile targets
 - Shareable deep links for valid calculator scenarios, with malformed query
   state falling back to a clean default calculator
 - Responsive layout with inline validation and keyboard-operable mode tabs
@@ -142,7 +143,16 @@ npm run handoff:prepare
 
 By default that writes verified artifacts into `.handoff/<issue-key>`, using
 the issue key parsed from the current branch name. That directory stays in the
-workspace and is ignored by git. You can still pass an explicit output path:
+workspace and is ignored by git. The generated handoff now includes:
+
+- `<bundle-name>.bundle` for the branch history itself
+- `<issue-key>-handoff-manifest.json` for manifest-backed verification
+- `SUMMARY.md` with the current blocker snapshot and resume steps
+- `resume-handoff.sh` for restoring into another writable checkout
+- `SHA256SUMS` for artifact integrity checks
+- `<issue-key>-handoff.tar.gz` as a packaged archive of the same files
+
+You can still pass an explicit output path:
 
 ```sh
 npm run handoff:prepare -- /tmp/hel-8-handoff
@@ -154,8 +164,17 @@ To verify the exported handoff before resuming elsewhere:
 npm run handoff:verify -- .handoff/<issue-key>/<issue-key>-handoff-manifest.json
 ```
 
-To import the included bundle into another writable checkout and publish it
-from there:
+To resume from the generated helper in another writable checkout:
+
+```sh
+.handoff/<issue-key>/resume-handoff.sh /path/to/repo --validate --dry-run-publish
+```
+
+That verifies the packaged artifacts, imports the bundled branch into the
+target checkout, optionally runs `npm run check`, and optionally rehearses the
+publish flow with `npm run pr:dry-run`.
+
+You can still import the included bundle manually and publish it from there:
 
 ```sh
 git -C /path/to/repo fetch .handoff/<issue-key>/<bundle-name>.bundle <branch>:<branch>
@@ -186,7 +205,11 @@ GitHub repository URL if the workspace was bootstrapped from the local mirror,
 then pushes the current branch and creates or updates the PR from
 `docs/pull-request-draft.md`. If GitHub auth or network checks fail first, it
 now writes a full handoff directory to `.handoff/<issue-key>` by default
-instead of only exporting a raw bundle to `/tmp`.
+instead of only exporting a raw bundle to `/tmp`. The generated handoff now
+includes a packaged archive, a resume helper, and checksum metadata in addition
+to the bundle, manifest, and summary. `.handoff/<issue-key>/SUMMARY.md` also
+records the detected publish blockers so the next environment does not have to
+rediscover the same auth, DNS, or HTTPS failures before resuming.
 
 To rehearse that flow without network access:
 
