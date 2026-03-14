@@ -4,8 +4,8 @@
   distance
 - render a compact selected-distance split table in the summary area and
   include final partial rows for half marathon and marathon distances
-- expand automated coverage for metric, imperial, half-marathon, and marathon
-  split behavior plus compact split-table markup
+- expand automated coverage for metric, imperial, half-marathon, marathon,
+  and immediate split-update behavior plus compact split-table markup
 - strengthen publish and handoff automation so detached-HEAD CI runs keep the
   correct branch metadata, same-branch handoff restores succeed, and
   regenerated handoff summaries preserve the latest auth and network blocker
@@ -14,6 +14,7 @@
 ## Testing
 
 - [x] `node --test tests/handoff.test.js`
+- [x] `npm test -- tests/calculator.test.js`
 - [x] `npm test`
 - [x] `npm run build`
 - [x] Other: `npm run check`
