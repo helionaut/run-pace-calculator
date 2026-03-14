@@ -1,13 +1,13 @@
-<!-- PR_TITLE: Make calculator a single-card one-screen mobile tool -->
+<!-- PR_TITLE: Replace lock-based calculator with implicit last-two-input solving -->
 
 ## Summary
 
-- collapse the mobile UI into one dense calculator card instead of a
-  header plus separate metric and disclosure sections
-- keep distance, pace, speed, finish time, and common race projections
-  visible together while shortening status and lock copy
-- drop the rendered split section, keep the DOM renderer tolerant of the
-  compact shell, and update the tests/docs to match the new layout
+- replace the lock-based calculator state with implicit last-two-input
+  solving across distance, movement rate, and time
+- combine pace and speed into a single movement-rate card and tighten the
+  mobile layout so the calculator fits on one phone screen
+- update deep-link serialization, dist verification, and reducer/DOM
+  tests for the new interaction model
 
 ## Testing
 
@@ -17,12 +17,12 @@
 
 ## Risks
 
-- Medium: the markup and CSS changed substantially, so visual regressions
-  on small screens are the main thing to watch
-- Low: the calculator math and deep-link serialization stay on the
-  existing logic path and remain covered by automated tests
-- Low: this environment could not complete a browser screenshot capture
-  because the host is missing Playwright browser dependencies
+- Medium: the calculator state and URL model changed substantially, so any
+  saved deep links from the old lock-based format should be rechecked
+- Low: the layout is intentionally tight on mobile, so extra copy or new
+  controls could push the projection strip below the first viewport again
+- Low: pace/speed displays round to user-facing precision while a
+  canonical internal rate preserves exact time math across unit switches
 
 ## Checklist
 
@@ -32,9 +32,9 @@
 
 Preview notes:
 
-- The calculator now opens as a single dense card with no standalone
-  header or extra disclosure panels.
-- Locked pace and time stay visually distinct while the projection strip
-  remains visible inside the same card.
-- Browser screenshot capture was attempted, but the host is missing the
-  Playwright runtime libraries needed to launch Chromium here.
+- Desktop screenshot reviewed at `/tmp/hel24-shots/desktop-pace.png`.
+- Mobile screenshots reviewed at `/tmp/hel24-shots/mobile-pace.png` and
+  `/tmp/hel24-shots/mobile-time.png`; both fit an iPhone 13 viewport with
+  no scrolling.
+- The same mobile review screenshots were posted to Telegram topic `7`
+  before publishing.
