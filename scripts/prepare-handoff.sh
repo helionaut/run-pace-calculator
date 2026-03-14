@@ -110,6 +110,12 @@ file_size() {
   stat -f '%z' "$1"
 }
 
+for existing_bundle in "$output_dir"/"${repo_slug}"-*.bundle; do
+  if [[ -e "$existing_bundle" && "$existing_bundle" != "$bundle_path" ]]; then
+    rm -f "$existing_bundle"
+  fi
+done
+
 existing_blocker_snapshot=""
 if [[ -z "${HANDOFF_BLOCKER_SNAPSHOT:-}" && -f "$summary_path" ]]; then
   existing_blocker_snapshot="$(

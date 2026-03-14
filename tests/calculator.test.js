@@ -11,7 +11,9 @@ import {
   createFormState,
   deriveCalculatorView,
   formatDistanceInputValue,
+  restoreCalculatorState,
   resetFormState,
+  serializeCalculatorState,
   updateDistanceInput,
   updateInputValue
 } from "../src/lib/calculator.js";
@@ -479,4 +481,88 @@ test("preset distances render exact converted miles from canonical kilometers", 
   assert.equal(formatDistanceInputValue(10, "mi"), "6.21371");
   assert.equal(formatDistanceInputValue(21.0975, "mi"), "13.10938");
   assert.equal(formatDistanceInputValue(42.195, "mi"), "26.21876");
+});
+
+test("serialize and restore preserve a valid finish-mode custom-distance scenario", () => {
+  const state = buildState(
+    {
+      mode: MODES.FINISH,
+      unit: "mi",
+      presetId: "custom"
+    },
+    {
+      distance: "6.5",
+      paceMinutes: "8",
+      paceSeconds: "15"
+    }
+  );
+
+  const search = serializeCalculatorState(state);
+  const restored = restoreCalculatorState(new URLSearchParams(search));
+
+  assert.equal(search, "mode=finish&unit=mi&preset=custom&distance=6.5&pm=8&ps=15");
+  assert.equal(restored.mode, MODES.FINISH);
+  assert.equal(restored.unit, "mi");
+  assert.equal(restored.presetId, "custom");
+  assert.equal(restored.inputs.distance, "6.5");
+  assert.equal(restored.inputs.paceMinutes, "8");
+  assert.equal(restored.inputs.paceSeconds, "15");
+  assert.equal(deriveCalculatorView(restored).resultState, "current");
+});
+
+test("serialize and restore preserve the active convert-source selection", () => {
+  const state = buildState(
+    {
+      mode: MODES.CONVERT,
+      unit: "mi",
+      convertSource: CONVERT_SOURCES.SPEED
+    },
+    {
+      speed: "7.5"
+    }
+  );
+
+  const search = serializeCalculatorState(state);
+  const restored = restoreCalculatorState(new URLSearchParams(search));
+
+  assert.equal(search, "mode=convert&unit=mi&source=speed&speed=7.5");
+  assert.equal(restored.mode, MODES.CONVERT);
+  assert.equal(restored.unit, "mi");
+  assert.equal(restored.convertSource, CONVERT_SOURCES.SPEED);
+  assert.equal(restored.inputs.speed, "7.5");
+  assert.equal(restored.inputs.paceMinutes, "");
+  assert.equal(restored.inputs.paceSeconds, "");
+  assert.equal(deriveCalculatorView(restored).showSpeedFields, true);
+});
+
+test("malformed query state falls back to the default calculator", () => {
+  const restored = restoreCalculatorState(
+    new URLSearchParams("mode=convert&unit=km&source=speed&speed=12&pm=5")
+  );
+
+  assert.deepEqual(restored, createFormState());
+});
+
+test("blank or invalid calculator state serializes to a clean URL", () => {
+  const partialState = buildState(
+    { mode: MODES.PACE },
+    {
+      distance: "10",
+      finishHours: "0",
+      finishMinutes: "",
+      finishSeconds: "0"
+    }
+  );
+
+  assert.equal(serializeCalculatorState(createFormState()), "");
+  assert.equal(serializeCalculatorState(partialState), "");
+});
+
+test("empty finish-mode state stays empty and serializes to a clean URL", () => {
+  const finishState = buildState({ mode: MODES.FINISH });
+  const view = deriveCalculatorView(finishState);
+
+  assert.equal(view.resultState, "empty");
+  assert.equal(view.currentResult, null);
+  assert.equal(serializeCalculatorState(finishState), "");
 });

@@ -13,6 +13,8 @@ Production URL: https://helionaut.github.io/run-pace-calculator/
 - Metric and imperial conversions
 - Projection table from one mile through the marathon
 - Selected-distance split table with kilometer or mile targets
+- Shareable deep links for valid calculator scenarios, with malformed query
+  state falling back to a clean default calculator
 - Responsive layout with inline validation and keyboard-operable mode tabs
 - Zero-dependency static build suitable for GitHub Pages
 - Product docs for the PRD, requirements, and implementation plan
@@ -96,8 +98,9 @@ short explicit error instead of a server traceback.
 
 - `src/index.html` contains the calculator UI shell.
 - `src/styles.css` defines the calculator interface and responsive layout.
-- `src/main.js` wires DOM events and rendering.
-- `src/lib/calculator.js` contains the shared conversion and formatting logic.
+- `src/main.js` wires DOM events, rendering, and URL-state syncing.
+- `src/lib/calculator.js` contains the shared conversion, formatting, and
+  URL serialization logic.
 - `src/lib/mode-navigation.js` contains the keyboard tab-navigation helper.
 - `tests/*.test.js` covers calculator logic, build/serve harness behavior,
   handoff verification, import flow, and mode navigation.

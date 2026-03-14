@@ -28,13 +28,20 @@
 
 ## Risks
 
-- GitHub push and PR creation are still blocked in this sandbox because
-  `github.com` DNS resolution and `gh` auth are unavailable here.
 - Long custom distances rely on the split table's bounded scroll area to stay
   within the one-screen layout.
 - The branch includes handoff-workflow polish alongside the calculator feature,
   so the eventual PR should be published from this updated draft rather than an
   earlier feature-only version.
+
+## Preview Notes
+
+- the summary area now shows a compact selected-distance split table directly
+  beside the primary result cards
+- metric mode renders kilometer rows, imperial mode renders mile rows, and
+  non-whole race distances end with a highlighted final partial split row
+- long split lists rely on the bounded table area to stay within the one-screen
+  layout
 
 ## Checklist
 

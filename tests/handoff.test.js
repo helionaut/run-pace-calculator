@@ -2,7 +2,16 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { chmod, mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  cp,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  stat,
+  writeFile
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -765,4 +774,59 @@ exit 1
   assert.match(resumeResult.stdout, /Would create a PR with: gh pr create --head/);
   assert.equal(git(["rev-parse", "--abbrev-ref", "HEAD"], targetRepo), branch);
   assert.equal(git(["rev-parse", "HEAD"], targetRepo), featureHead);
+});
+
+test("prepare-handoff replaces stale bundle names when the branch name changes", async () => {
+  const fixtureRoot = process.cwd();
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "hel-17-handoff-refresh."));
+  const repoDir = path.join(tempRoot, "repo");
+  const outputDir = path.join(tempRoot, "handoff");
+
+  await cp(fixtureRoot, repoDir, {
+    recursive: true,
+    filter(source) {
+      const relativePath = path.relative(fixtureRoot, source);
+
+      if (relativePath === "") {
+        return true;
+      }
+
+      const topLevel = relativePath.split(path.sep)[0];
+      return ![".git", ".handoff", "dist", "node_modules"].includes(topLevel);
+    }
+  });
+
+  git(["init", "-b", "main"], repoDir);
+  git(["config", "user.name", "Codex"], repoDir);
+  git(["config", "user.email", "codex@example.com"], repoDir);
+  git(["add", "."], repoDir);
+  git(["commit", "-m", "Fixture commit"], repoDir);
+  git(["branch", "-m", "feature/old-name"], repoDir);
+
+  const firstRun = spawnSync("bash", ["scripts/prepare-handoff.sh", outputDir], {
+    cwd: repoDir,
+    encoding: "utf8"
+  });
+  assert.equal(firstRun.status, 0, firstRun.stderr);
+
+  git(["branch", "-m", "feature/new-name"], repoDir);
+
+  const secondRun = spawnSync("bash", ["scripts/prepare-handoff.sh", outputDir], {
+    cwd: repoDir,
+    encoding: "utf8"
+  });
+  assert.equal(secondRun.status, 0, secondRun.stderr);
+
+  const files = await readdir(outputDir);
+  const bundleFiles = files.filter((file) => file.endsWith(".bundle"));
+  const manifestPath = path.join(outputDir, "HEL-8-handoff-manifest.json");
+
+  assert.deepEqual(bundleFiles, ["run-pace-calculator-feature-new-name.bundle"]);
+
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  assert.equal(manifest.branch, "feature/new-name");
+  assert.equal(manifest.artifacts[0].path, "run-pace-calculator-feature-new-name.bundle");
+
+  const result = await verifyManifest(manifestPath);
+  assert.equal(result.branch, "feature/new-name");
 });

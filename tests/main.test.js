@@ -234,7 +234,23 @@ async function loadApp() {
   const previousWindow = globalThis.window;
 
   globalThis.document = document;
-  globalThis.window = { document };
+  globalThis.window = {
+    document,
+    history: {
+      replaceState(_state, _title, url) {
+        const parsed = new URL(url, "https://example.test");
+
+        globalThis.window.location.pathname = parsed.pathname;
+        globalThis.window.location.search = parsed.search;
+        globalThis.window.location.hash = parsed.hash;
+      }
+    },
+    location: {
+      hash: "",
+      pathname: "/index.html",
+      search: ""
+    }
+  };
 
   importCounter += 1;
   await import(new URL(`../src/main.js?test=${importCounter}`, import.meta.url).href);
