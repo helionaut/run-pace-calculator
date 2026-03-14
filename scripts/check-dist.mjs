@@ -17,9 +17,12 @@ async function main() {
     "<title>Run Pace Calculator</title>",
     '<link rel="icon" type="image/svg+xml" href="./favicon.svg" />',
     '<script type="module" src="./main.js"></script>',
+    'id="distance-card"',
     'id="distance-slider"',
-    'id="pace-lock-button"',
-    'id="time-lock-button"',
+    'id="rate-card"',
+    'id="time-card"',
+    'id="pace-minutes"',
+    'id="speed-input"',
     'id="projection-marathon"',
   ];
 
