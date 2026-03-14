@@ -14,10 +14,18 @@ import {
 } from "./lib/calculator.js";
 
 function setTextContent(element, value) {
+  if (!element) {
+    return;
+  }
+
   element.textContent = value;
 }
 
 function setInputValue(element, value) {
+  if (!element) {
+    return;
+  }
+
   if (element.value !== value) {
     element.value = value;
   }
@@ -27,13 +35,20 @@ function setInvalid(inputs, message) {
   const hasError = Boolean(message);
 
   for (const input of inputs) {
+    if (!input) {
+      continue;
+    }
+
     input.setAttribute("aria-invalid", String(hasError));
   }
 }
 
 function renderError(errorElement, inputs, message) {
-  errorElement.textContent = message ?? "";
-  errorElement.classList.toggle("is-visible", Boolean(message));
+  if (errorElement) {
+    errorElement.textContent = message ?? "";
+    errorElement.classList.toggle("is-visible", Boolean(message));
+  }
+
   setInvalid(inputs, message);
 }
 
@@ -70,10 +85,10 @@ function renderLockButton(button, cardView) {
 }
 
 function renderCardState(card, tone) {
-  card.classList.toggle("metric-panel--adjust", tone === "adjust");
-  card.classList.toggle("metric-panel--goal", tone === "goal");
-  card.classList.toggle("metric-panel--auto", tone === "auto");
-  card.classList.toggle("metric-panel--ready", tone === "ready");
+  card.classList.toggle("metric-row--adjust", tone === "adjust");
+  card.classList.toggle("metric-row--goal", tone === "goal");
+  card.classList.toggle("metric-row--auto", tone === "auto");
+  card.classList.toggle("metric-row--ready", tone === "ready");
 }
 
 function renderPaceCard(elements, view, driverButtonView) {
@@ -157,6 +172,10 @@ function createPlaceholderRow(message) {
 }
 
 function renderSplitRows(elements, view) {
+  if (!elements.splitHeading || !elements.splitCopy || !elements.splitRows) {
+    return;
+  }
+
   setTextContent(elements.splitHeading, view.heading);
   setTextContent(elements.splitCopy, view.meta);
 
