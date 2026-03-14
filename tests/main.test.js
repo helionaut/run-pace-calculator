@@ -342,8 +342,10 @@ test("unit switch updates quick-distance chip labels for the selected unit", () 
   assert.equal(elements.presetButtons[0].textContent, "5 mi");
   assert.equal(elements.presetButtons[1].dataset.preset, "10mi");
   assert.equal(elements.presetButtons[1].textContent, "10 mi");
-  assert.equal(elements.presetButtons[2].textContent, "13.1 mi");
-  assert.equal(elements.presetButtons[3].textContent, "26.2 mi");
+  assert.equal(elements.presetButtons[2].dataset.preset, "half");
+  assert.equal(elements.presetButtons[2].textContent, "Half Marathon");
+  assert.equal(elements.presetButtons[3].dataset.preset, "marathon");
+  assert.equal(elements.presetButtons[3].textContent, "Marathon");
 });
 
 test("slider input rounds mile distances to at most two decimals", () => {

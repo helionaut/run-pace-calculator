@@ -1,29 +1,27 @@
-<!-- PR_TITLE: Tighten top row and normalize unit-specific distance controls -->
+<!-- PR_TITLE: Keep half-marathon and marathon labels stable across unit switch -->
 
 ## Summary
 
-- tighten the calculator header so the helper/status copy sits inline with
-  the unit toggle and reset controls instead of taking its own row
-- swap the quick distance chips to unit-aware labels and values in miles
-  mode, while preserving the existing kilometer-side presets
-- round slider-driven distance selections to at most two decimals in the
-  active unit and add calculator/DOM tests for the new behavior
+- keep the mile-mode `Half Marathon` and `Marathon` quick preset labels
+  canonical instead of renaming them to `13.1 mi` and `26.2 mi`
+- leave the generic quick buttons unitized in miles as `5 mi` and `10 mi`
+- add calculator-view and DOM regression coverage so the race-name labels stay
+  stable while the selected distance summary still shows the native mile value
 
 ## Testing
 
 - [x] `npm test`
 - [x] `npm run build`
 - [x] `npm run check`
+- [x] `node --test tests/calculator.test.js tests/main.test.js`
 
 ## Risks
 
-- Low: the inline status copy now truncates on narrow widths to keep the top
-  row compact, so future helper text should stay short
-- Low: mile-mode quick chips intentionally use native mile distances, so a
-  converted kilometer default remains a custom selection after a unit switch
-- Low: slider interaction now snaps to two-decimal precision in the active
-  unit, which trades a small amount of fine-grained range control for cleaner
-  displayed values
+- Low: the fix only changes the mile quick-preset labels for half marathon and
+  marathon, so any future preset additions still need explicit label coverage
+- Low: half-marathon and marathon selections in mile mode still use the native
+  `13.1 mi` and `26.2 mi` distances, which remains important for race-name
+  buttons that no longer expose the number directly
 
 ## Checklist
 
@@ -33,12 +31,12 @@
 
 Preview notes:
 
-- Desktop screenshot reviewed at
-  `/home/helionaut/workspaces/HEL-26/screenshots/hel-26-desktop-default.png`.
-- Desktop miles-state screenshot reviewed at
-  `/home/helionaut/workspaces/HEL-26/screenshots/hel-26-desktop-mi.png`.
-- Mobile miles-state screenshot reviewed at
-  `/home/helionaut/workspaces/HEL-26/screenshots/hel-26-mobile-mi.png`.
-- The screenshots matched the issue request: thinner top row, inline helper
-  copy, unit-aware mile chips, and two-decimal distance display after the
-  slider-driven selection.
+- Desktop miles-state screenshot reviewed locally with the half-marathon preset
+  active; the button label stayed `Half Marathon` while the distance summary
+  showed `13.1 mi`.
+- Mobile miles-state screenshot reviewed locally with the marathon preset
+  active; the button label stayed `Marathon` while the distance summary showed
+  `26.2 mi`.
+- The screenshots matched the issue request: only the generic numeric quick
+  buttons changed to mile labels, while the two race-name presets stayed
+  canonical across the unit switch.
