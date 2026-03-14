@@ -1,1 +1,1 @@
-Stabilize publish fixtures on main
+Make calculator a single-card one-screen mobile tool
