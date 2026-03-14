@@ -22,9 +22,10 @@ Deliver the first public working slice with:
      lock-driven recalculation behavior.
 3. UI
    - Built a responsive one-screen calculator with a live distance slider,
-     preset chips, and visible pace, speed, and finish-time cards.
-   - Added clear input, derived, and locked states plus a compact projection
-     disclosure for common running distances.
+     preset chips, and dense pace, speed, and finish-time rows inside a single
+     primary surface.
+   - Added clear input, derived, and locked states plus an inline projection
+     strip for common running distances.
 4. Deployment
    - Added a GitHub Pages workflow that builds and deploys `dist/`.
 5. Product docs

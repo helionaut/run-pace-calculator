@@ -16,378 +16,332 @@
   </head>
   <body>
     <main class="page-shell">
-      <section class="app-frame">
-        <header class="app-header">
-          <div class="app-header__copy">
-            <p class="eyebrow">Run Pace Calculator</p>
-            <h1>One compact surface for distance, goal time, pace, and speed.</h1>
-            <p
-              class="status-message"
-              id="status-message"
-              role="status"
-              aria-live="polite"
-              aria-atomic="true"
-            ></p>
-          </div>
-        </header>
+      <section class="calculator-panel" aria-labelledby="app-title">
+        <div class="tool-bar">
+          <div class="tool-bar__top">
+            <h1 id="app-title">Run Pace</h1>
 
-        <section class="calculator-panel">
-          <section class="distance-strip">
-            <div class="distance-strip__summary">
-              <div>
-                <p class="eyebrow">Distance</p>
-                <h2 id="selected-distance">10 km</h2>
-              </div>
-
-              <div class="distance-strip__controls">
-                <div class="segmented" aria-label="Distance unit">
-                  <button
-                    type="button"
-                    class="segmented__button is-active"
-                    data-unit-button
-                    data-unit="km"
-                    aria-pressed="true"
-                  >
-                    km
-                  </button>
-                  <button
-                    type="button"
-                    class="segmented__button"
-                    data-unit-button
-                    data-unit="mi"
-                    aria-pressed="false"
-                  >
-                    mi
-                  </button>
-                </div>
-
-                <button class="ghost-button" id="reset-button" type="button">
-                  Reset
-                </button>
-              </div>
-            </div>
-
-            <div class="distance-strip__entry">
-              <label class="field field--distance">
-                <span id="distance-label">Distance (km)</span>
-                <input
-                  id="distance-input"
-                  type="text"
-                  inputmode="decimal"
-                  autocomplete="off"
-                  spellcheck="false"
-                  aria-describedby="distance-error"
-                />
-              </label>
-
-              <div class="preset-row" aria-label="Race presets" role="toolbar">
+            <div class="tool-bar__actions">
+              <div class="segmented" aria-label="Distance unit">
                 <button
                   type="button"
-                  class="chip-button"
-                  data-preset-button
-                  data-preset="5k"
-                  aria-pressed="false"
-                >
-                  5K
-                </button>
-                <button
-                  type="button"
-                  class="chip-button"
-                  data-preset-button
-                  data-preset="10k"
+                  class="segmented__button is-active"
+                  data-unit-button
+                  data-unit="km"
                   aria-pressed="true"
                 >
-                  10K
+                  km
                 </button>
                 <button
                   type="button"
-                  class="chip-button"
-                  data-preset-button
-                  data-preset="half"
+                  class="segmented__button"
+                  data-unit-button
+                  data-unit="mi"
                   aria-pressed="false"
                 >
-                  Half
+                  mi
+                </button>
+              </div>
+
+              <button class="ghost-button" id="reset-button" type="button">
+                Reset
+              </button>
+            </div>
+          </div>
+          <p
+            class="status-message"
+            id="status-message"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          ></p>
+        </div>
+
+        <section class="distance-block" aria-label="Distance controls">
+          <div class="distance-block__top">
+            <label class="field field--distance">
+              <span id="distance-label">Distance (km)</span>
+              <input
+                id="distance-input"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                spellcheck="false"
+                aria-describedby="distance-error"
+              />
+            </label>
+
+            <div class="distance-block__summary">
+              <span class="eyebrow">Selected</span>
+              <p id="selected-distance">10 km</p>
+            </div>
+          </div>
+
+          <div class="preset-row" aria-label="Race presets" role="toolbar">
+            <button
+              type="button"
+              class="chip-button"
+              data-preset-button
+              data-preset="5k"
+              aria-pressed="false"
+            >
+              5K
+            </button>
+            <button
+              type="button"
+              class="chip-button"
+              data-preset-button
+              data-preset="10k"
+              aria-pressed="true"
+            >
+              10K
+            </button>
+            <button
+              type="button"
+              class="chip-button"
+              data-preset-button
+              data-preset="half"
+              aria-pressed="false"
+            >
+              Half
+            </button>
+            <button
+              type="button"
+              class="chip-button"
+              data-preset-button
+              data-preset="marathon"
+              aria-pressed="false"
+            >
+              Marathon
+            </button>
+          </div>
+
+          <input
+            id="distance-slider"
+            class="distance-slider"
+            type="range"
+            min="0.5"
+            max="60"
+            step="0.00001"
+            aria-label="Distance slider"
+            aria-describedby="distance-error"
+          />
+
+          <p class="field-error" id="distance-error" aria-live="polite"></p>
+        </section>
+
+        <section class="metric-grid" aria-label="Calculator metrics">
+          <section class="metric-row metric-row--adjust" id="pace-card">
+            <div class="metric-row__head">
+              <div class="metric-row__title">
+                <p class="eyebrow">Pace</p>
+                <h2 id="pace-label">Pace /km</h2>
+                <span class="sr-only" id="pace-state">Adjust</span>
+              </div>
+
+              <div class="metric-row__actions">
+                <button
+                  type="button"
+                  class="chip-button chip-button--soft"
+                  id="pace-lock-button"
+                  aria-pressed="false"
+                >
+                  Lock
                 </button>
                 <button
                   type="button"
-                  class="chip-button"
-                  data-preset-button
-                  data-preset="marathon"
-                  aria-pressed="false"
+                  class="ghost-button ghost-button--compact is-active"
+                  id="pace-driver-button"
+                  aria-pressed="true"
                 >
-                  Marathon
+                  Adjusting
                 </button>
               </div>
             </div>
 
-            <input
-              id="distance-slider"
-              class="distance-slider"
-              type="range"
-              min="0.5"
-              max="60"
-              step="0.00001"
-              aria-label="Distance slider"
-              aria-describedby="distance-error"
-            />
+            <div class="metric-row__body">
+              <p class="metric-value" id="pace-value" aria-live="polite" hidden>
+                --:-- /km
+              </p>
 
-            <p class="field-error" id="distance-error" aria-live="polite"></p>
+              <div class="metric-editor metric-editor--pair" id="pace-editor">
+                <label class="field">
+                  <span>Minutes</span>
+                  <input
+                    id="pace-minutes"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="--"
+                    aria-describedby="pace-state pace-error"
+                  />
+                </label>
+
+                <label class="field">
+                  <span>Seconds</span>
+                  <input
+                    id="pace-seconds"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="--"
+                    aria-describedby="pace-state pace-error"
+                  />
+                </label>
+              </div>
+
+              <p class="metric-secondary" id="pace-secondary">Also --:-- /mi</p>
+              <p class="field-error" id="pace-error" aria-live="polite"></p>
+            </div>
           </section>
 
-          <section class="metric-stack" aria-label="Calculator metrics">
-            <article class="metric-panel metric-panel--adjust" id="pace-card">
-              <div class="metric-panel__head">
-                <div>
-                  <p class="eyebrow">Pace</p>
-                  <h2 id="pace-label">Pace /km</h2>
-                </div>
-
-                <div class="metric-panel__actions">
-                  <span class="metric-state" id="pace-state">Adjust</span>
-                  <button
-                    type="button"
-                    class="chip-button chip-button--soft"
-                    id="pace-lock-button"
-                    aria-pressed="false"
-                  >
-                    Set goal
-                  </button>
-                  <button
-                    type="button"
-                    class="ghost-button ghost-button--compact is-active"
-                    id="pace-driver-button"
-                    aria-pressed="true"
-                  >
-                    Adjusting
-                  </button>
-                </div>
+          <section class="metric-row metric-row--ready" id="speed-card">
+            <div class="metric-row__head">
+              <div class="metric-row__title">
+                <p class="eyebrow">Speed</p>
+                <h2 id="speed-label">Speed (km/h)</h2>
+                <span class="sr-only" id="speed-state">Ready</span>
               </div>
 
-              <div class="metric-panel__body">
-                <p class="metric-value" id="pace-value" aria-live="polite" hidden>
-                  --:-- /km
-                </p>
-
-                <div class="metric-editor metric-editor--pair" id="pace-editor">
-                  <label class="field">
-                    <span>Minutes</span>
-                    <input
-                      id="pace-minutes"
-                      type="text"
-                      inputmode="numeric"
-                      autocomplete="off"
-                      spellcheck="false"
-                      placeholder="--"
-                      aria-describedby="pace-state pace-error"
-                    />
-                  </label>
-
-                  <label class="field">
-                    <span>Seconds</span>
-                    <input
-                      id="pace-seconds"
-                      type="text"
-                      inputmode="numeric"
-                      autocomplete="off"
-                      spellcheck="false"
-                      placeholder="--"
-                      aria-describedby="pace-state pace-error"
-                    />
-                  </label>
-                </div>
-
-                <p class="metric-secondary" id="pace-secondary">Also --:-- /mi</p>
-                <p class="field-error" id="pace-error" aria-live="polite"></p>
+              <div class="metric-row__actions">
+                <button
+                  type="button"
+                  class="ghost-button ghost-button--compact"
+                  id="speed-driver-button"
+                  aria-pressed="false"
+                >
+                  Adjust
+                </button>
               </div>
-            </article>
+            </div>
 
-            <article class="metric-panel metric-panel--ready" id="speed-card">
-              <div class="metric-panel__head">
-                <div>
-                  <p class="eyebrow">Speed</p>
-                  <h2 id="speed-label">Speed (km/h)</h2>
-                </div>
+            <div class="metric-row__body">
+              <p class="metric-value" id="speed-value" aria-live="polite">
+                --.-- km/h
+              </p>
 
-                <div class="metric-panel__actions">
-                  <span class="metric-state" id="speed-state">Ready</span>
-                  <button
-                    type="button"
-                    class="ghost-button ghost-button--compact"
-                    id="speed-driver-button"
-                    aria-pressed="false"
-                  >
-                    Adjust
-                  </button>
-                </div>
+              <div class="metric-editor" id="speed-editor" hidden>
+                <label class="field">
+                  <span>Value</span>
+                  <input
+                    id="speed-input"
+                    type="text"
+                    inputmode="decimal"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="--.--"
+                    aria-describedby="speed-state speed-error"
+                    disabled
+                  />
+                </label>
               </div>
 
-              <div class="metric-panel__body">
-                <p class="metric-value" id="speed-value" aria-live="polite">
-                  --.-- km/h
-                </p>
+              <p class="metric-secondary" id="speed-secondary">Also --.-- mph</p>
+              <p class="field-error" id="speed-error" aria-live="polite"></p>
+            </div>
+          </section>
 
-                <div class="metric-editor" id="speed-editor" hidden>
-                  <label class="field">
-                    <span>Value</span>
-                    <input
-                      id="speed-input"
-                      type="text"
-                      inputmode="decimal"
-                      autocomplete="off"
-                      spellcheck="false"
-                      placeholder="--.--"
-                      aria-describedby="speed-state speed-error"
-                      disabled
-                    />
-                  </label>
-                </div>
-
-                <p class="metric-secondary" id="speed-secondary">Also --.-- mph</p>
-                <p class="field-error" id="speed-error" aria-live="polite"></p>
-              </div>
-            </article>
-
-            <article class="metric-panel metric-panel--ready" id="time-card">
-              <div class="metric-panel__head">
-                <div>
-                  <p class="eyebrow">Finish Time</p>
-                  <h2>Goal or Result</h2>
-                </div>
-
-                <div class="metric-panel__actions">
-                  <span class="metric-state" id="time-state">Ready</span>
-                  <button
-                    type="button"
-                    class="chip-button chip-button--soft"
-                    id="time-lock-button"
-                    aria-pressed="false"
-                  >
-                    Set goal
-                  </button>
-                  <button
-                    type="button"
-                    class="ghost-button ghost-button--compact"
-                    id="time-driver-button"
-                    aria-pressed="false"
-                  >
-                    Adjust
-                  </button>
-                </div>
+          <section class="metric-row metric-row--ready" id="time-card">
+            <div class="metric-row__head">
+              <div class="metric-row__title">
+                <p class="eyebrow">Finish Time</p>
+                <h2>Goal or Result</h2>
+                <span class="sr-only" id="time-state">Ready</span>
               </div>
 
-              <div class="metric-panel__body">
-                <p class="metric-value" id="time-value" aria-live="polite">--:--:--</p>
-
-                <div class="metric-editor metric-editor--triplet" id="time-editor" hidden>
-                  <label class="field">
-                    <span>Hours</span>
-                    <input
-                      id="time-hours"
-                      type="text"
-                      inputmode="numeric"
-                      autocomplete="off"
-                      spellcheck="false"
-                      placeholder="--"
-                      aria-describedby="time-state time-error"
-                      disabled
-                    />
-                  </label>
-
-                  <label class="field">
-                    <span>Minutes</span>
-                    <input
-                      id="time-minutes"
-                      type="text"
-                      inputmode="numeric"
-                      autocomplete="off"
-                      spellcheck="false"
-                      placeholder="--"
-                      aria-describedby="time-state time-error"
-                      disabled
-                    />
-                  </label>
-
-                  <label class="field">
-                    <span>Seconds</span>
-                    <input
-                      id="time-seconds"
-                      type="text"
-                      inputmode="numeric"
-                      autocomplete="off"
-                      spellcheck="false"
-                      placeholder="--"
-                      aria-describedby="time-state time-error"
-                      disabled
-                    />
-                  </label>
-                </div>
-
-                <p class="metric-secondary" id="time-secondary">
-                  Set a valid distance to project finish time.
-                </p>
-                <p class="field-error" id="time-error" aria-live="polite"></p>
+              <div class="metric-row__actions">
+                <button
+                  type="button"
+                  class="chip-button chip-button--soft"
+                  id="time-lock-button"
+                  aria-pressed="false"
+                >
+                  Lock
+                </button>
+                <button
+                  type="button"
+                  class="ghost-button ghost-button--compact"
+                  id="time-driver-button"
+                  aria-pressed="false"
+                >
+                  Adjust
+                </button>
               </div>
-            </article>
+            </div>
+
+            <div class="metric-row__body">
+              <p class="metric-value" id="time-value" aria-live="polite">--:--:--</p>
+
+              <div class="metric-editor metric-editor--triplet" id="time-editor" hidden>
+                <label class="field">
+                  <span>Hours</span>
+                  <input
+                    id="time-hours"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="--"
+                    aria-describedby="time-state time-error"
+                    disabled
+                  />
+                </label>
+
+                <label class="field">
+                  <span>Minutes</span>
+                  <input
+                    id="time-minutes"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="--"
+                    aria-describedby="time-state time-error"
+                    disabled
+                  />
+                </label>
+
+                <label class="field">
+                  <span>Seconds</span>
+                  <input
+                    id="time-seconds"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="--"
+                    aria-describedby="time-state time-error"
+                    disabled
+                  />
+                </label>
+              </div>
+
+              <p class="metric-secondary" id="time-secondary">Need distance</p>
+              <p class="field-error" id="time-error" aria-live="polite"></p>
+            </div>
           </section>
         </section>
 
-        <details class="projection-panel">
-          <summary>Common race projections</summary>
-
-          <div class="projection-table">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">Distance</th>
-                  <th scope="col">Finish</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <th scope="row">5K</th>
-                  <td id="projection-5k">--:--:--</td>
-                </tr>
-                <tr>
-                  <th scope="row">10K</th>
-                  <td id="projection-10k">--:--:--</td>
-                </tr>
-                <tr>
-                  <th scope="row">Half Marathon</th>
-                  <td id="projection-half">--:--:--</td>
-                </tr>
-                <tr>
-                  <th scope="row">Marathon</th>
-                  <td id="projection-marathon">--:--:--</td>
-                </tr>
-              </tbody>
-            </table>
+        <section class="projection-strip" aria-label="Common race projections">
+          <div class="projection-chip">
+            <span>5K</span>
+            <strong id="projection-5k">--:--:--</strong>
           </div>
-        </details>
-
-        <details class="projection-panel">
-          <summary>Selected-distance splits</summary>
-
-          <div class="projection-table">
-            <p class="projection-copy" id="split-copy">
-              Choose a distance and valid metric to see cumulative split targets.
-            </p>
-
-            <table>
-              <caption id="split-heading">Kilometer splits</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Split</th>
-                  <th scope="col">Finish</th>
-                </tr>
-              </thead>
-              <tbody id="split-rows">
-                <tr class="table-placeholder">
-                  <td colspan="2">Choose a distance, then edit pace, speed, or time.</td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="projection-chip">
+            <span>10K</span>
+            <strong id="projection-10k">--:--:--</strong>
           </div>
-        </details>
+          <div class="projection-chip">
+            <span>Half</span>
+            <strong id="projection-half">--:--:--</strong>
+          </div>
+          <div class="projection-chip">
+            <span>Mar</span>
+            <strong id="projection-marathon">--:--:--</strong>
+          </div>
+        </section>
       </section>
     </main>
 

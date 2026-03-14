@@ -592,8 +592,7 @@ function createPaceCardView(state, calculation) {
       state.lockMetric === LOCK_METRICS.PACE
         ? false
         : !canLockMetric(LOCK_METRICS.PACE, calculation),
-    lockLabel:
-      state.lockMetric === LOCK_METRICS.PACE ? "Unlock goal" : "Set goal",
+    lockLabel: state.lockMetric === LOCK_METRICS.PACE ? "Unlock" : "Lock",
     lockPressed: state.lockMetric === LOCK_METRICS.PACE,
     secondary: Number.isFinite(calculation.speedKmh)
       ? `Also ${formatPace(
@@ -648,10 +647,10 @@ function createTimeCardView(state, calculation) {
         minutes: state.inputs.timeMinutes,
         seconds: state.inputs.timeSeconds
       }
-    : formatTimeFields(calculation.finishSeconds);
+      : formatTimeFields(calculation.finishSeconds);
   const distanceText = calculation.distanceKm !== null
-    ? `For ${formatDistance(calculation.distanceKm, state.unit)}`
-    : "Set a valid distance to project finish time.";
+    ? formatDistance(calculation.distanceKm, state.unit)
+    : "Need distance";
   const stateLabel = getMetricStateLabel(
     DRIVER_METRICS.TIME,
     driverMetric,
@@ -673,8 +672,7 @@ function createTimeCardView(state, calculation) {
       state.lockMetric === LOCK_METRICS.TIME
         ? false
         : !canLockMetric(LOCK_METRICS.TIME, calculation),
-    lockLabel:
-      state.lockMetric === LOCK_METRICS.TIME ? "Unlock goal" : "Set goal",
+    lockLabel: state.lockMetric === LOCK_METRICS.TIME ? "Unlock" : "Lock",
     lockPressed: state.lockMetric === LOCK_METRICS.TIME,
     secondary: distanceText,
     stateLabel,
@@ -692,26 +690,18 @@ function createStatusMessage(state, calculation) {
         : calculation.errors.time;
 
   if (calculation.errors.distance || driverError) {
-    return "Fix the highlighted fields to keep live results moving.";
+    return "Fix highlighted fields.";
   }
 
   if (state.lockMetric === LOCK_METRICS.TIME) {
-    return "Time goal locked. Drag distance to see the pace and speed you need.";
+    return "Time target locked.";
   }
 
   if (state.lockMetric === LOCK_METRICS.PACE) {
-    return "Pace goal locked. Drag distance to see the finish time it produces.";
+    return "Pace target locked.";
   }
 
-  if (driverMetric === DRIVER_METRICS.PACE) {
-    return "Adjust pace, or lock pace or time as the goal.";
-  }
-
-  if (driverMetric === DRIVER_METRICS.SPEED) {
-    return "Adjust speed to update the pace and finish time.";
-  }
-
-  return "Adjust finish time to see the pace and speed required.";
+  return "";
 }
 
 export function getPresetById(id) {

@@ -287,7 +287,7 @@ test("locking time keeps the target fixed while the slider recalculates pace and
   assert.equal(elements.speedInput.value, "6");
   assert.equal(
     elements.statusMessage.textContent,
-    "Time goal locked. Drag distance to see the pace and speed you need."
+    "Time target locked."
   );
 });
 
@@ -317,7 +317,7 @@ test("locking pace keeps finish time live and blocks switching drivers until unl
   assert.equal(elements.timeSeconds.value, "00");
   assert.equal(
     elements.statusMessage.textContent,
-    "Pace goal locked. Drag distance to see the finish time it produces."
+    "Pace target locked."
   );
 });
 
@@ -350,4 +350,20 @@ test("split rows update in the DOM as the selected distance changes", (t) => {
   assert.equal(rows.length, 5);
   assert.equal(rows.at(-1).label, "5 km");
   assert.equal(rows.at(-1).finishLabel, "00:25:00");
+});
+
+test("compact app rendering tolerates missing split-table DOM hooks", (t) => {
+  installFakeDocument(t);
+  const elements = createElements();
+
+  elements.splitCopy = null;
+  elements.splitHeading = null;
+  elements.splitRows = null;
+
+  createCalculatorApp(elements);
+  enterPace(elements, "5", "0");
+
+  assert.equal(elements.speedValue.textContent, "12.00 km/h");
+  assert.equal(elements.timeValue.textContent, "00:50:00");
+  assert.equal(elements.statusMessage.textContent, "");
 });

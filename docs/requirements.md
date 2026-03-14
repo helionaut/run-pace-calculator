@@ -22,8 +22,8 @@
 - The app must show the projected finish time for the selected distance.
 - The app must show equivalent pace in both `/km` and `/mi`.
 - The app must show equivalent speed in both `km/h` and `mph`.
-- The app must show a projection list for all supported race distances in a
-  compact disclosure.
+- The app must show a projection list for all supported race distances inside
+  the primary calculator surface.
 - The app must support locking at least pace and finish time so distance
   changes can recompute the remaining derived values.
 - The app must make user-provided values visually distinct from auto-derived

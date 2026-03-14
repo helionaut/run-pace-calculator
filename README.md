@@ -9,14 +9,13 @@ Production URL: https://helionaut.github.io/run-pace-calculator/
 
 ## What Ships In The Current Slice
 
-- A compact one-screen calculator with pace, speed, and finish-time cards
+- A single-card one-screen calculator with dense pace, speed, and finish-time rows
 - A live distance slider with common race preset chips
 - Pace and finish-time locks that keep one driving value fixed while distance moves
 - Metric and imperial conversions
 - Shareable deep links for valid calculator scenarios, with malformed query
   state falling back to the default one-screen calculator
-- A compact projection disclosure for common race distances
-- A compact split-table disclosure for the currently selected distance
+- An inline projection strip for common race distances
 - Responsive layout with inline validation and keyboard-operable inputs, slider, and lock controls
 - Zero-dependency static build suitable for GitHub Pages
 - Product docs for the PRD, requirements, and implementation plan

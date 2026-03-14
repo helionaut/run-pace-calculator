@@ -84,7 +84,7 @@ test("pace input derives speed and finish time for the selected distance", () =>
     minutes: "50",
     seconds: "00"
   });
-  assert.equal(view.cards.time.secondary, "For 10 km");
+  assert.equal(view.cards.time.secondary, "10 km");
 });
 
 test("speed input derives pace and finish time for the selected distance", () => {
@@ -167,10 +167,7 @@ test("locking time keeps the target fixed while distance changes", () => {
     seconds: "00"
   });
   assert.equal(view.cards.speed.inputValue, "6");
-  assert.equal(
-    view.statusMessage,
-    "Time goal locked. Drag distance to see the pace and speed you need."
-  );
+  assert.equal(view.statusMessage, "Time target locked.");
 });
 
 test("locking pace keeps the effort fixed while distance changes", () => {
@@ -198,10 +195,7 @@ test("locking pace keeps the effort fixed while distance changes", () => {
     seconds: "00"
   });
   assert.equal(view.cards.speed.inputValue, "12");
-  assert.equal(
-    view.statusMessage,
-    "Pace goal locked. Drag distance to see the finish time it produces."
-  );
+  assert.equal(view.statusMessage, "Pace target locked.");
 });
 
 test("split rows follow the selected distance and include a final partial segment", () => {
