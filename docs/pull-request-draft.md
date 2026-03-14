@@ -8,8 +8,8 @@
   locked-value summary in the compact context card
 - preserve stale-result clarity and accessibility with explicit text labels,
   input and summary `aria-describedby` links to provenance regions, badge
-  `aria-label` text, and tests for entered-vs-derived, blank-state, and
-  stale-state rendering paths
+  `aria-label` text, and tests for entered-vs-derived, blank-state,
+  stale-state, and remaining current-state rendering paths
 
 ## Testing
 
@@ -40,6 +40,9 @@
 - When stale output survives a mode or convert-source switch, the input
   clusters clear ambiguous entered or locked badges while the summary keeps the
   last valid driving value visible.
+- Calculator tests now cover the remaining current-state provenance paths for
+  `pace` mode and `convert`-from-`speed`, in addition to the existing stale and
+  accessibility checks.
 
 ## Checklist
 
