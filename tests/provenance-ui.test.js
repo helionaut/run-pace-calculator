@@ -56,6 +56,14 @@ class FakeElement {
   replaceChildren(...children) {
     this.children = children;
   }
+
+  getAttribute(name) {
+    return this.attributes.get(name) ?? null;
+  }
+
+  setAttribute(name, value) {
+    this.attributes.set(name, String(value));
+  }
 }
 
 class FakeDocument {
@@ -102,10 +110,22 @@ test("renderProvenanceBadges shows entered and derived labels with screen-reader
   assert.equal(primaryBadges.children[0].className, "sr-only");
   assert.equal(primaryBadges.children[0].textContent, "Result provenance: ");
   assert.deepEqual(getBadgeTexts(primaryBadges), ["Derived"]);
+  assert.equal(
+    primaryBadges.children[1].getAttribute("aria-label"),
+    "Calculated value"
+  );
 
   assert.equal(lockedBadges.hidden, false);
   assert.equal(lockedBadges.children[0].textContent, "Locked value provenance: ");
   assert.deepEqual(getBadgeTexts(lockedBadges), ["Entered", "Locked"]);
+  assert.equal(
+    lockedBadges.children[1].getAttribute("aria-label"),
+    "User-entered value"
+  );
+  assert.equal(
+    lockedBadges.children[2].getAttribute("aria-label"),
+    "Currently driving recalculation"
+  );
 
   assert.equal(lockedCluster.classList.contains("field-cluster--entered"), true);
   assert.equal(lockedCluster.classList.contains("field-cluster--locked"), true);
@@ -156,6 +176,10 @@ test("stale provenance rendering keeps last-valid context in summary badges and 
   setClusterState(speedCluster, staleView.inputProvenance.speed);
 
   assert.deepEqual(getBadgeTexts(lockedBadges), ["Entered", "Locked", "Last valid"]);
+  assert.equal(
+    lockedBadges.children[3].getAttribute("aria-label"),
+    "Shown from the last valid complete calculation"
+  );
   assert.equal(speedBadges.hidden, true);
   assert.deepEqual(speedBadges.children, []);
   assert.equal(speedCluster.classList.contains("field-cluster--entered"), false);

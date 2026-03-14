@@ -24,6 +24,7 @@ export function renderProvenanceBadges(
       const badgeElement = documentRef.createElement("span");
 
       badgeElement.className = `provenance-badge provenance-badge--${badge.tone}`;
+      badgeElement.setAttribute("aria-label", badge.ariaLabel ?? badge.label);
       badgeElement.textContent = badge.label;
       return badgeElement;
     })
