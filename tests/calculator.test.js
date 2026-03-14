@@ -174,6 +174,52 @@ test("convert speed mode exposes entered speed and derived pace without distance
   assert.deepEqual(view.inputProvenance.distance.badges, []);
 });
 
+test("convert pace mode exposes entered pace and derived speed without distance", () => {
+  const view = deriveCalculatorView(
+    buildState(
+      {
+        mode: MODES.CONVERT,
+        convertSource: CONVERT_SOURCES.PACE
+      },
+      {
+        paceMinutes: "5",
+        paceSeconds: "0"
+      }
+    )
+  );
+
+  assert.equal(view.resultState, "current");
+  assert.equal(view.display.primaryLabel, "Speed");
+  assert.equal(view.display.primaryValue, "12.00 km/h");
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.primary),
+    ["Derived"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.selectedPace),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.selectedSpeed),
+    ["Derived"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.display.provenance.distance),
+    ["Not used"]
+  );
+  assert.equal(view.display.lockedSummary.label, "Locked pace");
+  assert.equal(view.display.lockedSummary.value, "05:00 /km");
+  assert.deepEqual(
+    getBadgeLabels(view.display.lockedSummary.provenance),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(
+    getBadgeLabels(view.inputProvenance.pace),
+    ["Entered", "Locked"]
+  );
+  assert.deepEqual(view.inputProvenance.distance.badges, []);
+});
+
 test("finish mode exposes entered versus derived provenance and the locked pace", () => {
   const view = deriveCalculatorView(
     buildState(
