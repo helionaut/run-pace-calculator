@@ -40,7 +40,7 @@ async function cloneRepo() {
 
   run("git", ["clone", repoRoot, cloneDir], tempRoot);
   await syncWorkingTree(cloneDir);
-  snapshotWorkingTree(cloneDir);
+  normalizeFixtureRepo(cloneDir);
   return cloneDir;
 }
 
@@ -64,20 +64,44 @@ async function syncWorkingTree(cloneDir) {
   }
 }
 
-function snapshotWorkingTree(cloneDir) {
+function snapshotWorkingTree(cloneDir, hasChanges) {
+  if (!hasChanges) {
+    return;
+  }
+
+  run("git", ["add", "--all"], cloneDir);
+  run("git", ["commit", "-m", "test: snapshot working tree"], cloneDir);
+}
+
+function hasParentCommit(cloneDir) {
+  return spawnSync("git", ["rev-parse", "--verify", "HEAD~1"], {
+    cwd: cloneDir
+  }).status === 0;
+}
+
+function normalizeFixtureRepo(cloneDir) {
+  run("git", ["config", "user.name", "Codex Test"], cloneDir);
+  run("git", ["config", "user.email", "codex-test@example.com"], cloneDir);
+
+  if (run("git", ["branch", "--show-current"], cloneDir) === "") {
+    run(
+      "git",
+      ["switch", "-c", "codex/hel-16-publish-test-fixture"],
+      cloneDir
+    );
+  }
+
   const hasChanges =
     spawnSync("git", ["diff", "--quiet"], { cwd: cloneDir }).status !== 0 ||
     spawnSync("git", ["diff", "--cached", "--quiet"], { cwd: cloneDir }).status !== 0 ||
     run("git", ["status", "--short"], cloneDir) !== "";
 
-  if (!hasChanges) {
-    return;
-  }
+  snapshotWorkingTree(cloneDir, hasChanges);
 
-  run("git", ["config", "user.name", "Codex Test"], cloneDir);
-  run("git", ["config", "user.email", "codex-test@example.com"], cloneDir);
-  run("git", ["add", "--all"], cloneDir);
-  run("git", ["commit", "-m", "test: snapshot working tree"], cloneDir);
+  // CI checkouts can be depth-1 and detached, so make HEAD~1 exist explicitly.
+  if (!hasParentCommit(cloneDir)) {
+    run("git", ["commit", "--allow-empty", "-m", "test: add fixture parent"], cloneDir);
+  }
 }
 
 test("create_pr.sh dry run uses a branch-derived PR title", async () => {
