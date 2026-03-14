@@ -1,1 +1,1 @@
-Tighten the mobile layout and stabilize preset wrapping
+Fix mobile input zoom and restore single-row distance chips

@@ -1,29 +1,29 @@
-<!-- PR_TITLE: Tighten the mobile layout and stabilize preset wrapping -->
+<!-- PR_TITLE: Fix mobile input zoom and restore single-row distance chips -->
 
 ## Summary
 
-- tighten padding, gaps, and control sizing across the calculator so the mobile
-  layout stays denser without adding extra rows
-- remove the duplicate `Time` title treatment, move split status onto the
-  workout-splits heading line, and let the top status text wrap cleanly instead
-  of truncating
-- normalize quick-preset labeling and mobile layout so km/mi switching keeps
-  the preset area at the same height
+- raise calculator input text to the Safari-safe `16px` threshold while keeping
+  the compact mobile control sizing
+- restore the distance preset chips to a single row on mobile and keep the chip
+  labels from wrapping within their pills
+- add a CSS regression test that prevents the 4-column wrapped preset layout
+  and undersized mobile inputs from returning
 
 ## Testing
 
 - [x] `npm run check`
-- [x] Built-preview desktop/mobile verification via a temporary Playwright run
-  against `dist`
-- [x] Mobile preset row measured at the same height in preview for km and mi
-  (`58px`)
+- [x] Built-preview desktop/mobile verification via a temporary Playwright
+  Chromium run against `dist`
+- [x] Mobile preset row measured at `390px` width in both km and mi modes with
+  `rowCount = 1`
 
 ## Risks
 
-- Low: the mobile preset row now uses a fixed compact grid, so any future
-  addition of more quick presets will need a deliberate responsive layout pass
-- Low: the header status now wraps to two lines; longer future status copy may
-  need another wording pass if it becomes materially longer
+- Low: the mobile preset row still depends on a fixed 7-chip grid, so any
+  future preset additions will need a deliberate responsive pass
+- Low: Safari zoom prevention is achieved through the standard `16px` input
+  threshold, so future restyling must avoid shrinking focused input text below
+  that size again
 
 ## Checklist
 
@@ -33,11 +33,11 @@
 
 Preview notes:
 
-- Desktop built-preview screenshot reviewed with a saved split present; the
-  layout stayed compact and the split status remained inline with the heading.
-- Mobile built-preview screenshots reviewed in both km and mi modes at 390px
-  width; the quick preset area stayed at two rows in both unit systems with no
-  extra wrap on unit switch.
-- Narrow mobile built-preview screenshot reviewed at 320px width; the top
-  status text wrapped cleanly across two lines without clipping, and the
-  compact spacing changes still preserved the one-screen layout.
+- Desktop built-preview screenshot reviewed against the compact single-screen
+  calculator layout; no new wrapping or clipping was introduced.
+- Mobile built-preview screenshots reviewed for default km view, focused-input
+  view, and mi view at `390px` width; the quick preset chips stayed on one row
+  in each state and the focused input remained fully in-layout.
+- Computed mobile input font sizes were verified at `16px`; Safari no-zoom
+  behavior is inferred from that threshold because WebKit could not run on this
+  host due missing native libraries.

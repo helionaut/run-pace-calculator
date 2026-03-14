@@ -308,13 +308,14 @@ body {
 input {
   width: 100%;
   min-height: 36px;
-  padding: 7px 9px;
+  padding: 6px 8px;
   border: 1px solid rgba(49, 41, 28, 0.12);
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.92);
   color: var(--text);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 1rem;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
   transition:
     background-color 160ms ease,
@@ -401,6 +402,7 @@ input[aria-invalid="true"] {
   border-radius: 999px;
   color: var(--text);
   cursor: pointer;
+  white-space: nowrap;
   transition:
     border-color 160ms ease,
     background-color 160ms ease,
@@ -740,15 +742,14 @@ input[aria-invalid="true"] {
   }
 
   .preset-row {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 2px;
   }
 
   .preset-row .chip-button {
     min-height: 28px;
-    padding: 4px 6px;
-    font-size: 0.54rem;
-    letter-spacing: 0.08em;
+    padding: 4px 2px;
+    font-size: 0.48rem;
+    letter-spacing: 0.04em;
   }
 
   .split-builder__head {

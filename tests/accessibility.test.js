@@ -89,13 +89,18 @@ test("status messaging, error affordances, and responsive safeguards are present
   assert.match(css, /\.time-grid\s*{/);
   assert.match(css, /\.projection-strip\s*{/);
   assert.match(css, /\.split-builder\s*{/);
+  assert.match(css, /input\s*{[\s\S]*font-size:\s*1rem;/);
   assert.match(css, /\.split-card\s*{[\s\S]*display:\s*flex;/);
   assert.match(css, /\.split-card__actions\s*{[\s\S]*display:\s*flex;/);
   assert.match(
     css,
     /\.status-message\s*{[\s\S]*-webkit-line-clamp:\s*2;[\s\S]*white-space:\s*normal;/
   );
-  assert.match(css, /\.preset-row\s*{[\s\S]*display:\s*grid;/);
+  assert.match(
+    css,
+    /\.preset-row\s*{[\s\S]*display:\s*grid;[\s\S]*grid-template-columns:\s*repeat\(7,\s*minmax\(0,\s*1fr\)\);/
+  );
+  assert.match(css, /\.chip-button\s*{[\s\S]*white-space:\s*nowrap;/);
   assert.match(css, /\.split-builder__title\s*{[\s\S]*display:\s*flex;/);
   assert.match(
     css,
@@ -103,7 +108,7 @@ test("status messaging, error affordances, and responsive safeguards are present
   );
   assert.match(css, /\.status-message:empty\s*{/);
   assert.match(css, /min-height:\s*100dvh/);
-  assert.match(
+  assert.doesNotMatch(
     css,
     /@media \(max-width: 540px\)\s*{[\s\S]*\.preset-row\s*{[\s\S]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\);/
   );
