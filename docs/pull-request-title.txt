@@ -1,1 +1,1 @@
-Add shareable URL state for calculator inputs
+Add confidence-focused result presentation and input provenance styling
