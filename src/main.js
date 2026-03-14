@@ -821,7 +821,7 @@ export function createCalculatorApp(elements) {
     button.addEventListener("click", () => {
       const incrementKm = Number(button.dataset.incrementKm);
 
-      if (!Number.isFinite(incrementKm) || incrementKm <= 0) {
+      if (!Number.isFinite(incrementKm) || incrementKm === 0) {
         return;
       }
 

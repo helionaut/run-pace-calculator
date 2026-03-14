@@ -137,9 +137,10 @@ class FakeElement {
 function createElements() {
   const documentRef = new FakeDocument();
   const distanceIncrementButtons = [
+    new FakeElement({ dataset: { incrementKm: "-0.2" }, ownerDocument: documentRef }),
+    new FakeElement({ dataset: { incrementKm: "-0.1" }, ownerDocument: documentRef }),
     new FakeElement({ dataset: { incrementKm: "0.1" }, ownerDocument: documentRef }),
-    new FakeElement({ dataset: { incrementKm: "0.2" }, ownerDocument: documentRef }),
-    new FakeElement({ dataset: { incrementKm: "0.5" }, ownerDocument: documentRef })
+    new FakeElement({ dataset: { incrementKm: "0.2" }, ownerDocument: documentRef })
   ];
   const unitButtons = [
     new FakeElement({ dataset: { unit: "km" }, ownerDocument: documentRef }),
@@ -458,7 +459,7 @@ test("mile short-distance preset buttons update the selected distance", () => {
   assert.equal(getPresetButton(elements, "0.5mi").getAttribute("aria-pressed"), "true");
 });
 
-test("distance increment buttons add to the current distance and keep the solve live", () => {
+test("distance increment buttons adjust the current distance and keep the solve live", () => {
   const elements = createElements();
 
   createCalculatorApp(elements);
@@ -474,6 +475,14 @@ test("distance increment buttons add to the current distance and keep the solve 
     elements.statusMessage.textContent,
     "Solving time from distance + movement rate."
   );
+
+  getDistanceIncrementButton(elements, "-0.1").dispatch("click");
+
+  assert.equal(elements.distanceInput.value, "10.1");
+  assert.equal(elements.selectedDistance.textContent, "10.1 km");
+  assert.equal(elements.timeHours.value, "0");
+  assert.equal(elements.timeMinutes.value, "50");
+  assert.equal(elements.timeSeconds.value, "30");
 });
 
 test("distance increment buttons preserve the selected unit while adding meters", () => {
@@ -481,10 +490,10 @@ test("distance increment buttons preserve the selected unit while adding meters"
 
   createCalculatorApp(elements);
   elements.unitButtons[1].dispatch("click");
-  getDistanceIncrementButton(elements, "0.5").dispatch("click");
+  getDistanceIncrementButton(elements, "0.2").dispatch("click");
 
-  assert.equal(elements.distanceInput.value, "6.5244");
-  assert.equal(elements.selectedDistance.textContent, "6.5244 mi");
+  assert.equal(elements.distanceInput.value, "6.33798");
+  assert.equal(elements.selectedDistance.textContent, "6.33798 mi");
 });
 
 test("slider input rounds mile distances to at most two decimals", () => {

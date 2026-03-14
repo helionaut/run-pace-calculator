@@ -1217,7 +1217,7 @@ export function updateDistanceInput(state, distance) {
 }
 
 export function applyDistanceIncrement(state, incrementKm) {
-  if (!Number.isFinite(incrementKm) || incrementKm <= 0) {
+  if (!Number.isFinite(incrementKm) || incrementKm === 0) {
     return state;
   }
 
@@ -1232,6 +1232,10 @@ export function applyDistanceIncrement(state, incrementKm) {
   }
 
   const nextDistanceKm = Math.min(baseDistanceKm + incrementKm, MAX_DISTANCE);
+
+  if (nextDistanceKm <= 0) {
+    return state;
+  }
 
   return updateDistanceInput(
     state,
