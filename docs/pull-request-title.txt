@@ -1,1 +1,1 @@
-Keep half-marathon and marathon labels stable across unit switch
+Add a compact workout split builder below the calculator

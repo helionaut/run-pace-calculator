@@ -16,6 +16,8 @@ Production URL: https://helionaut.github.io/run-pace-calculator/
 - Shareable deep links for valid calculator scenarios, with malformed query
   state falling back to the default one-screen calculator
 - An inline projection strip for common race distances
+- A workout split builder that saves editable segments with distance, pace,
+  and time visible together
 - Responsive layout with inline validation and keyboard-operable inputs, slider, and lock controls
 - Zero-dependency static build suitable for GitHub Pages
 - Product docs for the PRD, requirements, and implementation plan
