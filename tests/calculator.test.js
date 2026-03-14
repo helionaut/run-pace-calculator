@@ -196,6 +196,24 @@ test("unit changes convert the selected distance and preserve the live result", 
   });
 });
 
+test("kilometer mode exposes short-distance quick-distance chips", () => {
+  const view = deriveCalculatorView(createFormState());
+
+  assert.deepEqual(
+    view.distance.presets.map(({ id, label }) => [id, label]),
+    [
+      ["100m", "100m"],
+      ["500m", "500m"],
+      ["1k", "1 km"],
+      ["5k", "5K"],
+      ["10k", "10K"],
+      ["half", "Half"],
+      ["marathon", "Marathon"]
+    ]
+  );
+  assert.equal(view.distance.presetId, "10k");
+});
+
 test("mile mode exposes native mile quick-distance chips", () => {
   const state = applyUnitChange(createFormState(), "mi");
   const view = deriveCalculatorView(state);
@@ -203,6 +221,9 @@ test("mile mode exposes native mile quick-distance chips", () => {
   assert.deepEqual(
     view.distance.presets.map(({ id, label }) => [id, label]),
     [
+      ["0.1mi", "0.1 mi"],
+      ["0.5mi", "0.5 mi"],
+      ["1mi", "1 mi"],
       ["5mi", "5 mi"],
       ["10mi", "10 mi"],
       ["half", "13.1 mi"],
@@ -212,6 +233,15 @@ test("mile mode exposes native mile quick-distance chips", () => {
   assert.equal(view.distance.presetId, "custom");
 });
 
+test("short kilometer quick-distance chips select the requested distance", () => {
+  const state = applyPresetSelection(createFormState(), "100m");
+  const view = deriveCalculatorView(state);
+
+  assert.equal(view.distance.inputValue, "0.1");
+  assert.equal(view.selectedDistanceLabel, "0.1 km");
+  assert.equal(view.distance.presetId, "100m");
+});
+
 test("mile quick-distance chips select native mile values", () => {
   const state = applyPresetSelection(applyUnitChange(createFormState(), "mi"), "10mi");
   const view = deriveCalculatorView(state);
@@ -219,6 +249,15 @@ test("mile quick-distance chips select native mile values", () => {
   assert.equal(view.distance.inputValue, "10");
   assert.equal(view.selectedDistanceLabel, "10 mi");
   assert.equal(view.distance.presetId, "10mi");
+});
+
+test("short mile quick-distance chips select native mile values", () => {
+  const state = applyPresetSelection(applyUnitChange(createFormState(), "mi"), "1mi");
+  const view = deriveCalculatorView(state);
+
+  assert.equal(view.distance.inputValue, "1");
+  assert.equal(view.selectedDistanceLabel, "1 mi");
+  assert.equal(view.distance.presetId, "1mi");
 });
 
 test("reset restores the default distance while preserving unit", () => {

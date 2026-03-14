@@ -67,9 +67,17 @@ function renderPresetButtons(elements, distanceView) {
     const preset = distanceView.presets[index];
 
     if (!preset) {
+      button.dataset.preset = "";
+      setTextContent(button, "");
+      button.hidden = true;
+      button.disabled = true;
+      button.classList.remove("is-active");
+      button.setAttribute("aria-pressed", "false");
       continue;
     }
 
+    button.hidden = false;
+    button.disabled = false;
     button.dataset.preset = preset.id;
     setTextContent(button, preset.label);
 

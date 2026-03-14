@@ -31,12 +31,18 @@ export const DISTANCE_PRESETS = Object.freeze([
 ]);
 const QUICK_DISTANCE_PRESETS = Object.freeze({
   km: Object.freeze([
+    { id: "100m", label: "100m", distanceKm: 0.1 },
+    { id: "500m", label: "500m", distanceKm: 0.5 },
+    { id: "1k", label: "1 km", distanceKm: 1 },
     { id: "5k", label: "5K", distanceKm: 5 },
     { id: "10k", label: "10K", distanceKm: 10 },
     { id: "half", label: "Half", distanceKm: 21.0975 },
     { id: "marathon", label: "Marathon", distanceKm: 42.195 }
   ]),
   mi: Object.freeze([
+    { id: "0.1mi", label: "0.1 mi", distanceKm: 0.1 * KM_PER_MILE },
+    { id: "0.5mi", label: "0.5 mi", distanceKm: 0.5 * KM_PER_MILE },
+    { id: "1mi", label: "1 mi", distanceKm: 1 * KM_PER_MILE },
     { id: "5mi", label: "5 mi", distanceKm: 5 * KM_PER_MILE },
     { id: "10mi", label: "10 mi", distanceKm: 10 * KM_PER_MILE },
     { id: "half", label: "13.1 mi", distanceKm: 13.1 * KM_PER_MILE },
