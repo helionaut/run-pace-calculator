@@ -9,6 +9,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "bundle:export": "./scripts/export_bundle.sh",
+    "checkout:repair": "./scripts/repair-shared-checkout.sh",
     "check:syntax": "node --check src/main.js && node --check src/lib/calculator.js && node --check src/lib/provenance-ui.js && node --check scripts/build.mjs && node --check scripts/check-dist.mjs && node --check scripts/serve.mjs && node --check scripts/verify-handoff.mjs && node --check scripts/verify-pages-content.mjs",
     "check": "npm run check:syntax && npm test && npm run build && node scripts/check-dist.mjs",
     "dev": "node scripts/serve.mjs src 3000",

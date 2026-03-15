@@ -1,1 +1,1 @@
-Move distance controls into the header and rebalance split rows
+Repair the shared checkout from current remote state

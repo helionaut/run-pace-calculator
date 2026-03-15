@@ -1,32 +1,29 @@
-<!-- PR_TITLE: Move distance controls into the header and rebalance split rows -->
+<!-- PR_TITLE: Repair the shared checkout from current remote state -->
 
 ## Summary
 
-- replace the distance increment controls with `-100m`, `-200m`, `+100m`, and
-  `+200m`, and keep them inline with the Distance heading/value instead of
-  taking a separate row
-- add left padding to the Distance, Movement Rate, and Time headings so the
-  card titles align cleanly away from the screen edge
-- rebalance the split summary row so the distance, pace, and time metrics read
-  as a more even single line while keeping the action buttons compact
-- cover the updated increment behavior and layout hooks with calculator, DOM,
-  and CSS regression tests
+- add `scripts/repair-shared-checkout.sh` and `npm run checkout:repair` so the
+  shared local repo in `.bootstrap/project.json` can be rebuilt from the
+  current remote branch state
+- preserve the previous checkout as a timestamped backup and restore it
+  automatically if the reclone step fails
+- cover the maintenance flow with regression tests for backup-and-reclone,
+  restore-on-failure, and explicit branch recreation, and document the command
+  in `README.md`
 
 ## Testing
 
 - [x] `npm run check`
-- [x] Built-preview desktop/mobile verification via temporary Playwright
-  Chromium screenshots against `dist`
-- [x] Reviewed a desktop split screenshot and an iPhone 13 mobile split
-  screenshot against the issue requirements and `docs/prd.md`
+- [x] `node --test tests/repair-shared-checkout.test.js`
+- [x] Repaired `/home/helionaut/src/projects/run-pace-calculator` in place and
+  confirmed the recreated checkout is back on `main` with a clean status
 
 ## Risks
 
-- Low: the header-row control fit depends on the compact chip sizing, so future
-  copy or typography changes should get another narrow-mobile screenshot pass
-- Low: split-row balance is tuned visually with centered metric cells rather
-  than content-aware measurement, so unusually long custom values still rely on
-  ellipsis as a fallback
+- Low: the repair flow intentionally replaces the configured shared checkout, so
+  anyone who still needs the pre-repair state must use the timestamped backup
+- Low: the helper defaults to `main`, so one-off maintenance on another branch
+  should call the script directly with `--branch`
 
 ## Checklist
 
@@ -36,9 +33,5 @@
 
 Preview notes:
 
-- Desktop built-preview screenshot reviewed with a sample split row visible:
-  the increment chips stayed in the Distance header row, headings had visible
-  left padding, and the split metrics read as a balanced single line.
-- iPhone 13 built-preview screenshot reviewed with the same sample split row:
-  the inline increment chips remained compact, headings stayed indented, and
-  the split row still read as one balanced line above the action icons.
+- Maintenance-only change; no UI preview was required for this checkout repair
+  flow.
