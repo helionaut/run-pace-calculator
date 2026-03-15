@@ -86,6 +86,7 @@ Production URL: https://helionaut.github.io/run-pace-calculator/
 | `npm ci` | Install the exact toolchain from `package-lock.json` |
 | `npm run dev` | Serve the source app from `src/` locally |
 | `npm run build` | Rebuild the deployable `dist/` directory |
+| `npm run checkout:repair` | Recreate the shared checkout from the repo metadata in `.bootstrap/project.json` |
 | `npm run preview` | Build and serve the production artifact |
 | `npm test` | Run the full Node test suite |
 | `npm run check` | Run the canonical validation flow used by CI |
@@ -96,6 +97,27 @@ GitHub Actions runs `npm run check` for every pull request.
 
 If the environment blocks local socket binding, `dev` and `preview` exit with a
 short explicit error instead of a server traceback.
+
+## Repairing The Shared Checkout
+
+If the shared checkout recorded in `.bootstrap/project.json` gets stuck on a
+stale or conflicted branch, rebuild it from the current remote state with:
+
+```sh
+npm run checkout:repair
+```
+
+The helper moves the previous checkout aside as
+`<target-dir>.backup.<timestamp>`, reclones the repo from the configured
+origin, fetches all remote branches, and resets the shared checkout onto
+`origin/main`.
+
+To repair a different checkout or branch during testing, call the script
+directly:
+
+```sh
+./scripts/repair-shared-checkout.sh --branch main --target-dir /tmp/run-pace-calculator
+```
 
 ## Project Structure
 
