@@ -1,1 +1,1 @@
-Repair the shared checkout from current remote state
+Persist workout split rows in the shareable URL state

@@ -1,29 +1,28 @@
-<!-- PR_TITLE: Repair the shared checkout from current remote state -->
+<!-- PR_TITLE: Persist workout split rows in the shareable URL state -->
 
 ## Summary
 
-- add `scripts/repair-shared-checkout.sh` and `npm run checkout:repair` so the
-  shared local repo in `.bootstrap/project.json` can be rebuilt from the
-  current remote branch state
-- preserve the previous checkout as a timestamped backup and restore it
-  automatically if the reclone step fails
-- cover the maintenance flow with regression tests for backup-and-reclone,
-  restore-on-failure, and explicit branch recreation, and document the command
-  in `README.md`
+- persist workout split rows and selected-row state into the shareable URL so
+  split workouts survive refresh, copy, and reopen flows
+- restore split-builder state safely on load, while keeping malformed or
+  partial split query data from breaking the existing calculator restore path
+- clear split-builder state during reset and cover the new URL behavior with
+  regression tests plus desktop/mobile verification
 
 ## Testing
 
 - [x] `npm run check`
-- [x] `node --test tests/repair-shared-checkout.test.js`
-- [x] Repaired `/home/helionaut/src/projects/run-pace-calculator` in place and
-  confirmed the recreated checkout is back on `main` with a clean status
+- [x] `node --test tests/url-state.test.js`
+- [x] Verified in a clean browser context that a copied URL restored 2 split
+  rows, kept split 1 selected in `Save split` / `Update split 1` state, and
+  restored the editor to `12 km`, `5:00`, `1:00:00`
 
 ## Risks
 
-- Low: the repair flow intentionally replaces the configured shared checkout, so
-  anyone who still needs the pre-repair state must use the timestamped backup
-- Low: the helper defaults to `main`, so one-off maintenance on another branch
-  should call the script directly with `--branch`
+- Low: split rows are stored in a JSON-encoded query param, so very large
+  workouts will grow the share URL accordingly
+- Low: malformed split payloads are intentionally dropped on restore, which
+  favors a safe calculator load over partial split reconstruction
 
 ## Checklist
 
@@ -33,5 +32,6 @@
 
 Preview notes:
 
-- Maintenance-only change; no UI preview was required for this checkout repair
-  flow.
+- Desktop and mobile screenshots were captured against the built app after
+  restoring a shared workout URL; both matched the requested outcome and kept
+  the split builder intact.
