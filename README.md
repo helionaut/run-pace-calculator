@@ -138,7 +138,7 @@ directly:
 
 ## Repository Docs
 
-- `docs/prd.md`
+- `docs/PRD.md`
 - `docs/requirements.md`
 - `docs/implementation-plan.md`
 - `docs/pull-request-draft.md`

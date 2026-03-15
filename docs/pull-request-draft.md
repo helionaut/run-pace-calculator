@@ -1,29 +1,25 @@
-<!-- PR_TITLE: Repair the shared checkout from current remote state -->
+<!-- PR_TITLE: Normalize the canonical PRD path to docs/PRD.md -->
 
 ## Summary
 
-- add `scripts/repair-shared-checkout.sh` and `npm run checkout:repair` so the
-  shared local repo in `.bootstrap/project.json` can be rebuilt from the
-  current remote branch state
-- preserve the previous checkout as a timestamped backup and restore it
-  automatically if the reclone step fails
-- cover the maintenance flow with regression tests for backup-and-reclone,
-  restore-on-failure, and explicit branch recreation, and document the command
-  in `README.md`
+- rename the shipped product requirements document to `docs/PRD.md` so the
+  repo matches the canonical control-plane path
+- update the repository docs reference in `README.md` to the uppercase PRD path
+- add a regression test that enforces the canonical tracked path and rejects
+  tracked references to the legacy lowercase filename
 
 ## Testing
 
 - [x] `npm run check`
-- [x] `node --test tests/repair-shared-checkout.test.js`
-- [x] Repaired `/home/helionaut/src/projects/run-pace-calculator` in place and
-  confirmed the recreated checkout is back on `main` with a clean status
+- [x] `node --test tests/prd-path.test.js`
+- [x] `git ls-files docs/PRD.md` returns only the canonical uppercase file
+- [x] Verified the uppercase PRD path exists and the lowercase alias does not
 
 ## Risks
 
-- Low: the repair flow intentionally replaces the configured shared checkout, so
-  anyone who still needs the pre-repair state must use the timestamped backup
-- Low: the helper defaults to `main`, so one-off maintenance on another branch
-  should call the script directly with `--branch`
+- Low: case-only renames can be awkward on case-insensitive filesystems, but
+  git now tracks the uppercase path and the new guard test will fail if the
+  lowercase filename becomes the source of truth again
 
 ## Checklist
 
@@ -33,5 +29,5 @@
 
 Preview notes:
 
-- Maintenance-only change; no UI preview was required for this checkout repair
-  flow.
+- Maintenance-only change; no UI preview was required for this docs-path
+  normalization.
