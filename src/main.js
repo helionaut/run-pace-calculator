@@ -239,7 +239,17 @@ function createSplitActionIcon(documentRef, icon) {
   svg.setAttribute("stroke-linejoin", "round");
 
   const paths =
-    icon === "duplicate"
+    icon === "move-earlier"
+      ? [
+          { tagName: "path", attributes: { d: "M8 12.25V3.75" } },
+          { tagName: "path", attributes: { d: "M4.75 7 8 3.75 11.25 7" } }
+        ]
+      : icon === "move-later"
+        ? [
+            { tagName: "path", attributes: { d: "M8 3.75v8.5" } },
+            { tagName: "path", attributes: { d: "M4.75 9 8 12.25 11.25 9" } }
+          ]
+        : icon === "duplicate"
       ? [
           { tagName: "rect", attributes: { x: "2", y: "2", width: "7", height: "7", rx: "1.25" } },
           { tagName: "rect", attributes: { x: "7", y: "7", width: "7", height: "7", rx: "1.25" } }
@@ -281,6 +291,29 @@ function createSplitMetric(documentRef, shortLabel, fullLabel, value) {
   return metric;
 }
 
+function bindSplitRowButton(button, onActivate) {
+  let handledPointerActivation = false;
+
+  button.addEventListener("pointerdown", (event) => {
+    if ((typeof event.button === "number" && event.button !== 0) || event.isPrimary === false) {
+      return;
+    }
+
+    handledPointerActivation = true;
+    event.preventDefault();
+    onActivate();
+  });
+
+  button.addEventListener("click", () => {
+    if (handledPointerActivation) {
+      handledPointerActivation = false;
+      return;
+    }
+
+    onActivate();
+  });
+}
+
 function renderSplitBuilder(
   elements,
   view,
@@ -288,6 +321,7 @@ function renderSplitBuilder(
     canCommitSplit,
     onDeleteSplit,
     onDuplicateSplit,
+    onMoveSplit,
     onSelectSplit,
     selectedSplitId,
     selectedSplitDirty,
@@ -339,10 +373,14 @@ function renderSplitBuilder(
     const indexLabel = documentRef.createElement("span");
     const metrics = documentRef.createElement("span");
     const actions = documentRef.createElement("span");
+    const moveEarlierButton = documentRef.createElement("button");
+    const moveLaterButton = documentRef.createElement("button");
     const duplicateButton = documentRef.createElement("button");
     const deleteButton = documentRef.createElement("button");
     const splitView = deriveCalculatorView(split.snapshot);
     const isSelected = split.id === selectedSplitId;
+    const canMoveEarlier = index > 0;
+    const canMoveLater = index < splits.length - 1;
 
     item.className = "split-list__item";
 
@@ -357,7 +395,7 @@ function renderSplitBuilder(
         splitView.unit
       )}, time ${formatSplitTimeLabel(splitView.time.inputValues)}`
     );
-    selectButton.addEventListener("click", () => {
+    bindSplitRowButton(selectButton, () => {
       onSelectSplit(split.id);
     });
 
@@ -384,12 +422,32 @@ function renderSplitBuilder(
 
     actions.className = "split-card__actions";
 
+    moveEarlierButton.className = "split-card__action";
+    moveEarlierButton.type = "button";
+    moveEarlierButton.disabled = !canMoveEarlier;
+    moveEarlierButton.setAttribute("aria-label", `Move split ${index + 1} earlier`);
+    moveEarlierButton.setAttribute("title", `Move split ${index + 1} earlier`);
+    moveEarlierButton.append(createSplitActionIcon(documentRef, "move-earlier"));
+    bindSplitRowButton(moveEarlierButton, () => {
+      onMoveSplit(split.id, -1);
+    });
+
+    moveLaterButton.className = "split-card__action";
+    moveLaterButton.type = "button";
+    moveLaterButton.disabled = !canMoveLater;
+    moveLaterButton.setAttribute("aria-label", `Move split ${index + 1} later`);
+    moveLaterButton.setAttribute("title", `Move split ${index + 1} later`);
+    moveLaterButton.append(createSplitActionIcon(documentRef, "move-later"));
+    bindSplitRowButton(moveLaterButton, () => {
+      onMoveSplit(split.id, 1);
+    });
+
     duplicateButton.className = "split-card__action";
     duplicateButton.type = "button";
     duplicateButton.setAttribute("aria-label", `Duplicate split ${index + 1}`);
     duplicateButton.setAttribute("title", `Duplicate split ${index + 1}`);
     duplicateButton.append(createSplitActionIcon(documentRef, "duplicate"));
-    duplicateButton.addEventListener("click", () => {
+    bindSplitRowButton(duplicateButton, () => {
       onDuplicateSplit(split.id);
     });
 
@@ -398,11 +456,11 @@ function renderSplitBuilder(
     deleteButton.setAttribute("aria-label", `Delete split ${index + 1}`);
     deleteButton.setAttribute("title", `Delete split ${index + 1}`);
     deleteButton.append(createSplitActionIcon(documentRef, "delete"));
-    deleteButton.addEventListener("click", () => {
+    bindSplitRowButton(deleteButton, () => {
       onDeleteSplit(split.id);
     });
 
-    actions.append(duplicateButton, deleteButton);
+    actions.append(moveEarlierButton, moveLaterButton, duplicateButton, deleteButton);
     item.append(selectButton, actions);
     return item;
   });
@@ -738,6 +796,21 @@ export function createCalculatorApp(elements) {
         ];
         selectedSplitId = duplicate.id;
         setStateAndRender(cloneCalculatorState(duplicate.snapshot));
+      },
+      onMoveSplit(splitId, offset) {
+        const splitIndex = splits.findIndex((split) => split.id === splitId);
+        const nextIndex = splitIndex + offset;
+
+        if (splitIndex < 0 || nextIndex < 0 || nextIndex >= splits.length) {
+          return;
+        }
+
+        const nextSplits = [...splits];
+        const [movedSplit] = nextSplits.splice(splitIndex, 1);
+
+        nextSplits.splice(nextIndex, 0, movedSplit);
+        splits = nextSplits;
+        refreshSplitBuilder(lastView ?? deriveCalculatorView(state));
       },
       onSelectSplit(splitId) {
         const selectedSplit = splits.find((split) => split.id === splitId);

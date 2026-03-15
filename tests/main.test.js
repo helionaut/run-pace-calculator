@@ -236,6 +236,10 @@ function getSplitMetricValues(splitRow) {
   return [0, 1, 2].map((index) => getSplitMetricValue(splitRow, index));
 }
 
+function getSplitActionButton(splitRow, index) {
+  return splitRow.children[1].children[index];
+}
+
 test("pace input plus slider movement updates derived speed and finish time live", () => {
   const elements = createElements();
 
@@ -564,21 +568,37 @@ test("selecting a split loads it into the editor and dirty edits switch the acti
   assert.equal(elements.splitSummary.textContent, "Editing split 1");
 });
 
-test("split rows use icon-only duplicate and delete controls", () => {
+test("split rows use icon-only reorder, duplicate, and delete controls", () => {
   const elements = createElements();
 
   createCalculatorApp(elements);
   enterPace(elements, "6", "0");
   elements.splitActionButton.dispatch("click");
+  getPresetButton(elements, "5k").dispatch("click");
+  enterPace(elements, "5", "0");
+  elements.splitActionButton.dispatch("click");
 
   const firstRow = elements.splitList.children[0];
-  const duplicateButton = firstRow.children[1].children[0];
-  const deleteButton = firstRow.children[1].children[1];
+  const secondRow = elements.splitList.children[1];
+  const moveEarlierButton = getSplitActionButton(firstRow, 0);
+  const moveLaterButton = getSplitActionButton(firstRow, 1);
+  const duplicateButton = getSplitActionButton(secondRow, 2);
+  const deleteButton = getSplitActionButton(secondRow, 3);
 
+  assert.equal(moveEarlierButton.textContent, "");
+  assert.equal(moveLaterButton.textContent, "");
   assert.equal(duplicateButton.textContent, "");
   assert.equal(deleteButton.textContent, "");
-  assert.equal(duplicateButton.getAttribute("aria-label"), "Duplicate split 1");
-  assert.equal(deleteButton.getAttribute("aria-label"), "Delete split 1");
+  assert.equal(moveEarlierButton.getAttribute("aria-label"), "Move split 1 earlier");
+  assert.equal(moveLaterButton.getAttribute("aria-label"), "Move split 1 later");
+  assert.equal(duplicateButton.getAttribute("aria-label"), "Duplicate split 2");
+  assert.equal(deleteButton.getAttribute("aria-label"), "Delete split 2");
+  assert.equal(moveEarlierButton.disabled, true);
+  assert.equal(moveLaterButton.disabled, false);
+  assert.equal(getSplitActionButton(secondRow, 0).disabled, false);
+  assert.equal(getSplitActionButton(secondRow, 1).disabled, true);
+  assert.equal(moveEarlierButton.children[0].tagName, "svg");
+  assert.equal(moveLaterButton.children[0].tagName, "svg");
   assert.equal(duplicateButton.children[0].tagName, "svg");
   assert.equal(deleteButton.children[0].tagName, "svg");
 });
@@ -591,8 +611,8 @@ test("duplicate and delete controls keep the split list editable", () => {
   elements.splitActionButton.dispatch("click");
 
   const firstRow = elements.splitList.children[0];
-  const duplicateButton = firstRow.children[1].children[0];
-  const deleteButton = firstRow.children[1].children[1];
+  const duplicateButton = getSplitActionButton(firstRow, 2);
+  const deleteButton = getSplitActionButton(firstRow, 3);
 
   duplicateButton.dispatch("click");
 
@@ -612,11 +632,97 @@ test("duplicate and delete controls keep the split list editable", () => {
   assert.equal(elements.splitSummary.textContent, "Editing split 1");
   assert.equal(elements.splitEmptyState.hidden, true);
 
-  elements.splitList.children[0].children[1].children[1].dispatch("click");
+  getSplitActionButton(elements.splitList.children[0], 3).dispatch("click");
 
   assert.equal(elements.splitList.children.length, 0);
   assert.equal(elements.splitSummary.textContent, "No splits yet");
   assert.equal(elements.splitEmptyState.hidden, false);
+});
+
+test("move controls reorder splits while preserving the selected dirty split", () => {
+  const elements = createElements();
+
+  createCalculatorApp(elements);
+  enterPace(elements, "6", "0");
+  elements.splitActionButton.dispatch("click");
+  getPresetButton(elements, "5k").dispatch("click");
+  enterPace(elements, "5", "0");
+  elements.splitActionButton.dispatch("click");
+  getPresetButton(elements, "1k").dispatch("click");
+  enterPace(elements, "4", "0");
+  elements.splitActionButton.dispatch("click");
+
+  elements.splitList.children[1].children[0].dispatch("click");
+
+  assert.equal(elements.splitSummary.textContent, "Editing split 2");
+
+  elements.distanceInput.dispatch("focus");
+  elements.distanceInput.value = "6";
+  elements.distanceInput.dispatch("input");
+
+  assert.equal(elements.splitSummary.textContent, "Update split 2");
+  assert.equal(elements.splitActionButton.textContent, "Save split");
+
+  getSplitActionButton(elements.splitList.children[1], 0).dispatch("click");
+
+  assert.equal(elements.splitSummary.textContent, "Update split 1");
+  assert.equal(elements.splitActionButton.textContent, "Save split");
+  assert.equal(elements.distanceInput.value, "6");
+  assert.deepEqual(getSplitMetricValues(elements.splitList.children[0]), [
+    "5 km",
+    "5:00 min/km",
+    "25m00s"
+  ]);
+  assert.deepEqual(getSplitMetricValues(elements.splitList.children[1]), [
+    "10 km",
+    "6:00 min/km",
+    "1h00m00s"
+  ]);
+  assert.deepEqual(getSplitMetricValues(elements.splitList.children[2]), [
+    "1 km",
+    "4:00 min/km",
+    "4m00s"
+  ]);
+
+  elements.splitActionButton.dispatch("click");
+
+  assert.equal(elements.splitSummary.textContent, "Editing split 1");
+  assert.equal(elements.splitActionButton.textContent, "Add split");
+  assert.deepEqual(getSplitMetricValues(elements.splitList.children[0]), [
+    "6 km",
+    "5:00 min/km",
+    "30m00s"
+  ]);
+  assert.deepEqual(getSplitMetricValues(elements.splitList.children[1]), [
+    "10 km",
+    "6:00 min/km",
+    "1h00m00s"
+  ]);
+  assert.deepEqual(getSplitMetricValues(elements.splitList.children[2]), [
+    "1 km",
+    "4:00 min/km",
+    "4m00s"
+  ]);
+
+  getSplitActionButton(elements.splitList.children[0], 1).dispatch("click");
+
+  assert.equal(elements.splitSummary.textContent, "Editing split 2");
+  assert.equal(elements.distanceInput.value, "6");
+  assert.deepEqual(getSplitMetricValues(elements.splitList.children[0]), [
+    "10 km",
+    "6:00 min/km",
+    "1h00m00s"
+  ]);
+  assert.deepEqual(getSplitMetricValues(elements.splitList.children[1]), [
+    "6 km",
+    "5:00 min/km",
+    "30m00s"
+  ]);
+  assert.deepEqual(getSplitMetricValues(elements.splitList.children[2]), [
+    "1 km",
+    "4:00 min/km",
+    "4m00s"
+  ]);
 });
 
 test("split rows trim leading zero groups when the duration only needs seconds", () => {
