@@ -13,6 +13,8 @@ import {
 } from "./lib/calculator.js";
 
 const PACE_FIELDS = Object.freeze(["paceMinutes", "paceSeconds"]);
+const SPLIT_URL_KEY = "splits";
+const SPLIT_URL_VERSION = 1;
 const TIME_FIELDS = Object.freeze(["timeHours", "timeMinutes", "timeSeconds"]);
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const GROUP_AUTO_FILL_DEFAULTS = Object.freeze({
@@ -169,6 +171,94 @@ function serializeCalculatorStateSnapshot(state) {
     rateInputMode: state.rateInputMode,
     unit: state.unit
   });
+}
+
+function serializeSplitBuilderState(splits, selectedSplitId) {
+  if (!Array.isArray(splits) || splits.length === 0) {
+    return null;
+  }
+
+  const rows = [];
+
+  for (const split of splits) {
+    const serializedSnapshot = serializeCalculatorState(split.snapshot);
+
+    if (!serializedSnapshot) {
+      return null;
+    }
+
+    rows.push(serializedSnapshot);
+  }
+
+  const payload = {
+    v: SPLIT_URL_VERSION,
+    r: rows
+  };
+  const selectedIndex = splits.findIndex((split) => split.id === selectedSplitId);
+
+  if (selectedIndex >= 0) {
+    payload.s = selectedIndex;
+  }
+
+  return JSON.stringify(payload);
+}
+
+function restoreSplitBuilderState(searchParams) {
+  const params = new URLSearchParams(searchParams);
+  const rawPayload = params.get(SPLIT_URL_KEY);
+
+  if (!rawPayload) {
+    return {
+      selectedSplitId: null,
+      splitCounter: 0,
+      splits: []
+    };
+  }
+
+  try {
+    const payload = JSON.parse(rawPayload);
+
+    if (
+      !payload ||
+      payload.v !== SPLIT_URL_VERSION ||
+      !Array.isArray(payload.r)
+    ) {
+      throw new Error("Invalid split URL payload.");
+    }
+
+    const splits = payload.r.map((serializedSnapshot, index) => {
+      if (typeof serializedSnapshot !== "string" || serializedSnapshot.length === 0) {
+        throw new Error("Invalid split snapshot.");
+      }
+
+      const snapshot = restoreCalculatorState(serializedSnapshot);
+
+      if (!serializeCalculatorState(snapshot)) {
+        throw new Error("Split snapshot did not restore to a live calculator state.");
+      }
+
+      return {
+        id: `split-${index + 1}`,
+        snapshot
+      };
+    });
+    const selectedIndex =
+      Number.isInteger(payload.s) && payload.s >= 0 && payload.s < splits.length
+        ? payload.s
+        : null;
+
+    return {
+      selectedSplitId: selectedIndex === null ? null : splits[selectedIndex].id,
+      splitCounter: splits.length,
+      splits
+    };
+  } catch {
+    return {
+      selectedSplitId: null,
+      splitCounter: 0,
+      splits: []
+    };
+  }
 }
 
 function formatSplitPaceLabel(paceInputValues, unit) {
@@ -588,7 +678,7 @@ function render(elements, state) {
   return view;
 }
 
-function syncUrlState(state) {
+function syncUrlState(state, splits, selectedSplitId) {
   if (
     typeof window === "undefined" ||
     !window.location ||
@@ -598,7 +688,17 @@ function syncUrlState(state) {
     return;
   }
 
-  const search = serializeCalculatorState(state);
+  const params = new URLSearchParams(serializeCalculatorState(state));
+  const serializedSplitBuilderState = serializeSplitBuilderState(
+    splits,
+    selectedSplitId
+  );
+
+  if (serializedSplitBuilderState) {
+    params.set(SPLIT_URL_KEY, serializedSplitBuilderState);
+  }
+
+  const search = params.toString();
   const nextUrl = search
     ? `${window.location.pathname}?${search}${window.location.hash}`
     : `${window.location.pathname}${window.location.hash}`;
@@ -723,6 +823,14 @@ export function createCalculatorApp(elements) {
   let splits = [];
   let selectedSplitId = null;
 
+  if (typeof window !== "undefined") {
+    const restoredSplitBuilderState = restoreSplitBuilderState(window.location.search);
+
+    splitCounter = restoredSplitBuilderState.splitCounter;
+    splits = restoredSplitBuilderState.splits;
+    selectedSplitId = restoredSplitBuilderState.selectedSplitId;
+  }
+
   function getState() {
     return state;
   }
@@ -748,6 +856,10 @@ export function createCalculatorApp(elements) {
     );
   }
 
+  function syncAppUrlState() {
+    syncUrlState(state, splits, selectedSplitId);
+  }
+
   function refreshSplitBuilder(view) {
     renderSplitBuilder(elements, view, {
       canCommitSplit: view.hasLiveResult && !hasViewErrors(view),
@@ -762,6 +874,7 @@ export function createCalculatorApp(elements) {
 
         if (selectedSplitId !== splitId) {
           refreshSplitBuilder(lastView ?? deriveCalculatorView(state));
+          syncAppUrlState();
           return;
         }
 
@@ -770,6 +883,7 @@ export function createCalculatorApp(elements) {
         if (!fallbackSplit) {
           selectedSplitId = null;
           refreshSplitBuilder(lastView ?? deriveCalculatorView(state));
+          syncAppUrlState();
           return;
         }
 
@@ -849,7 +963,7 @@ export function createCalculatorApp(elements) {
     }
 
     refreshSplitBuilder(view);
-    syncUrlState(state);
+    syncAppUrlState();
     return view;
   }
 
@@ -911,6 +1025,9 @@ export function createCalculatorApp(elements) {
   });
 
   elements.resetButton.addEventListener("click", () => {
+    splitCounter = 0;
+    splits = [];
+    selectedSplitId = null;
     setStateAndRender(resetFormState(getState()));
   });
 
@@ -920,6 +1037,7 @@ export function createCalculatorApp(elements) {
 
       if (!view.hasLiveResult || hasViewErrors(view)) {
         refreshSplitBuilder(view);
+        syncAppUrlState();
         return;
       }
 
@@ -935,6 +1053,7 @@ export function createCalculatorApp(elements) {
             : split
         );
         refreshSplitBuilder(view);
+        syncAppUrlState();
         return;
       }
 
@@ -947,6 +1066,7 @@ export function createCalculatorApp(elements) {
         }
       ];
       refreshSplitBuilder(view);
+      syncAppUrlState();
     });
   }
 
@@ -1017,14 +1137,15 @@ export function createCalculatorApp(elements) {
   lastView = render(elements, state);
   lastStableState = normalizeStateFromView(state, lastView);
   refreshSplitBuilder(lastView);
-  syncUrlState(state);
+  syncAppUrlState();
 
   return {
     getState,
     render() {
       const view = render(elements, state);
 
-      syncUrlState(state);
+      refreshSplitBuilder(view);
+      syncAppUrlState();
       return view;
     }
   };
