@@ -1,37 +1,40 @@
-<!-- PR_TITLE: Persist workout split rows in the shareable URL state -->
+<!-- PR_TITLE: Add compact split reordering controls -->
 
 ## Summary
 
-- persist workout split rows and selected-row state into the shareable URL so
-  split workouts survive refresh, copy, and reopen flows
-- restore split-builder state safely on load, while keeping malformed or
-  partial split query data from breaking the existing calculator restore path
-- clear split-builder state during reset and cover the new URL behavior with
-  regression tests plus desktop/mobile verification
+- add explicit move earlier and move later controls to each saved split row
+- preserve split selection/save state by reordering rows around the split id
+  instead of the current row position
+- tighten split-row spacing and button sizing so four row controls still fit
+  the compact single-line mobile layout
+- cover reorder behavior, control labeling, and selection preservation in
+  `tests/main.test.js`
 
 ## Testing
 
 - [x] `npm run check`
-- [x] `node --test tests/url-state.test.js`
-- [x] Verified in a clean browser context that a copied URL restored 2 split
-  rows, kept split 1 selected in `Save split` / `Update split 1` state, and
-  restored the editor to `12 km`, `5:00`, `1:00:00`
+- [x] Chromium preview review against the built `dist/` output
+- [x] Other: desktop/mobile split-builder screenshots reviewed locally plus a
+  `360px` overflow check (`scrollWidth === viewport`)
 
 ## Risks
 
-- Low: split rows are stored in a JSON-encoded query param, so very large
-  workouts will grow the share URL accordingly
-- Low: malformed split payloads are intentionally dropped on restore, which
-  favors a safe calculator load over partial split reconstruction
+- Medium: split-row controls now activate before blur-driven rerenders, so
+  pointer and keyboard activation need to stay aligned if the row actions grow
+- Low: the tighter mobile spacing may need another pass if future split rows add
+  more content or longer metric strings
 
 ## Checklist
 
 - [x] Scope matches the linked Linear issue
-- [x] Docs updated if behavior or workflow changed
+- [ ] Docs updated if behavior or workflow changed
 - [x] Screenshots or preview notes added when UI changed
 
 Preview notes:
 
-- Desktop and mobile screenshots were captured against the built app after
-  restoring a shared workout URL; both matched the requested outcome and kept
-  the split builder intact.
+- Desktop review: after selecting split 2, editing its distance, and moving it
+  earlier, the summary switched to `Update split 1` and the saved row order
+  changed to 5K / 10K / 1K without losing the dirty state.
+- Mobile review at 360px: after saving that edit and moving the split back
+  later, the split rows stayed on one line with all four row actions visible
+  and no horizontal overflow.

@@ -1,1 +1,1 @@
-Persist workout split rows in the shareable URL state
+Add compact split reordering controls

@@ -646,7 +646,8 @@ input[aria-invalid="true"] {
 .split-list__item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 4px;
+  min-width: 0;
+  gap: 3px;
   align-items: center;
 }
 
@@ -655,9 +656,9 @@ input[aria-invalid="true"] {
   grid-template-columns: auto minmax(0, 1fr);
   min-width: 0;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   width: 100%;
-  padding: 4px 6px;
+  padding: 4px 5px;
   border: 1px solid rgba(49, 41, 28, 0.14);
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.9);
@@ -680,14 +681,15 @@ input[aria-invalid="true"] {
 
 .split-card__index {
   display: inline-flex;
-  min-width: 20px;
-  min-height: 20px;
+  min-width: 18px;
+  min-height: 18px;
   align-items: center;
   justify-content: center;
-  padding: 0 5px;
+  padding: 0 4px;
   border-radius: 999px;
   background: rgba(49, 41, 28, 0.06);
   color: var(--text);
+  font-size: 0.68rem;
   flex: 0 0 auto;
 }
 
@@ -698,14 +700,14 @@ input[aria-invalid="true"] {
   flex: 1 1 auto;
   align-items: center;
   justify-items: stretch;
-  gap: 4px;
+  gap: 3px;
   overflow: hidden;
 }
 
 .split-card__metric {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
   justify-content: center;
   min-width: 0;
   overflow: hidden;
@@ -714,14 +716,14 @@ input[aria-invalid="true"] {
 
 .split-card__metric-label {
   display: inline-flex;
-  min-width: 14px;
-  min-height: 14px;
+  min-width: 13px;
+  min-height: 13px;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
   background: rgba(187, 93, 42, 0.12);
   color: var(--accent);
-  font-size: 0.42rem;
+  font-size: 0.4rem;
   flex: 0 0 auto;
 }
 
@@ -731,7 +733,7 @@ input[aria-invalid="true"] {
   overflow: hidden;
   color: var(--text);
   font-family: var(--number-font);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   letter-spacing: -0.03em;
   line-height: 1;
   text-align: center;
@@ -741,21 +743,21 @@ input[aria-invalid="true"] {
 
 .split-card__actions {
   display: flex;
-  gap: 2px;
+  gap: 1px;
   align-items: center;
   flex: 0 0 auto;
 }
 
 .split-card__action {
   display: inline-flex;
-  inline-size: 1.85rem;
-  block-size: 1.85rem;
-  min-height: 1.85rem;
+  inline-size: 1.7rem;
+  block-size: 1.7rem;
+  min-height: 1.7rem;
   align-items: center;
   justify-content: center;
   padding: 0;
   border: 1px solid rgba(49, 41, 28, 0.12);
-  border-radius: 0.8rem;
+  border-radius: 0.72rem;
   background: rgba(255, 255, 255, 0.94);
   color: var(--text);
   cursor: pointer;
@@ -767,9 +769,17 @@ input[aria-invalid="true"] {
     transform 160ms ease;
 }
 
+.split-card__action:disabled {
+  border-color: rgba(49, 41, 28, 0.08);
+  background: rgba(244, 238, 231, 0.82);
+  color: rgba(49, 41, 28, 0.4);
+  cursor: default;
+  transform: none;
+}
+
 .split-card__action-icon {
-  inline-size: 0.9rem;
-  block-size: 0.9rem;
+  inline-size: 0.78rem;
+  block-size: 0.78rem;
   stroke-width: 1.35;
   pointer-events: none;
 }
@@ -815,38 +825,54 @@ input[aria-invalid="true"] {
   }
 
   .split-card {
-    gap: 4px;
-    padding: 4px 5px;
+    gap: 3px;
+    padding: 3px 4px;
+  }
+
+  .split-card__index {
+    min-width: 17px;
+    min-height: 17px;
+    font-size: 0.64rem;
   }
 
   .split-card__metrics {
-    gap: 3px;
+    gap: 2px;
   }
 
   .split-card__metric-value {
-    font-size: 0.66rem;
+    font-size: 0.6rem;
   }
 
   .split-card__action {
-    inline-size: 1.75rem;
-    block-size: 1.75rem;
-    min-height: 1.75rem;
+    inline-size: 1.48rem;
+    block-size: 1.48rem;
+    min-height: 1.48rem;
+  }
+
+  .split-card__action-icon {
+    inline-size: 0.7rem;
+    block-size: 0.7rem;
   }
 }
 
 @media (max-width: 360px) {
   .split-card__metric-label {
-    min-width: 13px;
-    min-height: 13px;
+    min-width: 12px;
+    min-height: 12px;
   }
 
   .split-card__metric-value {
-    font-size: 0.62rem;
+    font-size: 0.56rem;
   }
 
   .split-card__action {
-    inline-size: 1.65rem;
-    block-size: 1.65rem;
-    min-height: 1.65rem;
+    inline-size: 1.38rem;
+    block-size: 1.38rem;
+    min-height: 1.38rem;
+  }
+
+  .split-card__action-icon {
+    inline-size: 0.62rem;
+    block-size: 0.62rem;
   }
 }
