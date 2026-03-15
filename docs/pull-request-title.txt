@@ -1,1 +1,1 @@
-Repair the shared checkout from current remote state
+Add compact split reordering controls
