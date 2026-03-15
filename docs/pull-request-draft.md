@@ -1,25 +1,28 @@
-<!-- PR_TITLE: Normalize the canonical PRD path to docs/PRD.md -->
+<!-- PR_TITLE: Persist workout split rows in the shareable URL state -->
 
 ## Summary
 
-- rename the shipped product requirements document to `docs/PRD.md` so the
-  repo matches the canonical control-plane path
-- update the repository docs reference in `README.md` to the uppercase PRD path
-- add a regression test that enforces the canonical tracked path and rejects
-  tracked references to the legacy lowercase filename
+- persist workout split rows and selected-row state into the shareable URL so
+  split workouts survive refresh, copy, and reopen flows
+- restore split-builder state safely on load, while keeping malformed or
+  partial split query data from breaking the existing calculator restore path
+- clear split-builder state during reset and cover the new URL behavior with
+  regression tests plus desktop/mobile verification
 
 ## Testing
 
 - [x] `npm run check`
-- [x] `node --test tests/prd-path.test.js`
-- [x] `git ls-files docs/PRD.md` returns only the canonical uppercase file
-- [x] Verified the uppercase PRD path exists and the lowercase alias does not
+- [x] `node --test tests/url-state.test.js`
+- [x] Verified in a clean browser context that a copied URL restored 2 split
+  rows, kept split 1 selected in `Save split` / `Update split 1` state, and
+  restored the editor to `12 km`, `5:00`, `1:00:00`
 
 ## Risks
 
-- Low: case-only renames can be awkward on case-insensitive filesystems, but
-  git now tracks the uppercase path and the new guard test will fail if the
-  lowercase filename becomes the source of truth again
+- Low: split rows are stored in a JSON-encoded query param, so very large
+  workouts will grow the share URL accordingly
+- Low: malformed split payloads are intentionally dropped on restore, which
+  favors a safe calculator load over partial split reconstruction
 
 ## Checklist
 
@@ -29,5 +32,6 @@
 
 Preview notes:
 
-- Maintenance-only change; no UI preview was required for this docs-path
-  normalization.
+- Desktop and mobile screenshots were captured against the built app after
+  restoring a shared workout URL; both matched the requested outcome and kept
+  the split builder intact.

@@ -52,14 +52,17 @@ class FakeClassList {
 }
 
 class FakeElement {
-  constructor({ id = "", dataset = {} } = {}) {
+  constructor({ id = "", dataset = {}, ownerDocument = null, tagName = "div" } = {}) {
     this.attributes = {};
     this.classList = new FakeClassList();
     this.children = [];
     this.dataset = { ...dataset };
     this.disabled = false;
+    this.hidden = false;
     this.id = id;
     this.listeners = new Map();
+    this.ownerDocument = ownerDocument;
+    this.tagName = tagName;
     this.textContent = "";
     this.value = "";
   }
@@ -100,6 +103,10 @@ class FakeElement {
     this.children = [...children];
   }
 
+  getAttribute(name) {
+    return this.attributes[name] ?? null;
+  }
+
   setAttribute(name, value) {
     this.attributes[name] = String(value);
   }
@@ -111,8 +118,15 @@ class FakeDocument {
     this.collections = new Map();
   }
 
-  createElement() {
-    return new FakeElement();
+  createElement(tagName) {
+    return new FakeElement({
+      ownerDocument: this,
+      tagName
+    });
+  }
+
+  createElementNS(_namespace, tagName) {
+    return this.createElement(tagName);
   }
 
   querySelector(selector) {
@@ -127,7 +141,13 @@ class FakeDocument {
     return this.collections.get(selector) ?? [];
   }
 
-  registerElement(id, element = new FakeElement({ id })) {
+  registerElement(
+    id,
+    element = new FakeElement({
+      id,
+      ownerDocument: this
+    })
+  ) {
     this.byId.set(id, element);
     return element;
   }
@@ -157,6 +177,10 @@ function createEnvironment(search = "") {
     "rate-card",
     "reset-button",
     "selected-distance",
+    "split-action-button",
+    "split-empty-state",
+    "split-list",
+    "split-summary",
     "speed-error",
     "speed-input",
     "speed-label",
@@ -238,6 +262,31 @@ function enterTime(elements, hours, minutes, seconds) {
   elements["time-minutes"].emit("input");
   elements["time-seconds"].value = seconds;
   elements["time-seconds"].emit("input");
+}
+
+function enterDistance(elements, distance) {
+  elements["distance-input"].value = distance;
+  elements["distance-input"].emit("input");
+}
+
+function createSplitPayload(rows, selectedIndex = null) {
+  const payload = {
+    v: 1,
+    r: rows
+  };
+
+  if (selectedIndex !== null) {
+    payload.s = selectedIndex;
+  }
+
+  return JSON.stringify(payload);
+}
+
+function parseSplitPayload(search) {
+  const params = new URLSearchParams(search);
+  const rawPayload = params.get("splits");
+
+  return rawPayload ? JSON.parse(rawPayload) : null;
 }
 
 async function loadApp(t, search = "") {
@@ -352,4 +401,91 @@ test("main reset clears a valid deep link back to a clean URL", async (t) => {
   assert.equal(app.elements["pace-seconds"].value, "");
   assert.equal(app.window.history.calls.at(-1), "/index.html");
   assert.equal(app.window.reloadCount, 0);
+});
+
+test("main round-trips split rows and selected dirty state through the URL", async (t) => {
+  const app = await loadApp(t);
+
+  enterPace(app.elements, "5", "0");
+  app.elements["split-action-button"].emit("click");
+  enterTime(app.elements, "0", "40", "0");
+  app.elements["split-action-button"].emit("click");
+  app.elements["split-list"].children[0].children[0].emit("click");
+  enterDistance(app.elements, "12");
+
+  assert.deepEqual(parseSplitPayload(app.window.location.search), {
+    v: 1,
+    r: [
+      "solve=distance-rate&preset=10k&unit=km&rate=pace&pm=5&ps=00",
+      "solve=rate-time&unit=km&rate=pace&pm=5&ps=00&th=0&tm=40&ts=00"
+    ],
+    s: 0
+  });
+
+  const restoredApp = await loadApp(t, app.window.location.search);
+
+  assert.equal(restoredApp.elements["distance-input"].value, "12");
+  assert.equal(restoredApp.elements["pace-minutes"].value, "5");
+  assert.equal(restoredApp.elements["pace-seconds"].value, "00");
+  assert.equal(restoredApp.elements["time-hours"].value, "1");
+  assert.equal(restoredApp.elements["time-minutes"].value, "00");
+  assert.equal(restoredApp.elements["time-seconds"].value, "00");
+  assert.equal(restoredApp.elements["split-list"].children.length, 2);
+  assert.equal(restoredApp.elements["split-summary"].textContent, "Update split 1");
+  assert.equal(restoredApp.elements["split-action-button"].textContent, "Save split");
+  assert.equal(
+    restoredApp.elements["split-list"].children[0].children[0].getAttribute("aria-pressed"),
+    "true"
+  );
+});
+
+test("main drops malformed split payloads while preserving valid calculator state", async (t) => {
+  const searchParams = new URLSearchParams({
+    solve: "distance-rate",
+    preset: "10k",
+    unit: "km",
+    rate: "pace",
+    pm: "5",
+    ps: "0",
+    splits: createSplitPayload([
+      "solve=distance-rate&preset=10k&unit=km&rate=pace&pm=5"
+    ], 0)
+  });
+  const app = await loadApp(t, `?${searchParams.toString()}`);
+
+  assert.equal(app.elements["distance-input"].value, "10");
+  assert.equal(app.elements["pace-minutes"].value, "5");
+  assert.equal(app.elements["pace-seconds"].value, "00");
+  assert.equal(app.elements["split-list"].children.length, 0);
+  assert.equal(app.elements["split-summary"].textContent, "No splits yet");
+  assert.equal(
+    app.window.location.search,
+    "?solve=distance-rate&preset=10k&unit=km&rate=pace&pm=5&ps=0"
+  );
+  assert.equal(app.window.history.calls.length, 1);
+});
+
+test("main reset clears split rows and removes split URL state", async (t) => {
+  const searchParams = new URLSearchParams({
+    solve: "distance-rate",
+    preset: "custom",
+    unit: "km",
+    distance: "12",
+    rate: "pace",
+    pm: "5",
+    ps: "0",
+    splits: createSplitPayload([
+      "solve=distance-rate&preset=10k&unit=km&rate=pace&pm=5&ps=0",
+      "solve=rate-time&unit=km&rate=pace&pm=5&ps=0&th=0&tm=40&ts=0"
+    ], 0)
+  });
+  const app = await loadApp(t, `?${searchParams.toString()}`);
+
+  app.elements["reset-button"].emit("click");
+
+  assert.equal(app.window.location.search, "");
+  assert.equal(app.elements["split-list"].children.length, 0);
+  assert.equal(app.elements["split-summary"].textContent, "No splits yet");
+  assert.equal(app.elements["split-empty-state"].hidden, false);
+  assert.equal(app.window.history.calls.at(-1), "/index.html");
 });

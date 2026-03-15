@@ -1,1 +1,1 @@
-Normalize the canonical PRD path to docs/PRD.md
+Persist workout split rows in the shareable URL state
