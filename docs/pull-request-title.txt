@@ -1,1 +1,1 @@
-Add compact split reordering controls
+Repoint the shared checkout to a clean replacement path

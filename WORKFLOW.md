@@ -134,7 +134,7 @@ Instructions:
 Repo metadata:
 
 - GitHub repo: `https://github.com/helionaut/run-pace-calculator`
-- Local repo root: `/home/helionaut/src/projects/run-pace-calculator`
+- Local repo root: `/home/helionaut/src/projects/run-pace-calculator-shared`
 - Symphony workspace root: `/home/helionaut/workspaces`
 
 Default flow:

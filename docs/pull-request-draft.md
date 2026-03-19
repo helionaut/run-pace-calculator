@@ -1,40 +1,34 @@
-<!-- PR_TITLE: Add compact split reordering controls -->
+<!-- PR_TITLE: Repoint the shared checkout to a clean replacement path -->
 
 ## Summary
 
-- add explicit move earlier and move later controls to each saved split row
-- preserve split selection/save state by reordering rows around the split id
-  instead of the current row position
-- tighten split-row spacing and button sizing so four row controls still fit
-  the compact single-line mobile layout
-- cover reorder behavior, control labeling, and selection preservation in
-  `tests/main.test.js`
+- repoint the default shared checkout metadata to
+  `/home/helionaut/src/projects/run-pace-calculator-shared`
+- update `WORKFLOW.md` so future Symphony issue runs advertise the replacement
+  repo root instead of the dirty legacy clone
+- document the exact HEL-62 cleanup and validation commands in `README.md`
 
 ## Testing
 
 - [x] `npm run check`
-- [x] Chromium preview review against the built `dist/` output
-- [x] Other: desktop/mobile split-builder screenshots reviewed locally plus a
-  `360px` overflow check (`scrollWidth === viewport`)
+- [x] `npm run build`
+- [x] Other: `node --test tests/repair-shared-checkout.test.js`
+- [x] Other: `npm run checkout:repair`
+- [x] Other:
+  `git -C /home/helionaut/src/projects/run-pace-calculator-shared status --short --branch`
+- [x] Other:
+  `git -C /home/helionaut/src/projects/run-pace-calculator-shared rev-parse HEAD origin/main`
+- [x] Other:
+  `git -C /home/helionaut/src/projects/run-pace-calculator-shared diff --exit-code origin/main -- WORKFLOW.md`
 
 ## Risks
 
-- Medium: split-row controls now activate before blur-driven rerenders, so
-  pointer and keyboard activation need to stay aligned if the row actions grow
-- Low: the tighter mobile spacing may need another pass if future split rows add
-  more content or longer metric strings
+- Low: after the PR merges, the replacement checkout needs one more refresh
+  against merged `origin/main` so its local `WORKFLOW.md` picks up the new repo
+  root metadata too
 
 ## Checklist
 
 - [x] Scope matches the linked Linear issue
-- [ ] Docs updated if behavior or workflow changed
-- [x] Screenshots or preview notes added when UI changed
-
-Preview notes:
-
-- Desktop review: after selecting split 2, editing its distance, and moving it
-  earlier, the summary switched to `Update split 1` and the saved row order
-  changed to 5K / 10K / 1K without losing the dirty state.
-- Mobile review at 360px: after saving that edit and moving the split back
-  later, the split rows stayed on one line with all four row actions visible
-  and no horizontal overflow.
+- [x] Docs updated if behavior or workflow changed
+- [ ] Screenshots or preview notes added when UI changed
