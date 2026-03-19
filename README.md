@@ -112,6 +112,25 @@ The helper moves the previous checkout aside as
 origin, fetches all remote branches, and resets the shared checkout onto
 `origin/main`.
 
+The active shared checkout for future repo-level work is:
+
+```text
+/home/helionaut/src/projects/run-pace-calculator-shared
+```
+
+The HEL-62 hygiene lane provisions or refreshes that replacement checkout with:
+
+```sh
+npm run checkout:repair
+git -C /home/helionaut/src/projects/run-pace-calculator-shared status --short --branch
+git -C /home/helionaut/src/projects/run-pace-calculator-shared rev-parse HEAD origin/main
+git -C /home/helionaut/src/projects/run-pace-calculator-shared diff --exit-code origin/main -- WORKFLOW.md
+```
+
+Those commands prove the replacement checkout is on `main`, matches
+`origin/main`, and has no local `WORKFLOW.md` drift before the next execution
+task starts.
+
 To repair a different checkout or branch during testing, call the script
 directly:
 
