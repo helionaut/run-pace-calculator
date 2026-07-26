@@ -6,6 +6,7 @@ export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url
 export const SOURCE_DIR = path.join(REPO_ROOT, "src");
 export const DIST_DIR = path.join(REPO_ROOT, "dist");
 export const DIST_FILES = [
+  "CNAME",
   "index.html",
   "styles.css",
   "main.js",

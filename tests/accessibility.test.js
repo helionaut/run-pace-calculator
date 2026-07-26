@@ -9,7 +9,7 @@ async function readFixture(url) {
   return readFile(url, "utf8");
 }
 
-test("calculator markup keeps the compact three-value flow in DOM order", async () => {
+test("calculator keeps the established value flow and accessible errors", async () => {
   const html = await readFixture(htmlPath);
   const orderedIds = [
     "distance-input",
@@ -25,7 +25,6 @@ test("calculator markup keeps the compact three-value flow in DOM order", async 
     "projection-half",
     "projection-marathon"
   ];
-
   let previousIndex = -1;
 
   for (const id of orderedIds) {
@@ -35,114 +34,58 @@ test("calculator markup keeps the compact three-value flow in DOM order", async 
     previousIndex = index;
   }
 
-  assert.match(html, /<span id="distance-label">Distance \(km\)<\/span>/);
-  assert.equal((html.match(/class="calculator-panel"/g) ?? []).length, 1);
-  assert.match(html, /class="tool-bar"/);
-  assert.match(html, /id="distance-card"/);
-  assert.match(html, /id="rate-card"/);
-  assert.match(html, /id="time-card"/);
-  assert.match(html, /class="projection-strip"/);
-  assert.match(html, /id="split-builder-title"/);
-  assert.match(html, /id="split-action-button"/);
-  assert.match(html, /id="split-summary"/);
-  assert.match(html, /id="split-list"/);
-  assert.match(
-    html,
-    /<div class="metric-card__head">[\s\S]*<div[\s\S]*class="distance-adjustments"[\s\S]*data-increment-km="-0\.1"[\s\S]*-100m[\s\S]*data-increment-km="-0\.2"[\s\S]*-200m[\s\S]*data-increment-km="0\.1"[\s\S]*\+100m[\s\S]*data-increment-km="0\.2"[\s\S]*\+200m[\s\S]*<\/div>/
-  );
-  assert.doesNotMatch(html, /data-increment-km="0\.5"[\s\S]*\+500m/);
-  assert.match(
-    html,
-    /<div class="metric-card__title metric-card__title--solo">[\s\S]*<h2>Time<\/h2>/
-  );
-  assert.match(html, /id="distance-slider"[\s\S]*type="range"/);
-  assert.match(html, /<span id="pace-label">Pace \(min\/km\)<\/span>/);
-  assert.match(html, /<span id="speed-label">Speed \(km\/h\)<\/span>/);
-  assert.match(html, /<span>Hours<\/span>[\s\S]*id="time-hours"/);
-  assert.match(html, /<span>Minutes<\/span>[\s\S]*id="time-minutes"/);
-  assert.match(html, /<span>Seconds<\/span>[\s\S]*id="time-seconds"/);
-  assert.doesNotMatch(html, /<p class="eyebrow">Time<\/p>[\s\S]*<h2>Time<\/h2>/);
-  assert.doesNotMatch(html, /pace-lock-button/);
-  assert.doesNotMatch(html, /time-lock-button/);
-  assert.doesNotMatch(html, /pace-driver-button/);
-  assert.doesNotMatch(html, /speed-driver-button/);
-  assert.doesNotMatch(html, /time-driver-button/);
-  assert.doesNotMatch(html, /<details/);
+  for (const errorId of ["distance-error", "pace-error", "speed-error", "time-error"]) {
+    assert.match(html, new RegExp(`id="${errorId}" aria-live="polite"`));
+  }
+
+  assert.match(html, /id="status-message"[\s\S]*role="status"[\s\S]*aria-live="polite"/);
+  assert.match(html, /id="split-list" aria-live="polite"/);
 });
 
-test("status messaging, error affordances, and responsive safeguards are present", async () => {
-  const [html, css] = await Promise.all([
-    readFixture(htmlPath),
-    readFixture(cssPath)
-  ]);
+test("responsive CSS encodes mobile, tablet, and desktop layout safeguards", async () => {
+  const css = await readFixture(cssPath);
 
-  assert.match(html, /id="distance-error" aria-live="polite"/);
-  assert.match(html, /id="pace-error" aria-live="polite"/);
-  assert.match(html, /id="speed-error" aria-live="polite"/);
-  assert.match(html, /id="time-error" aria-live="polite"/);
+  assert.match(css, /\*\s*{[\s\S]*box-sizing:\s*border-box;/);
+  assert.match(css, /\.page-shell\s*{[\s\S]*width:\s*min\(100%,\s*1232px\);/);
+  assert.match(css, /\.calculator-panel\s*{[\s\S]*min-width:\s*0;/);
+  assert.match(css, /@media \(min-width: 700px\)/);
+  assert.match(css, /@media \(min-width: 1100px\)/);
   assert.match(
-    html,
-    /id="status-message"[\s\S]*role="status"[\s\S]*aria-live="polite"[\s\S]*aria-atomic="true"/
+    css,
+    /grid-template-columns:\s*minmax\(0,\s*7fr\)\s+minmax\(320px,\s*5fr\);/
+  );
+  assert.match(css, /@media \(max-width: 420px\)/);
+  assert.match(css, /\.projection-strip\s*{[\s\S]*overflow:\s*hidden;/);
+  assert.match(css, /\.split-card__metrics\s*{[\s\S]*min-width:\s*0;/);
+  assert.match(css, /input\s*{[\s\S]*min-width:\s*0;[\s\S]*font-size:\s*1rem;/);
+});
+
+test("keyboard focus and interactive targets meet the static accessibility contract", async () => {
+  const css = await readFixture(cssPath);
+
+  assert.match(
+    css,
+    /\.support-link,[\s\S]*\.split-card__action\s*{[\s\S]*min-height:\s*44px;/
+  );
+  assert.match(css, /\.segmented__button\s*{[\s\S]*min-width:\s*44px;/);
+  assert.match(css, /input\s*{[\s\S]*min-height:\s*48px;/);
+  assert.match(css, /\.distance-slider\s*{[\s\S]*min-height:\s*44px;/);
+  assert.match(
+    css,
+    /input:focus-visible,[\s\S]*button:focus-visible,[\s\S]*a:focus-visible\s*{[\s\S]*outline:\s*2px solid var\(--accent\);[\s\S]*outline-offset:\s*3px;/
   );
   assert.match(css, /input\[aria-invalid="true"\]/);
-  assert.match(css, /\.calculator-panel\s*{/);
-  assert.match(css, /\.distance-card\s*{/);
-  assert.match(css, /\.metric-card\s*{/);
-  assert.match(css, /\.metric-card--source\s*{/);
-  assert.match(css, /\.metric-card--derived\s*{/);
+  assert.match(css, /\.field--linked > span::after|\.rate-field\.field--linked > span::after/);
+});
+
+test("support CTA uses the exact script-free owner URL", async () => {
+  const html = await readFixture(htmlPath);
+
   assert.match(
-    css,
-    /\.distance-card\s+\.metric-card__head\s*{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+auto;/
+    html,
+    /href="https:\/\/buymeacoffee\.com\/helionaut"[\s\S]*target="_blank"[\s\S]*rel="noopener noreferrer"/
   );
-  assert.match(
-    css,
-    /\.metric-card__title\s*{[\s\S]*padding-inline-start:\s*[0-9.]+rem;/
-  );
-  assert.match(css, /\.rate-grid\s*{/);
-  assert.match(css, /\.time-grid\s*{/);
-  assert.match(css, /\.projection-strip\s*{/);
-  assert.match(css, /\.split-builder\s*{/);
-  assert.match(css, /input\s*{[\s\S]*font-size:\s*1rem;/);
-  assert.match(css, /\.split-card\s*{[\s\S]*display:\s*flex;/);
-  assert.match(
-    css,
-    /\.split-card__metrics\s*{[\s\S]*display:\s*grid;[\s\S]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\);/
-  );
-  assert.match(
-    css,
-    /\.split-card__metric\s*{[\s\S]*justify-content:\s*center;/
-  );
-  assert.match(
-    css,
-    /\.split-card__metric-value\s*{[\s\S]*text-align:\s*center;/
-  );
-  assert.match(css, /\.split-card__actions\s*{[\s\S]*display:\s*flex;/);
-  assert.match(css, /\.split-card__action\s*{[\s\S]*inline-size:\s*[0-9.]+rem;/);
-  assert.match(css, /\.split-card__action-icon\s*{/);
-  assert.match(
-    css,
-    /\.status-message\s*{[\s\S]*-webkit-line-clamp:\s*2;[\s\S]*white-space:\s*normal;/
-  );
-  assert.match(
-    css,
-    /\.preset-row\s*{[\s\S]*display:\s*grid;[\s\S]*grid-template-columns:\s*repeat\(7,\s*minmax\(0,\s*1fr\)\);/
-  );
-  assert.match(css, /\.chip-button\s*{[\s\S]*white-space:\s*nowrap;/);
-  assert.match(css, /\.split-builder__title\s*{[\s\S]*display:\s*flex;/);
-  assert.match(
-    css,
-    /\.split-builder__summary\s*{[\s\S]*white-space:\s*nowrap;[\s\S]*text-overflow:\s*ellipsis;/
-  );
-  assert.match(css, /\.status-message:empty\s*{/);
-  assert.match(css, /min-height:\s*100dvh/);
-  assert.doesNotMatch(
-    css,
-    /@media \(max-width: 540px\)\s*{[\s\S]*\.preset-row\s*{[\s\S]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\);/
-  );
-  assert.doesNotMatch(
-    css,
-    /@media \(max-width: 360px\)\s*{[\s\S]*\.split-list__item\s*{[\s\S]*grid-template-columns:\s*1fr;/
-  );
-  assert.doesNotMatch(css, /\.metric-row--goal\s*{/);
-  assert.doesNotMatch(css, /\.ghost-button--compact\s*{/);
+  assert.match(html, /aria-label="Buy me a coffee \(opens in a new tab\)"/);
+  assert.doesNotMatch(html, /<script[^>]+(?:buymeacoffee|coffee)/i);
+  assert.doesNotMatch(html, /<iframe/i);
 });

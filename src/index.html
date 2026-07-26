@@ -10,7 +10,12 @@
       name="description"
       content="A compact running calculator that solves distance, movement rate, and finish time from the last two values you edit."
     />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'"
+    />
     <title>Run Pace Calculator</title>
+    <link rel="canonical" href="https://runpacecalculator.app/" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
@@ -23,17 +28,23 @@
               <div class="title-block">
                 <h1 id="app-title">Run Pace Calculator</h1>
               </div>
-
-              <p
-                class="status-message"
-                id="status-message"
-                role="status"
-                aria-live="polite"
-                aria-atomic="true"
-              ></p>
+              <p class="product-intro">
+                Turn any two running metrics into the third.
+              </p>
             </div>
 
             <div class="tool-bar__actions">
+              <a
+                class="support-link"
+                href="https://buymeacoffee.com/helionaut"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Buy me a coffee (opens in a new tab)"
+              >
+                <span aria-hidden="true">☕</span>
+                Support this tool
+              </a>
+
               <div class="segmented" aria-label="Distance unit">
                 <button
                   type="button"
@@ -324,6 +335,27 @@
             <strong id="projection-marathon">--:--:--</strong>
           </div>
         </section>
+
+        <aside class="result-card" aria-labelledby="result-title">
+          <p class="eyebrow">Live result</p>
+          <h2 id="result-title">Your calculation</h2>
+          <p class="result-card__label" id="result-label">Ready when you are</p>
+          <p class="result-card__value" id="result-value">—</p>
+          <p class="result-card__detail" id="result-detail">
+            Enter any two values to calculate the third.
+          </p>
+          <p
+            class="status-message"
+            id="status-message"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          ></p>
+          <div class="result-card__rule" aria-hidden="true"></div>
+          <p class="result-card__hint">
+            Edit any two values. The remaining value updates automatically.
+          </p>
+        </aside>
 
         <section class="split-builder" aria-labelledby="split-builder-title">
           <div class="split-builder__head">

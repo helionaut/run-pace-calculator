@@ -5,7 +5,7 @@ projected finish time across common race distances. This repo now has one
 canonical Node-based install, run, build, preview, check, and Pages-deploy
 verification flow for local work and pull-request validation.
 
-Production URL: https://helionaut.github.io/run-pace-calculator/
+Canonical production URL: https://runpacecalculator.app/
 
 ## What Ships In The Current Slice
 
@@ -29,13 +29,7 @@ Production URL: https://helionaut.github.io/run-pace-calculator/
 
 ## Canonical Local Workflow
 
-1. Install the lockfile-defined toolchain:
-
-   ```sh
-   npm ci
-   ```
-
-2. Run the source app locally:
+1. Run the source app locally:
 
    ```sh
    npm run dev
@@ -43,7 +37,7 @@ Production URL: https://helionaut.github.io/run-pace-calculator/
 
    The source app is served from `src/` at `http://127.0.0.1:3000`.
 
-3. Build the production artifact:
+2. Build the production artifact:
 
    ```sh
    npm run build
@@ -51,7 +45,7 @@ Production URL: https://helionaut.github.io/run-pace-calculator/
 
    This recreates `dist/` from the tracked files in `src/`.
 
-4. Preview the built artifact locally:
+3. Preview the built artifact locally:
 
    ```sh
    npm run preview
@@ -59,7 +53,7 @@ Production URL: https://helionaut.github.io/run-pace-calculator/
 
    This rebuilds `dist/` and serves it at `http://127.0.0.1:4173`.
 
-5. Run the full non-interactive validation gate:
+4. Run the full non-interactive validation gate:
 
    ```sh
    npm run check
@@ -68,11 +62,11 @@ Production URL: https://helionaut.github.io/run-pace-calculator/
    This runs syntax checks, the Node test suite, a production build, and a
    smoke check against the built artifact.
 
-6. Run the Pages deployment validation or compare the live site to `dist/`:
+5. Run the Pages deployment validation or compare the live site to `dist/`:
 
    ```sh
    npm run validate
-   npm run verify:pages -- https://helionaut.github.io/run-pace-calculator/
+   npm run verify:pages -- https://runpacecalculator.app/
    ```
 
    `npm run validate` reuses the deploy gate before GitHub Pages upload, and
@@ -83,7 +77,7 @@ Production URL: https://helionaut.github.io/run-pace-calculator/
 
 | Command | Purpose |
 | --- | --- |
-| `npm ci` | Install the exact toolchain from `package-lock.json` |
+| `npm run check:supply-chain` | Verify the lockfile, zero-dependency policy, and seven-day minimum package age policy |
 | `npm run dev` | Serve the source app from `src/` locally |
 | `npm run build` | Rebuild the deployable `dist/` directory |
 | `npm run checkout:repair` | Recreate the shared checkout from the repo metadata in `.bootstrap/project.json` |
@@ -93,7 +87,10 @@ Production URL: https://helionaut.github.io/run-pace-calculator/
 | `npm run validate` | Run the Pages pre-deploy validation path |
 | `npm run verify:pages -- <url>` | Compare a deployed site to local `dist/` |
 
-GitHub Actions runs `npm run check` for every pull request.
+GitHub Actions runs `npm run check` for every pull request without installing
+dependencies. The repository is intentionally zero-dependency; its checked
+supply-chain policy rejects external package entries and records a seven-day
+minimum release age for any future policy review.
 
 If the environment blocks local socket binding, `dev` and `preview` exit with a
 short explicit error instead of a server traceback.

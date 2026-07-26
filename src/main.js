@@ -122,6 +122,33 @@ function renderProjections(elements, projectionRows) {
   }
 }
 
+function renderResultSummary(elements, view) {
+  let label = "Ready when you are";
+  let value = "—";
+  let detail = "Enter any two values to calculate the third.";
+
+  if (view.hasLiveResult && view.derivedMetric === "time") {
+    label = "Finish time";
+    value = formatSplitTimeLabel(view.time.inputValues);
+    detail = `${view.selectedDistanceLabel} at ${formatSplitPaceLabel(
+      view.rate.paceInputValues,
+      view.unit
+    )}.`;
+  } else if (view.hasLiveResult && view.derivedMetric === "rate") {
+    label = "Required pace";
+    value = formatSplitPaceLabel(view.rate.paceInputValues, view.unit);
+    detail = `${view.rate.speedInputValue} ${view.unit === "mi" ? "mph" : "km/h"} for ${view.selectedDistanceLabel}.`;
+  } else if (view.hasLiveResult && view.derivedMetric === "distance") {
+    label = "Calculated distance";
+    value = view.selectedDistanceLabel;
+    detail = `At ${formatSplitPaceLabel(view.rate.paceInputValues, view.unit)}.`;
+  }
+
+  setTextContent(elements.resultLabel, label);
+  setTextContent(elements.resultValue, value);
+  setTextContent(elements.resultDetail, detail);
+}
+
 function hasValue(value) {
   return String(value ?? "").trim() !== "";
 }
@@ -674,6 +701,7 @@ function render(elements, state) {
   elements.statusMessage.classList.toggle("status-message--error", hasError);
 
   renderProjections(elements, view.projectionRows);
+  renderResultSummary(elements, view);
 
   return view;
 }
@@ -792,6 +820,9 @@ export function getElements(root) {
       marathon: root.querySelector("#projection-marathon")
     },
     rateCard: root.querySelector("#rate-card"),
+    resultDetail: root.querySelector("#result-detail"),
+    resultLabel: root.querySelector("#result-label"),
+    resultValue: root.querySelector("#result-value"),
     resetButton: root.querySelector("#reset-button"),
     selectedDistance: root.querySelector("#selected-distance"),
     splitActionButton: root.querySelector("#split-action-button"),
