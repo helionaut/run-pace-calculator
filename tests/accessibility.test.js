@@ -65,7 +65,7 @@ test("keyboard focus and interactive targets meet the static accessibility contr
 
   assert.match(
     css,
-    /\.support-link,[\s\S]*\.split-card__action\s*{[\s\S]*min-height:\s*44px;/
+    /\.support-link,[\s\S]*\.split-card__action\s*{[\s\S]*min-width:\s*44px;[\s\S]*min-height:\s*44px;/
   );
   assert.match(css, /\.segmented__button\s*{[\s\S]*min-width:\s*44px;/);
   assert.match(css, /input\s*{[\s\S]*min-height:\s*48px;/);
@@ -77,6 +77,19 @@ test("keyboard focus and interactive targets meet the static accessibility contr
   assert.match(css, /input\[aria-invalid="true"\]/);
   assert.match(css, /\.field--linked > span::after|\.rate-field\.field--linked > span::after/);
 });
+
+for (const viewport of ["768x1024", "1440x900"]) {
+  test(`${viewport} keeps every button and link target at least 44px square`, async () => {
+    const css = await readFixture(cssPath);
+    const sharedTargetRule = css.match(
+      /\.support-link,\s*\.segmented__button,\s*\.ghost-button,\s*\.chip-button,\s*\.split-action-button,\s*\.split-card,\s*\.split-card__action\s*\{([^}]+)\}/
+    );
+
+    assert.ok(sharedTargetRule, "shared interactive target rule should exist");
+    assert.match(sharedTargetRule[1], /min-width:\s*44px;/);
+    assert.match(sharedTargetRule[1], /min-height:\s*44px;/);
+  });
+}
 
 test("support CTA uses the exact script-free owner URL", async () => {
   const html = await readFixture(htmlPath);

@@ -125,6 +125,7 @@ a {
 .split-action-button,
 .split-card,
 .split-card__action {
+  min-width: 44px;
   min-height: 44px;
 }
 
