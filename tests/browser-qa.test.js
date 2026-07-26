@@ -5,9 +5,13 @@ import { fileURLToPath } from "node:url";
 
 import {
   evaluateAcceptance,
+  evaluateMobileComparison,
+  MOBILE_COMPARISON_VARIANTS,
+  MOBILE_COMPARISON_VIEWPORT,
   parseArguments,
   QA_VARIANTS,
   QA_VIEWPORTS,
+  renderMobileComparisonReport,
   renderMarkdownReport
 } from "../scripts/browser-qa.mjs";
 
@@ -95,6 +99,87 @@ function passingMeasurements() {
   };
 }
 
+function mobileComparisonMeasurement(variant, {
+  documentHeight,
+  primaryVisibleCount
+}) {
+  return {
+    appViewport: {
+      devicePixelRatio: 1,
+      height: 844,
+      visualScale: 1,
+      width: 390
+    },
+    contentBounds: {
+      left: 0,
+      right: 390,
+      width: 390
+    },
+    document: {
+      clientHeight: 844,
+      clientWidth: 390,
+      scrollHeight: documentHeight,
+      scrollWidth: 390
+    },
+    focus: {
+      id: null,
+      tag: "BODY"
+    },
+    identity: "Run Pace Calculator",
+    image: {
+      file: variant.screenshot,
+      height: 908,
+      sha256: "a".repeat(64),
+      width: 390
+    },
+    inputState: {
+      "distance-input": "10",
+      "pace-minutes": "5",
+      "pace-seconds": "00",
+      "speed-input": "12",
+      "time-hours": "0",
+      "time-minutes": "50",
+      "time-seconds": "00"
+    },
+    label: {
+      revision: variant.revision,
+      text: variant.label
+    },
+    outerDocument: {
+      clientHeight: 908,
+      clientWidth: 390,
+      scrollHeight: 908,
+      scrollWidth: 390
+    },
+    primaryBottom: documentHeight - 100,
+    primaryVisibleCount,
+    result: {
+      detail: "10K at 5:00 /km.",
+      label: "Finish time",
+      value: "50:00"
+    },
+    revision: variant.revision,
+    scroll: {
+      x: 0,
+      y: 0
+    },
+    unit: "km"
+  };
+}
+
+function passingMobileComparisonMeasurements() {
+  return {
+    old: mobileComparisonMeasurement(MOBILE_COMPARISON_VARIANTS[0], {
+      documentHeight: 1800,
+      primaryVisibleCount: 12
+    }),
+    new: mobileComparisonMeasurement(MOBILE_COMPARISON_VARIANTS[1], {
+      documentHeight: 1440,
+      primaryVisibleCount: 16
+    })
+  };
+}
+
 test("browser QA matrix fixes the three authoritative viewports and comparison states", () => {
   assert.deepEqual(
     QA_VIEWPORTS.map(({ id }) => id),
@@ -107,6 +192,84 @@ test("browser QA matrix fixes the three authoritative viewports and comparison s
       ["current", "0187103"],
       ["revised", null]
     ]
+  );
+});
+
+test("mobile comparison contract fixes exactly two labeled revisions at one app viewport", () => {
+  assert.deepEqual(MOBILE_COMPARISON_VIEWPORT, {
+    height: 844,
+    id: "390x844",
+    width: 390
+  });
+  assert.deepEqual(
+    MOBILE_COMPARISON_VARIANTS.map(
+      ({ id, label, revision, screenshot }) => ({
+        id,
+        label,
+        revision,
+        screenshot
+      })
+    ),
+    [
+      {
+        id: "old",
+        label: "Старая версия",
+        revision: "01871034a84d1ed4daf470535e2351ecc871fdd3",
+        screenshot: "old-version-0187103.png"
+      },
+      {
+        id: "new",
+        label: "Новая версия",
+        revision: "6ffa9d9a1019c0f3814d51cd7dbc888f4b00fe74",
+        screenshot: "new-version-6ffa9d9.png"
+      }
+    ]
+  );
+});
+
+test("mobile comparison acceptance verifies provenance, framing, state, overflow, and compactness", () => {
+  const acceptance = evaluateMobileComparison(
+    passingMobileComparisonMeasurements()
+  );
+
+  assert.equal(acceptance.passed, true);
+  assert.equal(acceptance.compactnessRatio, 0.8);
+  assert.deepEqual(
+    acceptance.checks.map(({ id }) => id),
+    [
+      "old-revision",
+      "old-label",
+      "old-app-viewport",
+      "old-image-size",
+      "old-horizontal-overflow",
+      "old-identity",
+      "new-revision",
+      "new-label",
+      "new-app-viewport",
+      "new-image-size",
+      "new-horizontal-overflow",
+      "new-identity",
+      "comparable-state",
+      "compactness"
+    ]
+  );
+});
+
+test("mobile comparison acceptance rejects mismatched state, crop, and weak density difference", () => {
+  const measurements = passingMobileComparisonMeasurements();
+
+  measurements.old.document.scrollWidth = 410;
+  measurements.new.inputState["distance-input"] = "5";
+  measurements.new.document.scrollHeight = 1700;
+
+  const acceptance = evaluateMobileComparison(measurements);
+
+  assert.equal(acceptance.passed, false);
+  assert.deepEqual(
+    acceptance.checks
+      .filter(({ passed }) => !passed)
+      .map(({ id }) => id),
+    ["old-horizontal-overflow", "comparable-state", "compactness"]
   );
 });
 
@@ -165,6 +328,34 @@ test("browser QA argument parsing keeps check mode dependency-free", () => {
 
   assert.equal(configuration.check, true);
   assert.equal(configuration.chrome, null);
+  assert.equal(configuration.mobileComparison, false);
+});
+
+test("mobile comparison argument parsing keeps its capture contract inspectable", () => {
+  const configuration = parseArguments([
+    "--mobile-comparison",
+    "--check",
+    "--output",
+    "artifacts/mobile"
+  ]);
+
+  assert.equal(configuration.check, true);
+  assert.equal(configuration.mobileComparison, true);
+  assert.equal(
+    configuration.output,
+    fileURLToPath(new URL("../artifacts/mobile", import.meta.url))
+  );
+});
+
+test("mobile comparison defaults to a dedicated artifact directory", () => {
+  const configuration = parseArguments(["--mobile-comparison", "--check"]);
+
+  assert.equal(
+    configuration.output,
+    fileURLToPath(
+      new URL("../artifacts/mobile-comparison", import.meta.url)
+    )
+  );
 });
 
 test("browser QA relative output paths remain portable across checkout roots", () => {
@@ -204,12 +395,34 @@ test("browser QA report records dimensions, checks, and all nine screenshots", (
   }
 });
 
+test("mobile comparison report records the two labels, revisions, and images", () => {
+  const measurements = passingMobileComparisonMeasurements();
+  const report = renderMobileComparisonReport({
+    acceptance: evaluateMobileComparison(measurements),
+    generatedAt: "2026-07-26T00:00:00.000Z",
+    measurements
+  });
+
+  assert.match(report, /Старая версия/);
+  assert.match(report, /Новая версия/);
+  assert.match(report, /01871034a84d1ed4daf470535e2351ecc871fdd3/);
+  assert.match(report, /6ffa9d9a1019c0f3814d51cd7dbc888f4b00fe74/);
+  assert.match(report, /old-version-0187103\.png/);
+  assert.match(report, /new-version-6ffa9d9\.png/);
+  assert.match(report, /compactness \\| PASS/);
+});
+
 test("package scripts expose explicit behavioral regression and browser QA commands", async () => {
   const packageJson = JSON.parse(
     await readFile(new URL("../package.json", import.meta.url), "utf8")
   );
 
   assert.equal(packageJson.scripts["qa:browser"], "node scripts/browser-qa.mjs");
+  assert.equal(
+    packageJson.scripts["qa:mobile-comparison"],
+    "node scripts/browser-qa.mjs --mobile-comparison --output artifacts/mobile-comparison"
+  );
+  assert.match(packageJson.scripts["check:syntax"], /browser-qa\.mjs/);
   assert.match(packageJson.scripts["test:regression"], /calculator\.test\.js/);
   assert.match(packageJson.scripts["test:regression"], /main\.test\.js/);
   assert.match(packageJson.scripts["test:regression"], /url-state\.test\.js/);

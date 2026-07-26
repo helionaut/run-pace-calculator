@@ -1,8 +1,10 @@
 import { spawn, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   copyFile,
   mkdir,
   mkdtemp,
+  readdir,
   readFile,
   rm,
   writeFile
@@ -53,10 +55,35 @@ export const QA_VIEWPORTS = Object.freeze([
   Object.freeze({ height: 900, id: "1440x900", width: 1440 })
 ]);
 
+export const MOBILE_COMPARISON_VARIANTS = Object.freeze([
+  Object.freeze({
+    id: "old",
+    label: "Старая версия",
+    revision: "01871034a84d1ed4daf470535e2351ecc871fdd3",
+    screenshot: "old-version-0187103.png"
+  }),
+  Object.freeze({
+    id: "new",
+    label: "Новая версия",
+    revision: "6ffa9d9a1019c0f3814d51cd7dbc888f4b00fe74",
+    screenshot: "new-version-6ffa9d9.png"
+  })
+]);
+
+export const MOBILE_COMPARISON_VIEWPORT = Object.freeze({
+  height: 844,
+  id: "390x844",
+  width: 390
+});
+
+const MOBILE_COMPARISON_LABEL_HEIGHT = 64;
+
 export function parseArguments(argv) {
+  let outputProvided = false;
   const options = {
     check: false,
     chrome: null,
+    mobileComparison: false,
     output: resolve(PROJECT_ROOT, "artifacts/browser-qa")
   };
 
@@ -68,6 +95,11 @@ export function parseArguments(argv) {
       continue;
     }
 
+    if (argument === "--mobile-comparison") {
+      options.mobileComparison = true;
+      continue;
+    }
+
     if (argument === "--chrome" || argument === "--output") {
       const value = argv[index + 1];
 
@@ -76,11 +108,16 @@ export function parseArguments(argv) {
       }
 
       options[argument.slice(2)] = resolve(PROJECT_ROOT, value);
+      outputProvided ||= argument === "--output";
       index += 1;
       continue;
     }
 
     throw new Error(`Unknown argument: ${argument}`);
+  }
+
+  if (options.mobileComparison && !outputProvided) {
+    options.output = resolve(PROJECT_ROOT, "artifacts/mobile-comparison");
   }
 
   return options;
@@ -156,6 +193,96 @@ async function stageVariant(variant, stagingRoot) {
   }
 
   return variantRoot;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+async function stageMobileComparisonVariant(variant, stagingRoot) {
+  await stageVariant(variant, stagingRoot);
+
+  const wrapperRoot = join(stagingRoot, `comparison-${variant.id}`);
+  const wrapper = `<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    />
+    <title>${escapeHtml(variant.label)}</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: ${MOBILE_COMPARISON_VIEWPORT.width}px;
+        min-width: ${MOBILE_COMPARISON_VIEWPORT.width}px;
+        max-width: ${MOBILE_COMPARISON_VIEWPORT.width}px;
+        margin: 0;
+        overflow: hidden;
+        background: #17211e;
+      }
+
+      .capture-label {
+        display: grid;
+        width: ${MOBILE_COMPARISON_VIEWPORT.width}px;
+        height: ${MOBILE_COMPARISON_LABEL_HEIGHT}px;
+        padding: 8px 14px 7px;
+        color: #fff;
+        font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1;
+      }
+
+      .capture-label strong {
+        align-self: center;
+        font-size: 17px;
+        letter-spacing: -0.01em;
+      }
+
+      .capture-label code {
+        align-self: center;
+        overflow: hidden;
+        font: 10px/1.2 "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      iframe {
+        display: block;
+        width: ${MOBILE_COMPARISON_VIEWPORT.width}px;
+        height: ${MOBILE_COMPARISON_VIEWPORT.height}px;
+        border: 0;
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <header
+      class="capture-label"
+      data-label="${escapeHtml(variant.label)}"
+      data-revision="${escapeHtml(variant.revision)}"
+    >
+      <strong>${escapeHtml(variant.label)}</strong>
+      <code>${escapeHtml(variant.revision)}</code>
+    </header>
+    <iframe
+      title="Run Pace Calculator — ${escapeHtml(variant.label)}"
+      src="../${escapeHtml(variant.id)}/index.html"
+    ></iframe>
+  </body>
+</html>
+`;
+
+  await mkdir(wrapperRoot, { recursive: true });
+  await writeFile(join(wrapperRoot, "index.html"), wrapper);
 }
 
 async function listen(server) {
@@ -614,6 +741,303 @@ async function captureVariant({
   }
 }
 
+const MOBILE_COMPARISON_MEASUREMENT_EXPRESSION = `(() => {
+  const frame = document.querySelector("iframe");
+  const label = document.querySelector(".capture-label");
+  const frameWindow = frame?.contentWindow;
+  const frameDocument = frame?.contentDocument;
+
+  if (!frameWindow || !frameDocument) {
+    throw new Error("The comparison frame is not available.");
+  }
+
+  const inputIds = [
+    "distance-input",
+    "pace-minutes",
+    "pace-seconds",
+    "speed-input",
+    "time-hours",
+    "time-minutes",
+    "time-seconds"
+  ];
+  const inputState = Object.fromEntries(
+    inputIds.map((id) => [id, frameDocument.querySelector(\`#\${id}\`)?.value ?? null])
+  );
+  const content = frameDocument.querySelector(".page-shell");
+  const contentRect = content?.getBoundingClientRect();
+  const primarySelectors = [
+    "#app-title",
+    ".tool-bar__actions",
+    "#distance-input",
+    "#distance-slider",
+    "[data-distance-increment-button]",
+    "[data-preset-button]",
+    "#pace-minutes",
+    "#pace-seconds",
+    "#speed-input",
+    "#time-hours",
+    "#time-minutes",
+    "#time-seconds",
+    ".result-card"
+  ];
+  const primaryRects = primarySelectors.flatMap((selector) =>
+    [...frameDocument.querySelectorAll(selector)].map((element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        bottom: Math.round(rect.bottom * 100) / 100,
+        top: Math.round(rect.top * 100) / 100
+      };
+    })
+  );
+
+  return {
+    appViewport: {
+      devicePixelRatio: frameWindow.devicePixelRatio,
+      height: frameWindow.innerHeight,
+      visualScale: frameWindow.visualViewport?.scale ?? 1,
+      width: frameWindow.innerWidth
+    },
+    contentBounds: contentRect
+      ? {
+          left: Math.round(contentRect.left * 100) / 100,
+          right: Math.round(contentRect.right * 100) / 100,
+          width: Math.round(contentRect.width * 100) / 100
+        }
+      : null,
+    document: {
+      clientHeight: frameDocument.documentElement.clientHeight,
+      clientWidth: frameDocument.documentElement.clientWidth,
+      scrollHeight: frameDocument.documentElement.scrollHeight,
+      scrollWidth: frameDocument.documentElement.scrollWidth
+    },
+    focus: {
+      id: frameDocument.activeElement?.id || null,
+      tag: frameDocument.activeElement?.tagName ?? null
+    },
+    identity: frameDocument.querySelector("#app-title")?.textContent.trim() ?? null,
+    inputState,
+    label: {
+      revision: label?.dataset.revision ?? null,
+      text: label?.dataset.label ?? null
+    },
+    outerDocument: {
+      clientHeight: document.documentElement.clientHeight,
+      clientWidth: document.documentElement.clientWidth,
+      scrollHeight: document.documentElement.scrollHeight,
+      scrollWidth: document.documentElement.scrollWidth
+    },
+    primaryBottom: Math.round(
+      Math.max(...primaryRects.map((rect) => rect.bottom))
+    ),
+    primaryVisibleCount: primaryRects.filter(
+      (rect) => rect.top >= -1 && rect.bottom <= frameWindow.innerHeight + 1
+    ).length,
+    result: {
+      detail: frameDocument.querySelector("#result-detail")?.textContent.trim() ?? null,
+      label: frameDocument.querySelector("#result-label")?.textContent.trim() ?? null,
+      value: frameDocument.querySelector("#result-value")?.textContent.trim() ?? null
+    },
+    scroll: {
+      x: frameWindow.scrollX,
+      y: frameWindow.scrollY
+    },
+    unit: frameDocument.querySelector("[data-unit-button][aria-pressed='true']")
+      ?.dataset.unit ?? null
+  };
+})()`;
+
+function pngDimensions(buffer) {
+  const signature = buffer.subarray(0, 8).toString("hex");
+
+  if (signature !== "89504e470d0a1a0a" || buffer.subarray(12, 16).toString() !== "IHDR") {
+    throw new Error("Chrome returned data that is not a PNG image.");
+  }
+
+  return {
+    height: buffer.readUInt32BE(20),
+    width: buffer.readUInt32BE(16)
+  };
+}
+
+async function captureMobileComparisonVariant({
+  baseUrl,
+  chromePort,
+  output,
+  variant
+}) {
+  const url = `${baseUrl}/comparison-${variant.id}/index.html`;
+  const { session, targetId } = await createPageSession(chromePort, "about:blank");
+  const screenshotViewport = {
+    height: MOBILE_COMPARISON_VIEWPORT.height + MOBILE_COMPARISON_LABEL_HEIGHT,
+    width: MOBILE_COMPARISON_VIEWPORT.width
+  };
+
+  try {
+    await session.command("Emulation.setDeviceMetricsOverride", {
+      deviceScaleFactor: 1,
+      height: screenshotViewport.height,
+      mobile: true,
+      screenHeight: screenshotViewport.height,
+      screenWidth: screenshotViewport.width,
+      width: screenshotViewport.width
+    });
+    const loaded = session.waitForEvent("Page.loadEventFired");
+
+    await session.command("Page.navigate", { url });
+    await loaded;
+    await evaluate(
+      session,
+      `(() => {
+        const frame = document.querySelector("iframe");
+        const frameWindow = frame?.contentWindow;
+        const frameDocument = frame?.contentDocument;
+
+        if (!frameWindow || !frameDocument) {
+          throw new Error("The comparison frame failed to load.");
+        }
+
+        const ready = frameDocument.fonts?.ready ?? Promise.resolve();
+        return ready.then(() => {
+          const active = frameDocument.activeElement;
+          if (active instanceof frameWindow.HTMLElement) active.blur();
+          frameWindow.scrollTo(0, 0);
+          return new Promise((resolvePromise) =>
+            frameWindow.requestAnimationFrame(() =>
+              frameWindow.requestAnimationFrame(() => resolvePromise(true))
+            )
+          );
+        });
+      })()`
+    );
+
+    const measurement = await evaluate(
+      session,
+      MOBILE_COMPARISON_MEASUREMENT_EXPRESSION
+    );
+    const screenshot = await session.command("Page.captureScreenshot", {
+      captureBeyondViewport: false,
+      format: "png",
+      fromSurface: true
+    });
+    const screenshotBuffer = Buffer.from(screenshot.data, "base64");
+    const dimensions = pngDimensions(screenshotBuffer);
+
+    await writeFile(join(output, variant.screenshot), screenshotBuffer);
+
+    return {
+      ...measurement,
+      image: {
+        ...dimensions,
+        file: variant.screenshot,
+        sha256: createHash("sha256").update(screenshotBuffer).digest("hex")
+      },
+      revision: variant.revision
+    };
+  } finally {
+    session.close();
+    await fetch(`http://127.0.0.1:${chromePort}/json/close/${targetId}`);
+  }
+}
+
+function comparableState(measurement) {
+  return JSON.stringify({
+    focus: measurement.focus,
+    inputState: measurement.inputState,
+    result: measurement.result,
+    scroll: measurement.scroll,
+    unit: measurement.unit
+  });
+}
+
+export function evaluateMobileComparison(measurements) {
+  const checks = [];
+  const expectedImageHeight =
+    MOBILE_COMPARISON_VIEWPORT.height + MOBILE_COMPARISON_LABEL_HEIGHT;
+
+  for (const variant of MOBILE_COMPARISON_VARIANTS) {
+    const measurement = measurements[variant.id];
+
+    checks.push({
+      id: `${variant.id}-revision`,
+      passed:
+        measurement.revision === variant.revision &&
+        measurement.label.revision === variant.revision,
+      value: `${measurement.label.revision ?? "missing"}`
+    });
+    checks.push({
+      id: `${variant.id}-label`,
+      passed: measurement.label.text === variant.label,
+      value: `${measurement.label.text ?? "missing"}`
+    });
+    checks.push({
+      id: `${variant.id}-app-viewport`,
+      passed:
+        measurement.appViewport.width === MOBILE_COMPARISON_VIEWPORT.width &&
+        measurement.appViewport.height === MOBILE_COMPARISON_VIEWPORT.height &&
+        measurement.appViewport.devicePixelRatio === 1 &&
+        measurement.appViewport.visualScale === 1,
+      value: `${measurement.appViewport.width}×${measurement.appViewport.height} CSS px; DPR ${measurement.appViewport.devicePixelRatio}; zoom ${measurement.appViewport.visualScale}`
+    });
+    checks.push({
+      id: `${variant.id}-image-size`,
+      passed:
+        measurement.image.width === MOBILE_COMPARISON_VIEWPORT.width &&
+        measurement.image.height === expectedImageHeight,
+      value: `${measurement.image.width}×${measurement.image.height} px`
+    });
+    checks.push({
+      id: `${variant.id}-horizontal-overflow`,
+      passed:
+        measurement.document.scrollWidth <=
+          measurement.document.clientWidth + 1 &&
+        measurement.outerDocument.scrollWidth <=
+          measurement.outerDocument.clientWidth + 1 &&
+        measurement.contentBounds?.left >= -1 &&
+        measurement.contentBounds?.right <=
+          MOBILE_COMPARISON_VIEWPORT.width + 1,
+      value: `app ${measurement.document.scrollWidth}/${measurement.document.clientWidth}; frame ${measurement.outerDocument.scrollWidth}/${measurement.outerDocument.clientWidth}`
+    });
+    checks.push({
+      id: `${variant.id}-identity`,
+      passed: measurement.identity === "Run Pace Calculator",
+      value: measurement.identity ?? "missing"
+    });
+  }
+
+  const oldMeasurement = measurements.old;
+  const newMeasurement = measurements.new;
+  const compactnessRatio =
+    newMeasurement.document.scrollHeight / oldMeasurement.document.scrollHeight;
+
+  checks.push({
+    id: "comparable-state",
+    passed:
+      comparableState(oldMeasurement) === comparableState(newMeasurement) &&
+      oldMeasurement.focus.id === null &&
+      ["BODY", "HTML"].includes(oldMeasurement.focus.tag),
+    value:
+      comparableState(oldMeasurement) === comparableState(newMeasurement)
+        ? "identical inputs, result, unit, focus-free scroll position"
+        : "state mismatch"
+  });
+  checks.push({
+    id: "compactness",
+    passed:
+      newMeasurement.document.scrollHeight <
+        oldMeasurement.document.scrollHeight &&
+      compactnessRatio <= 0.85 &&
+      newMeasurement.primaryVisibleCount >=
+        oldMeasurement.primaryVisibleCount,
+    value: `${newMeasurement.document.scrollHeight}/${oldMeasurement.document.scrollHeight} (${compactnessRatio.toFixed(3)}); visible controls ${newMeasurement.primaryVisibleCount}/${oldMeasurement.primaryVisibleCount}`
+  });
+
+  return {
+    checks,
+    compactnessRatio,
+    passed: checks.every((check) => check.passed)
+  };
+}
+
 export function evaluateAcceptance(measurements) {
   const checks = [];
   const revised = measurements.revised;
@@ -737,6 +1161,174 @@ export function renderMarkdownReport(report) {
   return sections.join("\n");
 }
 
+export function renderMobileComparisonReport(report) {
+  const rows = [
+    "# Сравнение мобильных версий Run Pace Calculator",
+    "",
+    `Создано: ${report.generatedAt}`,
+    "",
+    `Обе версии отрисованы одним процессом Chromium при viewport приложения ${MOBILE_COMPARISON_VIEWPORT.width}×${MOBILE_COMPARISON_VIEWPORT.height} CSS px, DPR 1 и масштабе 100%. Одинаковая плашка высотой ${MOBILE_COMPARISON_LABEL_HEIGHT} px добавлена вне viewport приложения.`,
+    "",
+    "| Версия | Git-ревизия | Изображение | Viewport приложения | Размер PNG | document scroll | Видимые основные элементы |",
+    "| --- | --- | --- | ---: | ---: | ---: | ---: |"
+  ];
+
+  for (const variant of MOBILE_COMPARISON_VARIANTS) {
+    const measurement = report.measurements[variant.id];
+
+    rows.push(
+      `| ${variant.label} | \`${variant.revision}\` | \`${measurement.image.file}\` | ${measurement.appViewport.width}×${measurement.appViewport.height} | ${measurement.image.width}×${measurement.image.height} | ${measurement.document.scrollWidth}×${measurement.document.scrollHeight} | ${measurement.primaryVisibleCount} |`
+    );
+  }
+
+  rows.push(
+    "",
+    "## Проверки",
+    "",
+    "| Проверка | Результат | Значение |",
+    "| --- | --- | --- |"
+  );
+
+  for (const check of report.acceptance.checks) {
+    rows.push(
+      `| ${check.id} | ${check.passed ? "PASS" : "FAIL"} | ${check.value} |`
+    );
+  }
+
+  rows.push("");
+
+  return rows.join("\n");
+}
+
+async function assertOnlyExpectedComparisonPngs(output) {
+  const expected = MOBILE_COMPARISON_VARIANTS.map(({ screenshot }) => screenshot).sort();
+  const actual = (await readdir(output))
+    .filter((entry) => entry.toLowerCase().endsWith(".png"))
+    .sort();
+
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new Error(
+      `The mobile comparison output must contain exactly two PNG files (${expected.join(", ")}); found: ${actual.join(", ") || "none"}.`
+    );
+  }
+}
+
+async function runMobileComparison(options) {
+  const chromePath = findChrome(options.chrome);
+  const temporaryRoot = await mkdtemp(
+    join(tmpdir(), "run-pace-mobile-comparison-")
+  );
+  let fixtureServer;
+  let chrome;
+
+  try {
+    const stagingRoot = join(temporaryRoot, "fixtures");
+    const captureOutput = join(temporaryRoot, "output");
+
+    await Promise.all(
+      MOBILE_COMPARISON_VARIANTS.map((variant) =>
+        stageMobileComparisonVariant(variant, stagingRoot)
+      )
+    );
+    await mkdir(captureOutput, { recursive: true });
+    await mkdir(options.output, { recursive: true });
+
+    const existingPngs = (await readdir(options.output)).filter(
+      (entry) =>
+        entry.toLowerCase().endsWith(".png") &&
+        !MOBILE_COMPARISON_VARIANTS.some(
+          ({ screenshot }) => screenshot === entry
+        )
+    );
+
+    if (existingPngs.length > 0) {
+      throw new Error(
+        `Refusing to mix the requested two-image comparison with unrelated PNG files: ${existingPngs.join(", ")}.`
+      );
+    }
+
+    fixtureServer = await createFixtureServer(stagingRoot);
+    chrome = await launchChrome(chromePath, temporaryRoot);
+
+    const measurements = {};
+
+    for (const variant of MOBILE_COMPARISON_VARIANTS) {
+      measurements[variant.id] = await captureMobileComparisonVariant({
+        baseUrl: fixtureServer.baseUrl,
+        chromePort: chrome.port,
+        output: captureOutput,
+        variant
+      });
+    }
+
+    await assertOnlyExpectedComparisonPngs(captureOutput);
+
+    const report = {
+      acceptance: evaluateMobileComparison(measurements),
+      browser: chromePath,
+      capture: {
+        appViewport: MOBILE_COMPARISON_VIEWPORT,
+        deviceScaleFactor: 1,
+        labelHeight: MOBILE_COMPARISON_LABEL_HEIGHT,
+        pageZoom: 1,
+        screenshotViewport: {
+          height:
+            MOBILE_COMPARISON_VIEWPORT.height +
+            MOBILE_COMPARISON_LABEL_HEIGHT,
+          width: MOBILE_COMPARISON_VIEWPORT.width
+        }
+      },
+      generatedAt: new Date().toISOString(),
+      measurements,
+      variants: MOBILE_COMPARISON_VARIANTS
+    };
+
+    await writeFile(
+      join(captureOutput, "manifest.json"),
+      `${JSON.stringify(report, null, 2)}\n`
+    );
+    await writeFile(
+      join(captureOutput, "report.md"),
+      `${renderMobileComparisonReport(report)}\n`
+    );
+
+    if (!report.acceptance.passed) {
+      const failures = report.acceptance.checks
+        .filter((check) => !check.passed)
+        .map((check) => `${check.id}: ${check.value}`)
+        .join("\n");
+
+      throw new Error(`Mobile comparison failed:\n${failures}`);
+    }
+
+    await Promise.all([
+      ...MOBILE_COMPARISON_VARIANTS.map(({ screenshot }) =>
+        copyFile(
+          join(captureOutput, screenshot),
+          join(options.output, screenshot)
+        )
+      ),
+      copyFile(
+        join(captureOutput, "manifest.json"),
+        join(options.output, "manifest.json")
+      ),
+      copyFile(
+        join(captureOutput, "report.md"),
+        join(options.output, "report.md")
+      )
+    ]);
+    await assertOnlyExpectedComparisonPngs(options.output);
+
+    process.stdout.write(
+      `Mobile comparison passed. Evidence: ${join(options.output, "report.md")}\n`
+    );
+  } finally {
+    await chrome?.close();
+    await fixtureServer?.close();
+    await rm(temporaryRoot, { force: true, recursive: true });
+  }
+}
+
 async function runBrowserQa(options) {
   const chromePath = findChrome(options.chrome);
   const temporaryRoot = await mkdtemp(join(tmpdir(), "run-pace-browser-qa-"));
@@ -812,11 +1404,18 @@ async function main() {
   if (options.check) {
     process.stdout.write(
       `${JSON.stringify(
-        {
-          output: options.output,
-          variants: QA_VARIANTS,
-          viewports: QA_VIEWPORTS
-        },
+        options.mobileComparison
+          ? {
+              appViewport: MOBILE_COMPARISON_VIEWPORT,
+              labelHeight: MOBILE_COMPARISON_LABEL_HEIGHT,
+              output: options.output,
+              variants: MOBILE_COMPARISON_VARIANTS
+            }
+          : {
+              output: options.output,
+              variants: QA_VARIANTS,
+              viewports: QA_VIEWPORTS
+            },
         null,
         2
       )}\n`
@@ -824,7 +1423,11 @@ async function main() {
     return;
   }
 
-  await runBrowserQa(options);
+  if (options.mobileComparison) {
+    await runMobileComparison(options);
+  } else {
+    await runBrowserQa(options);
+  }
 }
 
 const invokedPath = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : "";
