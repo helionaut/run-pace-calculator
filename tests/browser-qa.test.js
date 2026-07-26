@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   evaluateAcceptance,
@@ -160,11 +161,19 @@ test("browser QA acceptance fails on a measurable responsive regression", () => 
 });
 
 test("browser QA argument parsing keeps check mode dependency-free", () => {
-  const configuration = parseArguments(["--check", "--output", "artifacts/qa"]);
+  const configuration = parseArguments(["--check"]);
 
   assert.equal(configuration.check, true);
   assert.equal(configuration.chrome, null);
-  assert.equal(configuration.output, "/workspace/artifacts/qa");
+});
+
+test("browser QA relative output paths remain portable across checkout roots", () => {
+  const configuration = parseArguments(["--output", "artifacts/qa"]);
+
+  assert.equal(
+    configuration.output,
+    fileURLToPath(new URL("../artifacts/qa", import.meta.url))
+  );
 });
 
 test("browser QA report records dimensions, checks, and all nine screenshots", () => {
