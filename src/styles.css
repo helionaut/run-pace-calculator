@@ -964,7 +964,7 @@ input[aria-invalid="true"] {
   }
 
   .chip-button--increment {
-    min-width: 0;
+    min-width: 44px;
     padding-inline: 2px;
     font-size: 0.66rem;
   }
@@ -974,7 +974,7 @@ input[aria-invalid="true"] {
   }
 
   .preset-row .chip-button {
-    min-width: 0;
+    min-width: 44px;
     padding-inline: 4px;
     font-size: 0.7rem;
   }

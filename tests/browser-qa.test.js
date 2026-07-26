@@ -139,6 +139,7 @@ test("browser QA acceptance fails on a measurable responsive regression", () => 
   const measurements = passingMeasurements();
 
   measurements.revised["390x844"].document.scrollWidth = 410;
+  measurements.revised["390x844"].minTargetWidth = 43;
   measurements.revised["768x1024"].minTargetHeight = 40;
   measurements.revised["1440x900"].primaryFitsInitialViewport = false;
 
@@ -148,9 +149,10 @@ test("browser QA acceptance fails on a measurable responsive regression", () => 
   assert.deepEqual(
     acceptance.checks
       .filter(({ passed }) => !passed)
-      .map(({ id }) => id),
+    .map(({ id }) => id),
     [
       "horizontal-overflow-390x844",
+      "target-size-390x844",
       "target-size-768x1024",
       "desktop-primary-workflow"
     ]
