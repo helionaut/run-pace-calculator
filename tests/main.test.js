@@ -177,6 +177,9 @@ function createElements() {
       marathon: new FakeElement({ ownerDocument: documentRef })
     },
     rateCard: new FakeElement({ ownerDocument: documentRef }),
+    resultDetail: new FakeElement({ ownerDocument: documentRef }),
+    resultLabel: new FakeElement({ ownerDocument: documentRef }),
+    resultValue: new FakeElement({ ownerDocument: documentRef }),
     resetButton: new FakeElement({ ownerDocument: documentRef }),
     selectedDistance: new FakeElement({ ownerDocument: documentRef }),
     splitActionButton: new FakeElement({ ownerDocument: documentRef }),
@@ -250,6 +253,9 @@ test("pace input plus slider movement updates derived speed and finish time live
   assert.equal(elements.timeHours.value, "0");
   assert.equal(elements.timeMinutes.value, "50");
   assert.equal(elements.timeSeconds.value, "00");
+  assert.equal(elements.resultLabel.textContent, "Finish time");
+  assert.equal(elements.resultValue.textContent, "50m00s");
+  assert.equal(elements.resultDetail.textContent, "10 km at 5:00 min/km.");
   assert.equal(
     elements.statusMessage.textContent,
     "Solving time from distance + movement rate."
