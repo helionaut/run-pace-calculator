@@ -23,6 +23,8 @@
     "pr:dry-run": "./scripts/create_pr.sh --dry-run",
     "pr:publish": "./scripts/create_pr.sh",
     "preview": "npm run build && node scripts/serve.mjs dist 4173",
+    "qa:browser": "node scripts/browser-qa.mjs",
+    "test:regression": "node --test tests/calculator.test.js tests/main.test.js tests/url-state.test.js tests/accessibility.test.js tests/browser-qa.test.js",
     "test": "node --test",
     "validate": "npm run check",
     "verify:pages": "node scripts/verify-pages-content.mjs"
