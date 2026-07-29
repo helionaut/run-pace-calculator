@@ -7,11 +7,13 @@ import {
   evaluateAcceptance,
   evaluateMobileComparison,
   isCompletedPreSplitState,
+  isInitialPreSplitState,
   MOBILE_COMPARISON_VARIANTS,
   MOBILE_COMPARISON_VIEWPORT,
   parseArguments,
   QA_VARIANTS,
   QA_VIEWPORTS,
+  REQUIRED_PRIMARY_ELEMENT_COUNT,
   renderMobileComparisonReport,
   renderMarkdownReport
 } from "../scripts/browser-qa.mjs";
@@ -69,7 +71,7 @@ function measurement({
     minTargetWidth,
     nestedScroll,
     primaryBottom,
-    primaryControlCount: 27,
+    primaryControlCount: REQUIRED_PRIMARY_ELEMENT_COUNT,
     primaryFitsInitialViewport: primaryBottom <= clientHeight,
     requiredControlsOperable,
     result: {
@@ -429,6 +431,36 @@ test("completed pre-split detection uses semantic fields instead of result forma
 
   completed.inputState.timeMinutes = "49";
   assert.equal(isCompletedPreSplitState(completed), false);
+});
+
+test("required UI contract matches the measured 26-element interface", () => {
+  const measurements = passingMeasurements();
+  const initial = measurements.revised["390x844"];
+  const completed = initial.states.completed;
+  const desktop = measurements.revised["1440x900"];
+
+  assert.equal(REQUIRED_PRIMARY_ELEMENT_COUNT, 26);
+  assert.equal(isInitialPreSplitState(initial), true);
+
+  initial.result.value = "localized placeholder";
+  assert.equal(isInitialPreSplitState(initial), true);
+  assert.equal(evaluateAcceptance(measurements).passed, true);
+
+  for (const measurement of [initial, completed, desktop]) {
+    measurement.primaryControlCount = 25;
+    measurement.primaryFitsInitialViewport = true;
+  }
+
+  assert.deepEqual(
+    evaluateAcceptance(measurements).checks
+      .filter(({ passed }) => !passed)
+      .map(({ id }) => id),
+    [
+      "initial-required-ui-390x844",
+      "completed-required-ui-390x844",
+      "desktop-primary-workflow"
+    ]
+  );
 });
 
 test("browser QA acceptance fails on a measurable responsive regression", () => {

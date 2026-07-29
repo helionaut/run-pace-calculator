@@ -56,6 +56,8 @@ export const QA_VIEWPORTS = Object.freeze([
   Object.freeze({ height: 900, id: "1440x900", width: 1440 })
 ]);
 
+export const REQUIRED_PRIMARY_ELEMENT_COUNT = 26;
+
 export const MOBILE_COMPARISON_VARIANTS = Object.freeze([
   Object.freeze({
     id: "old",
@@ -91,6 +93,27 @@ function numericInputValue(value) {
   const parsed = Number(value);
 
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function isInitialPreSplitState(state) {
+  const inputState = state?.inputState;
+
+  if (!inputState) {
+    return false;
+  }
+
+  return (
+    inputState.unit === "km" &&
+    numericInputValue(inputState.distance) === 10 &&
+    numericInputValue(inputState.paceMinutes) === null &&
+    numericInputValue(inputState.paceSeconds) === null &&
+    numericInputValue(inputState.speed) === null &&
+    numericInputValue(inputState.timeHours) === null &&
+    numericInputValue(inputState.timeMinutes) === null &&
+    numericInputValue(inputState.timeSeconds) === null &&
+    state.splitActionDisabled === true &&
+    state.splitCount === 0
+  );
 }
 
 export function isCompletedPreSplitState(state) {
@@ -720,7 +743,8 @@ const MEASUREMENT_EXPRESSION = `(() => {
     nestedScroll,
     primaryBottom: Math.round(primaryBottom * 100) / 100,
     primaryControlCount: requiredRects.length,
-    primaryFitsInitialViewport: requiredRects.length === 27 &&
+    primaryFitsInitialViewport:
+      requiredRects.length === ${REQUIRED_PRIMARY_ELEMENT_COUNT} &&
       requiredRects.every((rect) => rect.visible && rect.inViewport),
     primaryRects: requiredRects,
     requiredControlsOperable: requiredRects
@@ -1321,11 +1345,11 @@ export function evaluateAcceptance(measurements) {
   checks.push({
     id: "initial-required-ui-390x844",
     passed:
-      initial.primaryControlCount === 27 &&
+      initial.primaryControlCount === REQUIRED_PRIMARY_ELEMENT_COUNT &&
       initial.primaryFitsInitialViewport &&
-      initial.result.value === "—" &&
+      isInitialPreSplitState(initial) &&
       initial.result.rect?.inViewport === true,
-    value: `${initial.primaryControlCount}/27 required elements; bottom ${initial.primaryBottom}/${initial.effectiveViewport.height}; result ${initial.result.value}`
+    value: `${initial.primaryControlCount}/${REQUIRED_PRIMARY_ELEMENT_COUNT} required elements; bottom ${initial.primaryBottom}/${initial.effectiveViewport.height}; result ${initial.result.value}`
   });
   checks.push({
     id: "initial-neutral-validation-390x844",
@@ -1353,12 +1377,12 @@ export function evaluateAcceptance(measurements) {
   checks.push({
     id: "completed-required-ui-390x844",
     passed:
-      completed?.primaryControlCount === 27 &&
+      completed?.primaryControlCount === REQUIRED_PRIMARY_ELEMENT_COUNT &&
       completed.primaryFitsInitialViewport &&
       completed.requiredControlsOperable &&
       completed.splitActionDisabled === false,
     value: completed
-      ? `${completed.primaryControlCount}/27 required elements; bottom ${completed.primaryBottom}/${completed.effectiveViewport.height}; Add split ${completed.splitActionDisabled ? "disabled" : "enabled"}`
+      ? `${completed.primaryControlCount}/${REQUIRED_PRIMARY_ELEMENT_COUNT} required elements; bottom ${completed.primaryBottom}/${completed.effectiveViewport.height}; Add split ${completed.splitActionDisabled ? "disabled" : "enabled"}`
       : "missing completed-state measurement"
   });
   checks.push({
@@ -1384,6 +1408,8 @@ export function evaluateAcceptance(measurements) {
     id: "desktop-primary-workflow",
     passed:
       revised["1440x900"].identity === "Run Pace Calculator" &&
+      revised["1440x900"].primaryControlCount ===
+        REQUIRED_PRIMARY_ELEMENT_COUNT &&
       revised["1440x900"].primaryFitsInitialViewport,
     value: `${revised["1440x900"].primaryControlCount} controls; bottom ${revised["1440x900"].primaryBottom}/900`
   });
