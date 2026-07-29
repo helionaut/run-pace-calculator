@@ -151,6 +151,15 @@ test("mobile fit overrides preserve 44px controls in the compact grids", async (
   );
 });
 
+test("tablet timing controls keep enough track width for 44px targets", async () => {
+  const css = await readFixture(cssPath);
+
+  assert.match(
+    css,
+    /@media \(min-width: 700px\) and \(max-width: 899px\)\s*{[\s\S]*?\.metric-grid\s*{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/
+  );
+});
+
 test("support CTA uses the exact script-free owner URL", async () => {
   const html = await readFixture(htmlPath);
 
@@ -203,4 +212,58 @@ test("night-track palette clears key AA text and non-text contrast thresholds", 
     contrastRatio("#616d5e", "#171b17") >= 3,
     "control boundaries should meet 3:1 against raised surfaces"
   );
+});
+
+test("performance console replaces the card grammar across every result surface", async () => {
+  const [html, css] = await Promise.all([
+    readFixture(htmlPath),
+    readFixture(cssPath)
+  ]);
+
+  for (const compositionHook of [
+    "system-kicker",
+    "console-zone--distance",
+    "distance-scale",
+    "console-zone--rate",
+    "console-zone--time",
+    "timing-board",
+    "live-indicator",
+    "projection-strip__label"
+  ]) {
+    assert.match(html, new RegExp(`class="[^"]*${compositionHook}`));
+  }
+
+  assert.match(css, /\.tool-bar\s*{[\s\S]*border-block:/);
+  assert.match(css, /\.console-zone\s*{[\s\S]*border-radius:\s*0;/);
+  assert.match(css, /\.rate-grid\s*{[\s\S]*background:\s*var\(--line\);/);
+  assert.match(css, /\.time-grid \.field:not\(:last-child\)::after/);
+  assert.match(css, /\.result-card\s*{[\s\S]*background-size:\s*20px 20px;/);
+  assert.match(
+    css,
+    /\.projection-strip\s*{[\s\S]*grid-template-columns:\s*126px repeat\(4, minmax\(0, 1fr\)\);/
+  );
+});
+
+test("performance console gives controls and semantic states a complete grammar", async () => {
+  const css = await readFixture(cssPath);
+
+  for (const stateSelector of [
+    ".metric-card--source",
+    ".metric-card--derived",
+    ".metric-card--idle",
+    ".rate-field.field--active",
+    ".rate-field.field--linked",
+    '.chip-button[aria-pressed="true"]',
+    'input[aria-invalid="true"]',
+    ".split-action-button:disabled",
+    ".split-card.is-selected",
+    ".split-card__action--danger",
+    ".distance-slider:active"
+  ]) {
+    assert.ok(css.includes(stateSelector), `${stateSelector} should be styled`);
+  }
+
+  assert.match(css, /input:focus-visible,[\s\S]*button:focus-visible,[\s\S]*a:focus-visible/);
+  assert.match(css, /@media \(hover: hover\)/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });

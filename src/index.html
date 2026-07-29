@@ -27,6 +27,11 @@
           <div class="tool-bar__top">
             <div class="tool-bar__heading">
               <div class="title-block">
+                <p class="system-kicker">
+                  <span>PACE SYSTEM</span>
+                  <span aria-hidden="true">/</span>
+                  <span>01</span>
+                </p>
                 <h1 id="app-title">Run Pace Calculator</h1>
               </div>
               <p class="product-intro">
@@ -54,25 +59,28 @@
                 </span>
               </a>
 
-              <div class="segmented" aria-label="Distance unit">
-                <button
-                  type="button"
-                  class="segmented__button is-active"
-                  data-unit-button
-                  data-unit="km"
-                  aria-pressed="true"
-                >
-                  km
-                </button>
-                <button
-                  type="button"
-                  class="segmented__button"
-                  data-unit-button
-                  data-unit="mi"
-                  aria-pressed="false"
-                >
-                  mi
-                </button>
+              <div class="unit-control">
+                <span class="unit-control__label" aria-hidden="true">Unit</span>
+                <div class="segmented" aria-label="Distance unit">
+                  <button
+                    type="button"
+                    class="segmented__button is-active"
+                    data-unit-button
+                    data-unit="km"
+                    aria-pressed="true"
+                  >
+                    km
+                  </button>
+                  <button
+                    type="button"
+                    class="segmented__button"
+                    data-unit-button
+                    data-unit="mi"
+                    aria-pressed="false"
+                  >
+                    mi
+                  </button>
+                </div>
               </div>
 
               <button class="ghost-button" id="reset-button" type="button">
@@ -82,8 +90,12 @@
           </div>
         </header>
 
-        <section class="distance-card metric-card metric-card--source" id="distance-card">
+        <section
+          class="distance-card metric-card metric-card--source console-zone console-zone--distance"
+          id="distance-card"
+        >
           <div class="metric-card__head">
+            <span class="zone-index" aria-hidden="true">01</span>
             <div class="metric-card__title">
               <p class="eyebrow">Distance</p>
               <p class="metric-card__summary" id="selected-distance">10 km</p>
@@ -218,14 +230,23 @@
               aria-label="Distance slider"
               aria-describedby="distance-error"
             />
+            <div class="distance-scale" aria-hidden="true">
+              <span>START</span>
+              <span>COURSE MEASURE</span>
+              <span>60</span>
+            </div>
 
             <p class="field-error" id="distance-error" aria-live="polite"></p>
           </div>
         </section>
 
         <section class="metric-grid" aria-label="Calculator values">
-          <section class="metric-card metric-card--source" id="rate-card">
+          <section
+            class="metric-card metric-card--source console-zone console-zone--rate"
+            id="rate-card"
+          >
             <div class="metric-card__head">
+              <span class="zone-index" aria-hidden="true">02</span>
               <div class="metric-card__title">
                 <p class="eyebrow">Movement Rate</p>
                 <h2>Pace + Speed</h2>
@@ -233,7 +254,10 @@
             </div>
 
             <div class="rate-grid">
-              <label class="field rate-field field--active" id="pace-field">
+              <label
+                class="field rate-field field--active rate-field--pace"
+                id="pace-field"
+              >
                 <span id="pace-label">Pace (min/km)</span>
                 <div class="field-pair">
                   <input
@@ -258,7 +282,10 @@
                 <p class="field-error" id="pace-error" aria-live="polite"></p>
               </label>
 
-              <label class="field rate-field field--linked" id="speed-field">
+              <label
+                class="field rate-field field--linked rate-field--speed"
+                id="speed-field"
+              >
                 <span id="speed-label">Speed (km/h)</span>
                 <input
                   id="speed-input"
@@ -274,8 +301,12 @@
             </div>
           </section>
 
-          <section class="metric-card metric-card--idle" id="time-card">
+          <section
+            class="metric-card metric-card--idle console-zone console-zone--time"
+            id="time-card"
+          >
             <div class="metric-card__head">
+              <span class="zone-index" aria-hidden="true">03</span>
               <div class="metric-card__title metric-card__title--solo">
                 <h2>Time</h2>
               </div>
@@ -326,9 +357,14 @@
           </section>
         </section>
 
-        <aside class="result-card" aria-labelledby="result-title">
-          <p class="eyebrow">Live result</p>
-          <h2 id="result-title">Your calculation</h2>
+        <aside class="result-card timing-board" aria-labelledby="result-title">
+          <div class="result-card__head">
+            <div>
+              <p class="eyebrow">Live result</p>
+              <h2 id="result-title">Your calculation</h2>
+            </div>
+            <span class="live-indicator"><span aria-hidden="true"></span>Live</span>
+          </div>
           <p class="result-card__label" id="result-label">Ready when you are</p>
           <p class="result-card__value" id="result-value">—</p>
           <p class="result-card__detail" id="result-detail">
@@ -348,26 +384,30 @@
         </aside>
 
         <section class="projection-strip" aria-label="Common race projections">
+          <p class="projection-strip__label" aria-hidden="true">
+            Projected finishes
+          </p>
           <div class="projection-chip">
-            <span>5K</span>
+            <span>5K <small>01</small></span>
             <strong id="projection-5k">--:--:--</strong>
           </div>
           <div class="projection-chip">
-            <span>10K</span>
+            <span>10K <small>02</small></span>
             <strong id="projection-10k">--:--:--</strong>
           </div>
           <div class="projection-chip">
-            <span>Half</span>
+            <span>Half <small>03</small></span>
             <strong id="projection-half">--:--:--</strong>
           </div>
           <div class="projection-chip">
-            <span>Mar</span>
+            <span>Mar <small>04</small></span>
             <strong id="projection-marathon">--:--:--</strong>
           </div>
         </section>
 
         <section class="split-builder" aria-labelledby="split-builder-title">
           <div class="split-builder__head">
+            <span class="zone-index" aria-hidden="true">04</span>
             <div class="split-builder__title">
               <h2 id="split-builder-title">Workout splits</h2>
               <p class="split-builder__summary" id="split-summary">No splits yet</p>
