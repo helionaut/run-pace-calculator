@@ -79,6 +79,52 @@ export const MOBILE_COMPARISON_VIEWPORT = Object.freeze({
 
 const MOBILE_COMPARISON_LABEL_HEIGHT = 64;
 
+function numericInputValue(value) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value !== "string" || value.trim() === "") {
+    return null;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function isCompletedPreSplitState(state) {
+  const inputState = state?.inputState;
+
+  if (!inputState) {
+    return false;
+  }
+
+  const distance = numericInputValue(inputState.distance);
+  const paceMinutes = numericInputValue(inputState.paceMinutes);
+  const paceSeconds = numericInputValue(inputState.paceSeconds);
+  const speed = numericInputValue(inputState.speed);
+  const timeHours = numericInputValue(inputState.timeHours);
+  const timeMinutes = numericInputValue(inputState.timeMinutes);
+  const timeSeconds = numericInputValue(inputState.timeSeconds);
+
+  return (
+    inputState.unit === "km" &&
+    distance === 10 &&
+    paceMinutes !== null &&
+    paceSeconds !== null &&
+    paceMinutes * 60 + paceSeconds === 300 &&
+    speed !== null &&
+    Math.abs(speed - 12) < 0.001 &&
+    timeHours !== null &&
+    timeMinutes !== null &&
+    timeSeconds !== null &&
+    timeHours * 3600 + timeMinutes * 60 + timeSeconds === 3000 &&
+    state.splitActionDisabled === false &&
+    state.splitCount === 0
+  );
+}
+
 export function parseArguments(argv) {
   let outputProvided = false;
   const options = {
@@ -656,6 +702,18 @@ const MEASUREMENT_EXPRESSION = `(() => {
       width: Math.round(viewportWidth * 100) / 100
     },
     identity: document.querySelector("#app-title")?.textContent.trim() ?? null,
+    inputState: {
+      distance: document.querySelector("#distance-input")?.value ?? null,
+      paceMinutes: document.querySelector("#pace-minutes")?.value ?? null,
+      paceSeconds: document.querySelector("#pace-seconds")?.value ?? null,
+      speed: document.querySelector("#speed-input")?.value ?? null,
+      timeHours: document.querySelector("#time-hours")?.value ?? null,
+      timeMinutes: document.querySelector("#time-minutes")?.value ?? null,
+      timeSeconds: document.querySelector("#time-seconds")?.value ?? null,
+      unit:
+        document.querySelector('[data-unit-button][aria-pressed="true"]')
+          ?.dataset.unit ?? null
+    },
     interactiveCount: interactive.length,
     minTargetHeight: Math.min(...targets.map((target) => target.height)),
     minTargetWidth: Math.min(...targets.map((target) => target.width)),
@@ -774,7 +832,21 @@ const COMPLETE_PRE_SPLIT_STATE_EXPRESSION = `(async () => {
   );
   scrollTo(0, 0);
   return {
+    inputState: {
+      distance: document.querySelector("#distance-input")?.value ?? null,
+      paceMinutes: document.querySelector("#pace-minutes")?.value ?? null,
+      paceSeconds: document.querySelector("#pace-seconds")?.value ?? null,
+      speed: document.querySelector("#speed-input")?.value ?? null,
+      timeHours: document.querySelector("#time-hours")?.value ?? null,
+      timeMinutes: document.querySelector("#time-minutes")?.value ?? null,
+      timeSeconds: document.querySelector("#time-seconds")?.value ?? null,
+      unit:
+        document.querySelector('[data-unit-button][aria-pressed="true"]')
+          ?.dataset.unit ?? null
+    },
     result: document.querySelector("#result-value")?.textContent.trim() ?? null,
+    splitActionDisabled:
+      document.querySelector("#split-action-button")?.disabled ?? null,
     splitCount: document.querySelectorAll(".split-list__item").length
   };
 })()`;
@@ -841,7 +913,7 @@ async function captureVariant({
         COMPLETE_PRE_SPLIT_STATE_EXPRESSION
       );
 
-      if (completedState.result !== "50:00" || completedState.splitCount !== 0) {
+      if (!isCompletedPreSplitState(completedState)) {
         throw new Error(
           `Unable to establish completed pre-split state: ${JSON.stringify(completedState)}`
         );
@@ -1292,11 +1364,10 @@ export function evaluateAcceptance(measurements) {
   checks.push({
     id: "completed-result-390x844",
     passed:
-      completed?.result.label === "Finish time" &&
-      completed.result.value === "50:00" &&
+      isCompletedPreSplitState(completed) &&
       completed.result.rect?.inViewport === true,
     value: completed
-      ? `${completed.result.label}: ${completed.result.value}; ${completed.result.detail}`
+      ? `${completed.result.label}: ${completed.result.value}; inputs ${JSON.stringify(completed.inputState)}`
       : "missing completed-state measurement"
   });
   checks.push({

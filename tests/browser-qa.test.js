@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   evaluateAcceptance,
   evaluateMobileComparison,
+  isCompletedPreSplitState,
   MOBILE_COMPARISON_VARIANTS,
   MOBILE_COMPARISON_VIEWPORT,
   parseArguments,
@@ -20,6 +21,16 @@ function measurement({
   clientWidth,
   documentHeight,
   focusCount = 18,
+  inputState = {
+    distance: "10",
+    paceMinutes: "",
+    paceSeconds: "",
+    speed: "",
+    timeHours: "",
+    timeMinutes: "",
+    timeSeconds: "",
+    unit: "km"
+  },
   minTargetHeight = 44,
   minTargetWidth = 44,
   nestedScroll = [],
@@ -53,6 +64,7 @@ function measurement({
       failures: []
     },
     identity: "Run Pace Calculator",
+    inputState,
     minTargetHeight,
     minTargetWidth,
     nestedScroll,
@@ -62,7 +74,7 @@ function measurement({
     requiredControlsOperable,
     result: {
       detail:
-        resultValue === "50:00"
+        resultValue === "50m00s"
           ? "10 km at 5:00 min/km."
           : "Enter any two values to calculate the third.",
       label: resultLabel,
@@ -106,7 +118,17 @@ function passingMeasurements() {
     documentHeight: 720,
     primaryBottom: 710,
     resultLabel: "Finish time",
-    resultValue: "50:00",
+    resultValue: "50m00s",
+    inputState: {
+      distance: "10",
+      paceMinutes: "5",
+      paceSeconds: "00",
+      speed: "12",
+      timeHours: "0",
+      timeMinutes: "50",
+      timeSeconds: "00",
+      unit: "km"
+    },
     splitActionDisabled: false
   });
   const splits390 = measurement({
@@ -115,7 +137,17 @@ function passingMeasurements() {
     documentHeight: 900,
     primaryBottom: 710,
     resultLabel: "Finish time",
-    resultValue: "50:00",
+    resultValue: "50m00s",
+    inputState: {
+      distance: "10",
+      paceMinutes: "5",
+      paceSeconds: "00",
+      speed: "12",
+      timeHours: "0",
+      timeMinutes: "50",
+      timeSeconds: "00",
+      unit: "km"
+    },
     splitActionDisabled: false,
     splitCount: 1
   });
@@ -384,6 +416,19 @@ test("browser QA acceptance covers both pre-split states, narrow width, splits, 
       "desktop-primary-workflow"
     ]
   );
+});
+
+test("completed pre-split detection uses semantic fields instead of result formatting", () => {
+  const completed = passingMeasurements().revised["390x844"].states.completed;
+
+  assert.equal(completed.result.value, "50m00s");
+  assert.equal(isCompletedPreSplitState(completed), true);
+
+  completed.result.value = "localized finish time";
+  assert.equal(isCompletedPreSplitState(completed), true);
+
+  completed.inputState.timeMinutes = "49";
+  assert.equal(isCompletedPreSplitState(completed), false);
 });
 
 test("browser QA acceptance fails on a measurable responsive regression", () => {
