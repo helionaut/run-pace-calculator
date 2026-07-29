@@ -151,6 +151,15 @@ test("mobile fit overrides preserve 44px controls in the compact grids", async (
   );
 });
 
+test("tablet timing controls keep enough track width for 44px targets", async () => {
+  const css = await readFixture(cssPath);
+
+  assert.match(
+    css,
+    /@media \(min-width: 700px\) and \(max-width: 899px\)\s*{[\s\S]*?\.metric-grid\s*{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/
+  );
+});
+
 test("support CTA uses the exact script-free owner URL", async () => {
   const html = await readFixture(htmlPath);
 
