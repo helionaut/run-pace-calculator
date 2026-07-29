@@ -9,6 +9,28 @@ async function readFixture(url) {
   return readFile(url, "utf8");
 }
 
+function relativeLuminance(hex) {
+  const channels = hex
+    .slice(1)
+    .match(/.{2}/g)
+    .map((channel) => Number.parseInt(channel, 16) / 255)
+    .map((channel) =>
+      channel <= 0.04045
+        ? channel / 12.92
+        : ((channel + 0.055) / 1.055) ** 2.4
+    );
+
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+}
+
+function contrastRatio(first, second) {
+  const luminances = [relativeLuminance(first), relativeLuminance(second)].sort(
+    (left, right) => right - left
+  );
+
+  return (luminances[0] + 0.05) / (luminances[1] + 0.05);
+}
+
 test("calculator keeps the established value flow and accessible errors", async () => {
   const html = await readFixture(htmlPath);
   const orderedIds = [
@@ -139,4 +161,46 @@ test("support CTA uses the exact script-free owner URL", async () => {
   assert.match(html, /aria-label="Buy me a coffee \(opens in a new tab\)"/);
   assert.doesNotMatch(html, /<script[^>]+(?:buymeacoffee|coffee)/i);
   assert.doesNotMatch(html, /<iframe/i);
+});
+
+test("night-track theme keeps decoration inert and interaction states explicit", async () => {
+  const [html, css] = await Promise.all([
+    readFixture(htmlPath),
+    readFixture(cssPath)
+  ]);
+
+  assert.match(html, /class="track-atmosphere" aria-hidden="true"/);
+  assert.match(css, /color-scheme:\s*dark;/);
+  assert.match(css, /--canvas:\s*#070907;/);
+  assert.match(css, /--surface:\s*#111411;/);
+  assert.match(css, /--text:\s*#f3f7ef;/);
+  assert.match(css, /--accent:\s*#c8ff3d;/);
+  assert.match(css, /\.track-atmosphere\s*{[^}]*pointer-events:\s*none;/);
+  assert.match(css, /button:not\(:disabled\):active/);
+  assert.match(css, /button:disabled,/);
+  assert.match(css, /@media \(hover: hover\)/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+});
+
+test("night-track palette clears key AA text and non-text contrast thresholds", () => {
+  const textPairs = [
+    ["#f3f7ef", "#111411"],
+    ["#a5afa2", "#111411"],
+    ["#7d887b", "#111411"],
+    ["#737d71", "#090b09"],
+    ["#101606", "#c8ff3d"],
+    ["#ff8b80", "#111411"]
+  ];
+
+  for (const [foreground, background] of textPairs) {
+    assert.ok(
+      contrastRatio(foreground, background) >= 4.5,
+      `${foreground} on ${background} should meet 4.5:1`
+    );
+  }
+
+  assert.ok(
+    contrastRatio("#616d5e", "#171b17") >= 3,
+    "control boundaries should meet 3:1 against raised surfaces"
+  );
 });
