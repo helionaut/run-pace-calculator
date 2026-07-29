@@ -109,11 +109,23 @@ test("mobile fit overrides preserve 44px controls in the compact grids", async (
   );
   assert.match(
     css,
-    /@media \(max-width: 699px\)[\s\S]*?\.distance-card\s*{[^}]*grid-template-columns:\s*52px 94px minmax\(0,\s*1fr\) 44px;/
+    /@media \(max-width: 699px\)[\s\S]*?\.distance-card\s*{[^}]*grid-template-columns:\s*52px 94px minmax\(0,\s*1fr\);/
   );
   assert.match(
     css,
-    /@media \(max-width: 350px\)[\s\S]*?\.metric-grid\s*{[^}]*grid-template-columns:\s*1fr;/
+    /@media \(max-width: 699px\)[\s\S]*?\.distance-slider\s*{[^}]*grid-column:\s*1\s*\/\s*-1;[^}]*grid-row:\s*3;/
+  );
+  assert.match(
+    css,
+    /@media \(max-width: 699px\)[\s\S]*?input\s*{[^}]*font-size:\s*1rem;/
+  );
+  assert.match(
+    css,
+    /@media \(max-width: 699px\)[\s\S]*?\.distance-slider\s*{[^}]*width:\s*100%;/
+  );
+  assert.match(
+    css,
+    /@media \(max-width: 699px\)[\s\S]*?\.metric-grid\s*{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/
   );
 });
 
