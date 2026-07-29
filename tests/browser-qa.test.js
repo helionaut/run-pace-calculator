@@ -23,7 +23,12 @@ function measurement({
   minTargetHeight = 44,
   minTargetWidth = 44,
   nestedScroll = [],
-  primaryBottom
+  primaryBottom,
+  requiredControlsOperable = true,
+  resultLabel = "Ready when you are",
+  resultValue = "—",
+  splitActionDisabled = true,
+  splitCount = 0
 }) {
   return {
     body: {
@@ -38,6 +43,10 @@ function measurement({
       scrollHeight: documentHeight,
       scrollWidth: clientWidth
     },
+    effectiveViewport: {
+      height: clientHeight,
+      width: clientWidth
+    },
     focus: {
       controlsVisited: focusCount,
       expectedCount: focusCount,
@@ -48,14 +57,82 @@ function measurement({
     minTargetWidth,
     nestedScroll,
     primaryBottom,
-    primaryControlCount: 22,
-    primaryFitsInitialViewport: primaryBottom <= clientHeight
+    primaryControlCount: 27,
+    primaryFitsInitialViewport: primaryBottom <= clientHeight,
+    requiredControlsOperable,
+    result: {
+      detail:
+        resultValue === "50:00"
+          ? "10 km at 5:00 min/km."
+          : "Enter any two values to calculate the third.",
+      label: resultLabel,
+      rect: {
+        inViewport: primaryBottom <= clientHeight
+      },
+      value: resultValue
+    },
+    scroll: {
+      x: 0,
+      y: 0
+    },
+    splitActionDisabled,
+    splitCount,
+    validationRegions: [
+      "distance-error",
+      "pace-error",
+      "speed-error",
+      "time-error",
+      "status-message"
+    ].map((id) => ({
+      ariaLive: "polite",
+      exists: true,
+      id,
+      text: ""
+    }))
   };
 }
 
 function passingMeasurements() {
+  const initial390 = measurement({
+    clientHeight: 844,
+    clientWidth: 390,
+    documentHeight: 700,
+    primaryBottom: 690,
+    requiredControlsOperable: false
+  });
+  const completed390 = measurement({
+    clientHeight: 844,
+    clientWidth: 390,
+    documentHeight: 720,
+    primaryBottom: 710,
+    resultLabel: "Finish time",
+    resultValue: "50:00",
+    splitActionDisabled: false
+  });
+  const splits390 = measurement({
+    clientHeight: 844,
+    clientWidth: 390,
+    documentHeight: 900,
+    primaryBottom: 710,
+    resultLabel: "Finish time",
+    resultValue: "50:00",
+    splitActionDisabled: false,
+    splitCount: 1
+  });
+
+  initial390.states = {
+    completed: completed390,
+    splits: splits390
+  };
+
   return {
     current: {
+      "320x844": measurement({
+        clientHeight: 844,
+        clientWidth: 320,
+        documentHeight: 1800,
+        primaryBottom: 1450
+      }),
       "390x844": measurement({
         clientHeight: 844,
         clientWidth: 390,
@@ -77,16 +154,17 @@ function passingMeasurements() {
     },
     previous: {},
     revised: {
-      "390x844": measurement({
+      "320x844": measurement({
         clientHeight: 844,
-        clientWidth: 390,
-        documentHeight: 1400,
-        primaryBottom: 1180
+        clientWidth: 320,
+        documentHeight: 820,
+        primaryBottom: 800
       }),
+      "390x844": initial390,
       "768x1024": measurement({
         clientHeight: 1024,
         clientWidth: 768,
-        documentHeight: 1100,
+        documentHeight: 1000,
         primaryBottom: 880
       }),
       "1440x900": measurement({
@@ -180,10 +258,10 @@ function passingMobileComparisonMeasurements() {
   };
 }
 
-test("browser QA matrix fixes the three authoritative viewports and comparison states", () => {
+test("browser QA matrix fixes fit, narrow-mobile, tablet, and desktop viewports", () => {
   assert.deepEqual(
     QA_VIEWPORTS.map(({ id }) => id),
-    ["390x844", "768x1024", "1440x900"]
+    ["320x844", "390x844", "768x1024", "1440x900"]
   );
   assert.deepEqual(
     QA_VARIANTS.map(({ id, revision }) => [id, revision]),
@@ -273,27 +351,36 @@ test("mobile comparison acceptance rejects mismatched state, crop, and weak dens
   );
 });
 
-test("browser QA acceptance checks cover overflow, travel, targets, focus, and desktop fit", () => {
+test("browser QA acceptance covers both pre-split states, narrow width, splits, accessibility, and desktop", () => {
   const acceptance = evaluateAcceptance(passingMeasurements());
 
   assert.equal(acceptance.passed, true);
   assert.deepEqual(
     acceptance.checks.map(({ id }) => id),
     [
+      "horizontal-overflow-320x844",
+      "nested-scroll-320x844",
+      "target-size-320x844",
+      "keyboard-focus-320x844",
       "horizontal-overflow-390x844",
       "nested-scroll-390x844",
       "target-size-390x844",
       "keyboard-focus-390x844",
-      "vertical-travel-390x844",
       "horizontal-overflow-768x1024",
       "nested-scroll-768x1024",
       "target-size-768x1024",
       "keyboard-focus-768x1024",
-      "vertical-travel-768x1024",
       "horizontal-overflow-1440x900",
       "nested-scroll-1440x900",
       "target-size-1440x900",
       "keyboard-focus-1440x900",
+      "initial-pre-split-fit-390x844",
+      "initial-required-ui-390x844",
+      "initial-neutral-validation-390x844",
+      "completed-pre-split-fit-390x844",
+      "completed-required-ui-390x844",
+      "completed-result-390x844",
+      "created-split-scroll-and-overflow-390x844",
       "desktop-primary-workflow"
     ]
   );
@@ -318,6 +405,7 @@ test("browser QA acceptance fails on a measurable responsive regression", () => 
       "horizontal-overflow-390x844",
       "target-size-390x844",
       "target-size-768x1024",
+      "initial-pre-split-fit-390x844",
       "desktop-primary-workflow"
     ]
   );
@@ -367,7 +455,7 @@ test("browser QA relative output paths remain portable across checkout roots", (
   );
 });
 
-test("browser QA report records dimensions, checks, and all nine screenshots", () => {
+test("browser QA report records dimensions, checks, and state screenshots", () => {
   const measurements = passingMeasurements();
 
   for (const variant of QA_VARIANTS) {
@@ -393,6 +481,8 @@ test("browser QA report records dimensions, checks, and all nine screenshots", (
       assert.match(report, new RegExp(`${variant.id}-${viewport.id}\\.png`));
     }
   }
+  assert.match(report, /revised-390x844-completed\.png/);
+  assert.match(report, /revised-390x844-splits\.png/);
 });
 
 test("mobile comparison report records the two labels, revisions, and images", () => {

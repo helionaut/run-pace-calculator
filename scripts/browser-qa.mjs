@@ -50,6 +50,7 @@ export const QA_VARIANTS = Object.freeze([
 ]);
 
 export const QA_VIEWPORTS = Object.freeze([
+  Object.freeze({ height: 844, id: "320x844", width: 320 }),
   Object.freeze({ height: 844, id: "390x844", width: 390 }),
   Object.freeze({ height: 1024, id: "768x1024", width: 768 }),
   Object.freeze({ height: 900, id: "1440x900", width: 1440 })
@@ -543,7 +544,30 @@ const MEASUREMENT_EXPRESSION = `(() => {
   const visible = (element) => {
     const rect = element.getBoundingClientRect();
     const style = getComputedStyle(element);
-    return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden";
+    return rect.width > 0 && rect.height > 0 &&
+      style.display !== "none" && style.visibility !== "hidden";
+  };
+  const viewportHeight = window.visualViewport?.height ?? innerHeight;
+  const viewportWidth = window.visualViewport?.width ?? innerWidth;
+  const rectRecord = (element, name) => {
+    const rect = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return {
+      bottom: Math.round(rect.bottom * 100) / 100,
+      disabled: element.matches(":disabled") ||
+        style.pointerEvents === "none",
+      height: Math.round(rect.height * 100) / 100,
+      inViewport:
+        rect.top >= -1 && rect.left >= -1 &&
+        rect.bottom <= viewportHeight + 1 &&
+        rect.right <= viewportWidth + 1,
+      left: Math.round(rect.left * 100) / 100,
+      name,
+      right: Math.round(rect.right * 100) / 100,
+      top: Math.round(rect.top * 100) / 100,
+      visible: visible(element),
+      width: Math.round(rect.width * 100) / 100
+    };
   };
   const interactive = [...document.querySelectorAll(
     'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
@@ -565,9 +589,11 @@ const MEASUREMENT_EXPRESSION = `(() => {
     return /(auto|scroll)/.test(style.overflowY) &&
       element.scrollHeight > element.clientHeight + 1;
   }).map((element) => element.id || element.className);
-  const primarySelectors = [
+  const requiredSelectors = [
     "#app-title",
-    ".tool-bar__actions",
+    ".support-link",
+    "[data-unit-button]",
+    "#reset-button",
     "#distance-input",
     "#distance-slider",
     "[data-distance-increment-button]",
@@ -578,25 +604,40 @@ const MEASUREMENT_EXPRESSION = `(() => {
     "#time-hours",
     "#time-minutes",
     "#time-seconds",
+    "#split-action-button",
     ".result-card"
   ];
-  const primaryRects = primarySelectors.flatMap((selector) =>
-    [...document.querySelectorAll(selector)].filter(visible).map((element, index) => {
-      const rect = element.getBoundingClientRect();
-      return {
-        bottom: Math.round(rect.bottom * 100) / 100,
-        height: Math.round(rect.height * 100) / 100,
-        name: element.id || element.getAttribute("aria-label") ||
-          \`\${selector}[\${index}]\`,
-        right: Math.round(rect.right * 100) / 100,
-        top: Math.round(rect.top * 100) / 100,
-        width: Math.round(rect.width * 100) / 100
-      };
-    })
+  const requiredRects = requiredSelectors.flatMap((selector) =>
+    [...document.querySelectorAll(selector)].map((element, index) =>
+      rectRecord(
+        element,
+        element.id || element.getAttribute("aria-label") ||
+          \`\${selector}[\${index}]\`
+      )
+    )
   );
   const primaryBottom = Math.max(
-    ...primaryRects.map((rect) => rect.bottom)
+    ...requiredRects.map((rect) => rect.bottom)
   );
+  const validationRegions = [
+    "#distance-error",
+    "#pace-error",
+    "#speed-error",
+    "#time-error",
+    "#status-message"
+  ].map((selector) => {
+    const element = document.querySelector(selector);
+    return {
+      ariaLive: element?.getAttribute("aria-live") ?? null,
+      exists: Boolean(element),
+      id: selector.slice(1),
+      text: element?.textContent.trim() ?? null
+    };
+  });
+  const resultCard = document.querySelector(".result-card");
+  const resultRect = resultCard
+    ? rectRecord(resultCard, "result-card")
+    : null;
   return {
     body: {
       clientHeight: document.body.clientHeight,
@@ -610,20 +651,38 @@ const MEASUREMENT_EXPRESSION = `(() => {
       scrollHeight: document.documentElement.scrollHeight,
       scrollWidth: document.documentElement.scrollWidth
     },
+    effectiveViewport: {
+      height: Math.round(viewportHeight * 100) / 100,
+      width: Math.round(viewportWidth * 100) / 100
+    },
     identity: document.querySelector("#app-title")?.textContent.trim() ?? null,
     interactiveCount: interactive.length,
     minTargetHeight: Math.min(...targets.map((target) => target.height)),
     minTargetWidth: Math.min(...targets.map((target) => target.width)),
     nestedScroll,
     primaryBottom: Math.round(primaryBottom * 100) / 100,
-    primaryControlCount: primaryRects.length,
-    primaryFitsInitialViewport: primaryRects.length === 22 &&
-      primaryRects.every((rect) =>
-        rect.top >= -1 && rect.bottom <= innerHeight + 1 &&
-        rect.right <= innerWidth + 1
-      ),
-    primaryRects,
+    primaryControlCount: requiredRects.length,
+    primaryFitsInitialViewport: requiredRects.length === 27 &&
+      requiredRects.every((rect) => rect.visible && rect.inViewport),
+    primaryRects: requiredRects,
+    requiredControlsOperable: requiredRects
+      .filter((rect) => rect.name !== "app-title" && rect.name !== "result-card")
+      .every((rect) => rect.visible && !rect.disabled),
+    result: {
+      detail: document.querySelector("#result-detail")?.textContent.trim() ?? null,
+      label: document.querySelector("#result-label")?.textContent.trim() ?? null,
+      rect: resultRect,
+      value: document.querySelector("#result-value")?.textContent.trim() ?? null
+    },
+    scroll: {
+      x: Math.round(scrollX * 100) / 100,
+      y: Math.round(scrollY * 100) / 100
+    },
+    splitActionDisabled:
+      document.querySelector("#split-action-button")?.disabled ?? null,
+    splitCount: document.querySelectorAll(".split-list__item").length,
     targets,
+    validationRegions,
     viewport: { height: innerHeight, width: innerWidth }
   };
 })()`;
@@ -693,6 +752,48 @@ async function auditKeyboardFocus(session) {
   };
 }
 
+const COMPLETE_PRE_SPLIT_STATE_EXPRESSION = `(async () => {
+  const setInput = (id, value) => {
+    const input = document.querySelector(\`#\${id}\`);
+
+    if (!(input instanceof HTMLInputElement)) {
+      throw new Error(\`Missing input #\${id}\`);
+    }
+
+    input.focus();
+    input.value = value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+
+  setInput("distance-input", "10");
+  setInput("pace-minutes", "5");
+  setInput("pace-seconds", "00");
+  document.activeElement?.blur();
+  await new Promise((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(resolve))
+  );
+  scrollTo(0, 0);
+  return {
+    result: document.querySelector("#result-value")?.textContent.trim() ?? null,
+    splitCount: document.querySelectorAll(".split-list__item").length
+  };
+})()`;
+
+const CREATE_SPLIT_STATE_EXPRESSION = `(async () => {
+  const button = document.querySelector("#split-action-button");
+
+  if (!(button instanceof HTMLButtonElement) || button.disabled) {
+    throw new Error("The completed state did not enable Add split.");
+  }
+
+  button.click();
+  await new Promise((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(resolve))
+  );
+  scrollTo(0, 0);
+  return document.querySelectorAll(".split-list__item").length;
+})()`;
+
 async function captureVariant({
   baseUrl,
   chromePort,
@@ -733,6 +834,59 @@ async function captureVariant({
     measurement.focus = await auditKeyboardFocus(session);
     measurement.screenshot = screenshotName;
     measurement.url = `/${variant.id}/index.html`;
+
+    if (variant.id === "revised" && viewport.id === "390x844") {
+      const completedState = await evaluate(
+        session,
+        COMPLETE_PRE_SPLIT_STATE_EXPRESSION
+      );
+
+      if (completedState.result !== "50:00" || completedState.splitCount !== 0) {
+        throw new Error(
+          `Unable to establish completed pre-split state: ${JSON.stringify(completedState)}`
+        );
+      }
+
+      const completed = await evaluate(session, MEASUREMENT_EXPRESSION);
+      const completedScreenshot =
+        `${variant.id}-${viewport.id}-completed.png`;
+      const completedImage = await session.command("Page.captureScreenshot", {
+        captureBeyondViewport: false,
+        format: "png",
+        fromSurface: true
+      });
+
+      await writeFile(
+        join(output, completedScreenshot),
+        completedImage.data,
+        "base64"
+      );
+      completed.focus = await auditKeyboardFocus(session);
+      completed.screenshot = completedScreenshot;
+
+      const splitCount = await evaluate(session, CREATE_SPLIT_STATE_EXPRESSION);
+
+      if (splitCount !== 1) {
+        throw new Error(`Expected one created split, received ${splitCount}.`);
+      }
+
+      const splits = await evaluate(session, MEASUREMENT_EXPRESSION);
+      const splitsScreenshot = `${variant.id}-${viewport.id}-splits.png`;
+      const splitsImage = await session.command("Page.captureScreenshot", {
+        captureBeyondViewport: false,
+        format: "png",
+        fromSurface: true
+      });
+
+      await writeFile(
+        join(output, splitsScreenshot),
+        splitsImage.data,
+        "base64"
+      );
+      splits.focus = await auditKeyboardFocus(session);
+      splits.screenshot = splitsScreenshot;
+      measurement.states = { completed, splits };
+    }
 
     return measurement;
   } finally {
@@ -1041,17 +1195,27 @@ export function evaluateMobileComparison(measurements) {
 export function evaluateAcceptance(measurements) {
   const checks = [];
   const revised = measurements.revised;
-  const current = measurements.current;
+  const initial = revised["390x844"];
+  const completed = initial.states?.completed;
+  const splits = initial.states?.splits;
+  const noHorizontalOverflow = (measurement) =>
+    Boolean(measurement) &&
+    measurement.document.scrollWidth <= measurement.document.clientWidth + 1 &&
+    measurement.body.scrollWidth <= measurement.document.clientWidth + 1;
+  const fitsViewportAtTop = (measurement) =>
+    noHorizontalOverflow(measurement) &&
+    measurement.document.scrollHeight <=
+      measurement.effectiveViewport.height + 1 &&
+    measurement.scroll.x === 0 &&
+    measurement.scroll.y === 0;
 
   for (const viewport of QA_VIEWPORTS) {
     const revisedMeasurement = revised[viewport.id];
 
     checks.push({
       id: `horizontal-overflow-${viewport.id}`,
-      passed:
-        revisedMeasurement.document.scrollWidth <=
-        revisedMeasurement.document.clientWidth + 1,
-      value: `${revisedMeasurement.document.scrollWidth}/${revisedMeasurement.document.clientWidth}`
+      passed: noHorizontalOverflow(revisedMeasurement),
+      value: `document ${revisedMeasurement.document.scrollWidth}/${revisedMeasurement.document.clientWidth}; body ${revisedMeasurement.body.scrollWidth}/${revisedMeasurement.document.clientWidth}`
     });
     checks.push({
       id: `nested-scroll-${viewport.id}`,
@@ -1073,20 +1237,78 @@ export function evaluateAcceptance(measurements) {
         revisedMeasurement.focus.failures.length === 0,
       value: `${revisedMeasurement.focus.controlsVisited}/${revisedMeasurement.focus.expectedCount} controls`
     });
-
-    if (viewport.width < 1100) {
-      const ratio =
-        revisedMeasurement.document.scrollHeight /
-        current[viewport.id].document.scrollHeight;
-
-      checks.push({
-        id: `vertical-travel-${viewport.id}`,
-        passed: ratio <= 0.85,
-        value: `${revisedMeasurement.document.scrollHeight}/${current[viewport.id].document.scrollHeight} (${ratio.toFixed(3)})`
-      });
-    }
   }
 
+  checks.push({
+    id: "initial-pre-split-fit-390x844",
+    passed:
+      fitsViewportAtTop(initial) &&
+      initial.splitCount === 0,
+    value: `scroll ${initial.document.scrollWidth}×${initial.document.scrollHeight}; effective viewport ${initial.effectiveViewport.width}×${initial.effectiveViewport.height}; scroll position ${initial.scroll.x},${initial.scroll.y}`
+  });
+  checks.push({
+    id: "initial-required-ui-390x844",
+    passed:
+      initial.primaryControlCount === 27 &&
+      initial.primaryFitsInitialViewport &&
+      initial.result.value === "—" &&
+      initial.result.rect?.inViewport === true,
+    value: `${initial.primaryControlCount}/27 required elements; bottom ${initial.primaryBottom}/${initial.effectiveViewport.height}; result ${initial.result.value}`
+  });
+  checks.push({
+    id: "initial-neutral-validation-390x844",
+    passed:
+      initial.validationRegions.length === 5 &&
+      initial.validationRegions.every(
+        (region) =>
+          region.exists &&
+          region.ariaLive === "polite" &&
+          region.text === ""
+      ),
+    value: initial.validationRegions
+      .map((region) => `${region.id}:${region.exists ? region.ariaLive : "missing"}`)
+      .join(", ")
+  });
+  checks.push({
+    id: "completed-pre-split-fit-390x844",
+    passed:
+      fitsViewportAtTop(completed) &&
+      completed.splitCount === 0,
+    value: completed
+      ? `scroll ${completed.document.scrollWidth}×${completed.document.scrollHeight}; effective viewport ${completed.effectiveViewport.width}×${completed.effectiveViewport.height}; scroll position ${completed.scroll.x},${completed.scroll.y}`
+      : "missing completed-state measurement"
+  });
+  checks.push({
+    id: "completed-required-ui-390x844",
+    passed:
+      completed?.primaryControlCount === 27 &&
+      completed.primaryFitsInitialViewport &&
+      completed.requiredControlsOperable &&
+      completed.splitActionDisabled === false,
+    value: completed
+      ? `${completed.primaryControlCount}/27 required elements; bottom ${completed.primaryBottom}/${completed.effectiveViewport.height}; Add split ${completed.splitActionDisabled ? "disabled" : "enabled"}`
+      : "missing completed-state measurement"
+  });
+  checks.push({
+    id: "completed-result-390x844",
+    passed:
+      completed?.result.label === "Finish time" &&
+      completed.result.value === "50:00" &&
+      completed.result.rect?.inViewport === true,
+    value: completed
+      ? `${completed.result.label}: ${completed.result.value}; ${completed.result.detail}`
+      : "missing completed-state measurement"
+  });
+  checks.push({
+    id: "created-split-scroll-and-overflow-390x844",
+    passed:
+      splits?.splitCount === 1 &&
+      noHorizontalOverflow(splits) &&
+      splits.nestedScroll.length === 0,
+    value: splits
+      ? `${splits.splitCount} split; document ${splits.document.scrollWidth}×${splits.document.scrollHeight}; nested scroll ${splits.nestedScroll.join(", ") || "none"}`
+      : "missing split-state measurement"
+  });
   checks.push({
     id: "desktop-primary-workflow",
     passed:
@@ -1124,7 +1346,7 @@ export function renderMarkdownReport(report) {
     "",
     `Generated: ${report.generatedAt}`,
     "",
-    "The three variants were rendered by the same Chromium process with device scale factor 1. Screenshots show the initial viewport; dimensions below are CSS pixels.",
+    "The three variants were rendered by the same Chromium process with device scale factor 1. Screenshots show the initial viewport; dimensions below are CSS pixels. The revised 390×844 capture also records completed pre-split and created-split states.",
     ""
   ];
 
@@ -1155,6 +1377,8 @@ export function renderMarkdownReport(report) {
           `- ${variant.label}, ${viewport.id}: \`${variant.id}-${viewport.id}.png\``
       )
     ),
+    "- Revised worktree layout, 390x844 completed pre-split state: `revised-390x844-completed.png`",
+    "- Revised worktree layout, 390x844 after creating one split: `revised-390x844-splits.png`",
     ""
   );
 

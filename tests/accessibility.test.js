@@ -54,7 +54,8 @@ test("responsive CSS encodes mobile, tablet, and desktop layout safeguards", asy
     css,
     /grid-template-columns:\s*minmax\(0,\s*7fr\)\s+minmax\(320px,\s*5fr\);/
   );
-  assert.match(css, /@media \(max-width: 420px\)/);
+  assert.match(css, /@media \(max-width: 699px\)/);
+  assert.match(css, /@media \(max-width: 350px\)/);
   assert.match(css, /\.projection-strip\s*{[\s\S]*overflow:\s*hidden;/);
   assert.match(css, /\.split-card__metrics\s*{[\s\S]*min-width:\s*0;/);
   assert.match(css, /input\s*{[\s\S]*min-width:\s*0;[\s\S]*font-size:\s*1rem;/);
@@ -78,7 +79,7 @@ test("keyboard focus and interactive targets meet the static accessibility contr
   assert.match(css, /\.field--linked > span::after|\.rate-field\.field--linked > span::after/);
 });
 
-for (const viewport of ["390x844", "768x1024", "1440x900"]) {
+for (const viewport of ["320x844", "390x844", "768x1024", "1440x900"]) {
   test(`${viewport} keeps every button and link target at least 44px square`, async () => {
     const css = await readFixture(cssPath);
     const sharedTargetRule = css.match(
@@ -91,16 +92,28 @@ for (const viewport of ["390x844", "768x1024", "1440x900"]) {
   });
 }
 
-test("390x844 mobile overrides preserve the 44px minimum control width", async () => {
+test("mobile fit overrides preserve 44px controls in the compact grids", async () => {
   const css = await readFixture(cssPath);
 
   assert.match(
     css,
-    /@media \(max-width: 420px\)[\s\S]*?\.chip-button--increment\s*{[^}]*min-width:\s*44px;/
+    /@media \(max-width: 699px\)[\s\S]*?\.chip-button--increment\s*{[^}]*min-width:\s*44px;/
   );
   assert.match(
     css,
-    /@media \(max-width: 420px\)[\s\S]*?\.preset-row \.chip-button\s*{[^}]*min-width:\s*44px;/
+    /@media \(max-width: 699px\)[\s\S]*?\.preset-row \.chip-button\s*{[^}]*min-width:\s*44px;/
+  );
+  assert.match(
+    css,
+    /@media \(max-width: 699px\)[\s\S]*?input\s*{[^}]*min-height:\s*44px;[^}]*height:\s*44px;/
+  );
+  assert.match(
+    css,
+    /@media \(max-width: 699px\)[\s\S]*?\.distance-card\s*{[^}]*grid-template-columns:\s*52px 94px minmax\(0,\s*1fr\) 44px;/
+  );
+  assert.match(
+    css,
+    /@media \(max-width: 350px\)[\s\S]*?\.metric-grid\s*{[^}]*grid-template-columns:\s*1fr;/
   );
 });
 
